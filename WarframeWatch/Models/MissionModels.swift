@@ -84,6 +84,14 @@ public struct MissionReward: Codable {
         try container.encodeIfPresent(ItemType, forKey: .ItemType)
         try container.encodeIfPresent(ItemCount, forKey: .ItemCount)
     }
+    
+    public func containsKeyword(_ keyword: String) -> Bool {
+        let kw = keyword.lowercased()
+        if let items = items, items.contains(where: { $0.lowercased().contains(kw) }) { return true }
+        if let counted = countedItems, counted.contains(where: { $0.ItemType.lowercased().contains(kw) }) { return true }
+        if let itemType = ItemType, itemType.lowercased().contains(kw) { return true }
+        return false
+    }
 }
 
 public struct CountedItem: Codable, Identifiable {

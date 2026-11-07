@@ -38,4 +38,18 @@ public final class StorageService {
             UserDefaults.standard.set(data, forKey: historyKey)
         }
     }
+    
+    // MARK: - Catalog Subscriptions
+    private let catalogSubscriptionsKey = "wf_ws_catalog_subscriptions"
+    
+    public func loadCatalogSubscriptions() -> Set<String> {
+        guard let list = UserDefaults.standard.stringArray(forKey: catalogSubscriptionsKey) else {
+            return ["catalyst", "reactor", "forma", "fissure_t1_speed", "cetus_night"]
+        }
+        return Set(list)
+    }
+    
+    public func saveCatalogSubscriptions(_ set: Set<String>) {
+        UserDefaults.standard.set(Array(set), forKey: catalogSubscriptionsKey)
+    }
 }

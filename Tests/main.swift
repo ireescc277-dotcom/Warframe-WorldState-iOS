@@ -98,6 +98,23 @@ let task = URLSession.shared.dataTask(with: request) { data, response, error in
     do {
         let liveState = try decoder.decode(WorldState.self, from: data)
         print("✅ Live decode SUCCESSFUL! Version: \(liveState.Version ?? -1), Sorties: \(liveState.Sorties?.count ?? 0), Alerts: \(liveState.Alerts?.count ?? 0), Invasions: \(liveState.Invasions?.count ?? 0)")
+        
+        // 4. Test Watch Catalog Database against Live State
+        print("\n--- Testing Watch Catalog Database ---")
+        let catalogItems = WatchCatalogDatabase.shared.items
+        print("Catalog items count: \(catalogItems.count)")
+        for item in catalogItems {
+            let state = item.evaluate(liveState)
+            switch state {
+            case .active(let loc, let exp, let rem):
+                print("  [🟢 LIVE] \(item.title) -> \(loc), remaining: \(Int(rem))s, exp: \(exp?.description ?? "nil")")
+            case .deterministic(let date, let rem, let note):
+                print("  [🔵 DET] \(item.title) -> \(note), in \(Int(rem/60))m (target: \(date.description))")
+            case .probabilistic(let lastSeen, let interval, let pct, let note):
+                print("  [⚪ PROB] \(item.title) -> Last: \(lastSeen), Int: \(interval), Pct: \(pct)%, Note: \(note)")
+            }
+        }
+        print("✅ Watch Catalog Database evaluated all \(catalogItems.count) items with zero crashes!")
     } catch {
         print("❌ Live decode FAILED:")
         print(error)

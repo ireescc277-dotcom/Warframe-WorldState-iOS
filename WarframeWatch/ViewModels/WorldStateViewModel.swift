@@ -22,6 +22,7 @@ public final class WorldStateViewModel: ObservableObject {
     
     // Watchlist & Notifications
     @Published public var watchItems: [String: WatchItem] = [:]
+    @Published public var subscribedCatalogIds: Set<String> = []
     @Published public var isNotificationAuthorized: Bool = false
     
     // Diffs
@@ -54,6 +55,7 @@ public final class WorldStateViewModel: ObservableObject {
     
     public init() {
         self.watchItems = storage.loadWatchItems()
+        self.subscribedCatalogIds = storage.loadCatalogSubscriptions()
         setupTimer()
         checkNotificationStatus()
         loadInitialData()
@@ -187,6 +189,46 @@ public final class WorldStateViewModel: ObservableObject {
             let aExp = a.expiry ?? Date.distantFuture
             let bExp = b.expiry ?? Date.distantFuture
             return aExp < bExp
+        }
+    }
+    
+    // MARK: - Watch Target Catalog
+    public func isCatalogSubscribed(_ id: String) -> Bool {
+        subscribedCatalogIds.contains(id)
+    }
+    
+    public func toggleCatalogSubscription(_ id: String) {
+        if subscribedCatalogIds.contains(id) {
+            subscribedCatalogIds.remove(id)
+        } else {
+            subscribedCatalogIds.insert(id)
+        }
+        storage.saveCatalogSubscriptions(subscribedCatalogIds)
+    }
+    
+    public var evaluatedCatalogItems: [EvaluatedWatchItem] {
+        guard let ws = worldState else { return [] }
+        let items = WatchCatalogDatabase.shared.items.map { item -> EvaluatedWatchItem in
+            let state = item.evaluate(ws)
+            return EvaluatedWatchItem(item: item, state: state, isSubscribed: subscribedCatalogIds.contains(item.id))
+        }
+        
+        return items.sorted { a, b in
+            if a.state.sortOrder != b.state.sortOrder {
+                return a.state.sortOrder < b.state.sortOrder
+            }
+            if case let .active(_, _, remA) = a.state, case let .active(_, _, remB) = b.state {
+                if remA > 0 && remB > 0 { return remA < remB }
+                if remA > 0 { return true }
+                return false
+            }
+            if case let .deterministic(_, remA, _) = a.state, case let .deterministic(_, remB, _) = b.state {
+                return remA < remB
+            }
+            if case let .probabilistic(_, _, pctA, _) = a.state, case let .probabilistic(_, _, pctB, _) = b.state {
+                return pctA > pctB
+            }
+            return false
         }
     }
     

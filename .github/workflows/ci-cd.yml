@@ -35,6 +35,7 @@ jobs:
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
             WarframeWatch/Models/SnapshotDiff.swift \
+            WarframeWatch/Models/WatchCatalogModel.swift \
             WarframeWatch/Models/WatchItem.swift \
             WarframeWatch/Models/WorldState.swift \
             Tests/main.swift \
