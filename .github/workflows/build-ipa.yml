@@ -1,0 +1,73 @@
+name: Build Unsigned iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Package IPA
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode Project
+        run: |
+          xcodegen generate
+
+      - name: Build & Archive (Unsigned)
+        run: |
+          xcodebuild archive \
+            -project WarframeWatch.xcodeproj \
+            -scheme WarframeWatch \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/WarframeWatch.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package into IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/WarframeWatch.xcarchive/Products/Applications/WarframeWatch.app Payload/
+          zip -r -9 WarframeWatch-unsigned.ipa Payload
+          ls -lh WarframeWatch-unsigned.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarframeWatch-unsigned-ipa
+          path: WarframeWatch-unsigned.ipa
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: WarframeWatch-unsigned.ipa
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

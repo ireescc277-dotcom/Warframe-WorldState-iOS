@@ -1,0 +1,34 @@
+name: WarframeWatch
+options:
+  bundleIdPrefix: com.warframe
+  deploymentTarget:
+    iOS: "16.0"
+  defaultConfig: Release
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGN_IDENTITY: ""
+    DEVELOPMENT_TEAM: ""
+targets:
+  WarframeWatch:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: WarframeWatch
+        excludes:
+          - "Info.plist"
+    info:
+      path: WarframeWatch/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.warframe.watch
+        PRODUCT_NAME: WarframeWatch
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: ""
+        ENABLE_BITCODE: NO
+        GENERATE_INFOPLIST_FILE: NO

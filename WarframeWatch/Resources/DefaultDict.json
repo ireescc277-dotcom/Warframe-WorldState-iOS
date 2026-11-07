@@ -1,0 +1,2666 @@
+{
+  "nodes": {
+    "SolNode0": {
+      "n": "远古惩戒（特殊节点）",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "SolNode1": {
+      "n": "Galatea （海王星）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode2": {
+      "n": "Aphrodite （金星）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode3": {
+      "n": "Cordelia （天王星）",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "SolNode4": {
+      "n": "Acheron （冥王星）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode5": {
+      "n": "Perdita （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode6": {
+      "n": "Despina （海王星）",
+      "e": "Corpus",
+      "t": "挖掘"
+    },
+    "SolNode7": {
+      "n": "Epimetheus （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode8": {
+      "n": "Nix （冥王星）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode9": {
+      "n": "Rosalind （天王星）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode10": {
+      "n": "Thebe （木星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode11": {
+      "n": "Tharsis （火星）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode12": {
+      "n": "Elion （水星）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode13": {
+      "n": "Bianca （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode14": {
+      "n": "Ultor （火星）",
+      "e": "双方交战",
+      "t": "歼灭"
+    },
+    "SolNode15": {
+      "n": "Pacific （地球）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode16": {
+      "n": "Augustus （火星）",
+      "e": "Grineer",
+      "t": "挖掘"
+    },
+    "SolNode17": {
+      "n": "Proteus （海王星）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SolNode18": {
+      "n": "Rhea （土星）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode19": {
+      "n": "Enceladus （土星）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode20": {
+      "n": "Telesto （土星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode21": {
+      "n": "Narcissus （冥王星）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode22": {
+      "n": "Tessera （金星）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SolNode23": {
+      "n": "Cytherean （金星）",
+      "e": "Corpus",
+      "t": "拦截"
+    },
+    "SolNode24": {
+      "n": "Oro （地球）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode25": {
+      "n": "Callisto （木星）",
+      "e": "Corpus",
+      "t": "拦截"
+    },
+    "SolNode26": {
+      "n": "Lith （地球）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode27": {
+      "n": "E Prime （地球）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode28": {
+      "n": "Terminus （水星）",
+      "e": "双方交战",
+      "t": "破坏"
+    },
+    "SolNode29": {
+      "n": "Oberon （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode30": {
+      "n": "Olympus （火星）",
+      "e": "Grineer",
+      "t": "中断"
+    },
+    "SolNode31": {
+      "n": "Anthe （土星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode32": {
+      "n": "Tethys （土星）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode33": {
+      "n": "Ariel （天王星）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode34": {
+      "n": "Sycorax （天王星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode35": {
+      "n": "Arcadia （火星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode36": {
+      "n": "Martialis （火星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode37": {
+      "n": "Pallene （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode38": {
+      "n": "Minthe （冥王星）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode39": {
+      "n": "Everest （地球）",
+      "e": "Grineer",
+      "t": "挖掘"
+    },
+    "SolNode40": {
+      "n": "Prospero （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode41": {
+      "n": "Arval （火星）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode42": {
+      "n": "Helene （土星）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode43": {
+      "n": "Cerberus （冥王星）",
+      "e": "Corpus",
+      "t": "拦截"
+    },
+    "SolNode44": {
+      "n": "Mimas （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode45": {
+      "n": "Ara （火星）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode46": {
+      "n": "Spear （火星）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode47": {
+      "n": "Janus （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode48": {
+      "n": "Regna （冥王星）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode49": {
+      "n": "Larissa （海王星）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode50": {
+      "n": "Numa （土星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode51": {
+      "n": "Hades （冥王星）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "SolNode52": {
+      "n": "Portia （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode53": {
+      "n": "Themisto （木星）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "SolNode54": {
+      "n": "Silvanus （火星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode55": {
+      "n": "Methone （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode56": {
+      "n": "Cypress （冥王星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode57": {
+      "n": "Sao （海王星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode58": {
+      "n": "Hellas （火星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode59": {
+      "n": "Eurasia （地球）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode60": {
+      "n": "Caliban （天王星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode61": {
+      "n": "Ishtar （金星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode62": {
+      "n": "Neso （海王星）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode63": {
+      "n": "Mantle （地球）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode64": {
+      "n": "Umbriel （天王星）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode65": {
+      "n": "Gradivus （火星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode66": {
+      "n": "Unda （金星）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode67": {
+      "n": "Dione （土星）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode68": {
+      "n": "Vallis （火星）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode69": {
+      "n": "Ophelia （天王星）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SolNode70": {
+      "n": "Cassini （土星）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode71": {
+      "n": "Vesper （金星）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode72": {
+      "n": "Outer Terminus （冥王星）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SolNode73": {
+      "n": "Ananke （木星）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode74": {
+      "n": "Carme （木星）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode75": {
+      "n": "Cervantes （地球）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode76": {
+      "n": "Hydra （冥王星）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode77": {
+      "n": "Cupid （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode78": {
+      "n": "Triton （海王星）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode79": {
+      "n": "Cambria （地球）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode80": {
+      "n": "Phoebe （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode81": {
+      "n": "Palus （冥王星）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "SolNode82": {
+      "n": "Calypso （土星）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode83": {
+      "n": "Cressida （天王星）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode84": {
+      "n": "Nereid （海王星）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode85": {
+      "n": "Gaia （地球）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode86": {
+      "n": "Aegaeon （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode87": {
+      "n": "Ganymede （木星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "SolNode88": {
+      "n": "Adrastea （木星）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode89": {
+      "n": "Mariana （地球）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode90": {
+      "n": "Miranda",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "SolNode91": {
+      "n": "Iapetus （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode92": {
+      "n": "Charon （冥王星）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode93": {
+      "n": "Keeler （土星）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode94": {
+      "n": "Apollodorus （水星）",
+      "e": "Infested",
+      "t": "生存"
+    },
+    "SolNode95": {
+      "n": "Thalassa （海王星）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode96": {
+      "n": "Titan （土星）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SolNode97": {
+      "n": "Amalthea （木星）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode98": {
+      "n": "Desdemona （天王星）",
+      "e": "Grineer",
+      "t": "破坏 (Archwing)"
+    },
+    "SolNode99": {
+      "n": "War （火星）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode100": {
+      "n": "Elara （木星）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "SolNode101": {
+      "n": "Kiliken （金星）",
+      "e": "Corpus",
+      "t": "挖掘"
+    },
+    "SolNode102": {
+      "n": "Oceanum （冥王星）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode103": {
+      "n": "M Prime （水星）",
+      "e": "双方交战",
+      "t": "歼灭"
+    },
+    "SolNode104": {
+      "n": "Fossa （金星）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "SolNode105": {
+      "n": "Titania （天王星）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode106": {
+      "n": "Alator （火星）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode107": {
+      "n": "Venera （金星）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode108": {
+      "n": "Tolstoj （水星）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode109": {
+      "n": "Linea （金星）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode110": {
+      "n": "Hyperion （土星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode111": {
+      "n": "Juliet （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode112": {
+      "n": "Setebos （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode113": {
+      "n": "Ares （火星）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode114": {
+      "n": "Puck （天王星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode115": {
+      "n": "Quirinus （火星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode116": {
+      "n": "Mab （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode117": {
+      "n": "Naiad （海王星）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode118": {
+      "n": "Laomedeia （海王星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "SolNode119": {
+      "n": "Caloris （水星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode120": {
+      "n": "Halimede （海王星）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode121": {
+      "n": "Carpo （木星）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode122": {
+      "n": "Stephano （天王星）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode123": {
+      "n": "V Prime （金星）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "SolNode124": {
+      "n": "Trinculo （天王星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode125": {
+      "n": "Io （木星）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SolNode126": {
+      "n": "Metis （木星）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode127": {
+      "n": "Psamathe （海王星）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "SolNode128": {
+      "n": "E Gate （金星）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode129": {
+      "n": "奥布山谷 （金星）",
+      "e": "Corpus",
+      "t": "自由探索"
+    },
+    "SolNode130": {
+      "n": "Lares （水星）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode131": {
+      "n": "Pallas （谷神星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode132": {
+      "n": "Bode （谷神星）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode133": {
+      "n": "Vedic （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode134": {
+      "n": "Varro （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode135": {
+      "n": "Thon （谷神星）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode136": {
+      "n": "Olla （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode137": {
+      "n": "Nuovo （谷神星）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode138": {
+      "n": "Ludi （谷神星）",
+      "e": "Grineer",
+      "t": "劫持"
+    },
+    "SolNode139": {
+      "n": "Lex （谷神星）",
+      "e": "Grineer",
+      "t": "捕获"
+    },
+    "SolNode140": {
+      "n": "Kiste （谷神星）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode141": {
+      "n": "Ker （谷神星）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode142": {
+      "n": "Hapke （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode143": {
+      "n": "Gefion （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode144": {
+      "n": "Exta （谷神星）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode145": {
+      "n": "Egeria （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode146": {
+      "n": "Draco （谷神星）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SolNode147": {
+      "n": "Cinxia （谷神星）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode148": {
+      "n": "Cerium （谷神星）",
+      "e": "",
+      "t": ""
+    },
+    "SolNode149": {
+      "n": "Casta （谷神星）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode150": {
+      "n": "Albedo （谷神星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode151": {
+      "n": "Acanth （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode152": {
+      "n": "Ascar （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode153": {
+      "n": "Brugia （阋神星）",
+      "e": "Infested",
+      "t": "救援"
+    },
+    "SolNode154": {
+      "n": "Candiru （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode155": {
+      "n": "Cosis （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode156": {
+      "n": "Cyath （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode157": {
+      "n": "Giardia （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode158": {
+      "n": "Gnathos （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode159": {
+      "n": "Lepis （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode160": {
+      "n": "Histo （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode161": {
+      "n": "Hymeno （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode162": {
+      "n": "Isos （阋神星）",
+      "e": "Infested",
+      "t": "捕获"
+    },
+    "SolNode163": {
+      "n": "Ixodes （阋神星）",
+      "e": "",
+      "t": ""
+    },
+    "SolNode164": {
+      "n": "Kala-azar （阋神星）",
+      "e": "Infested",
+      "t": "防御"
+    },
+    "SolNode165": {
+      "n": "Sporid （阋神星）",
+      "e": "Infested",
+      "t": "清巢"
+    },
+    "SolNode166": {
+      "n": "Nimus （阋神星）",
+      "e": "Infested",
+      "t": "生存"
+    },
+    "SolNode167": {
+      "n": "Oestrus （阋神星）",
+      "e": "Infested",
+      "t": "Infested资源回收"
+    },
+    "SolNode168": {
+      "n": "Phalan （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode169": {
+      "n": "Psoro （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode170": {
+      "n": "Ranova （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode171": {
+      "n": "Saxis （阋神星）",
+      "e": "Infested",
+      "t": "歼灭"
+    },
+    "SolNode172": {
+      "n": "Xini （阋神星）",
+      "e": "Infested",
+      "t": "拦截"
+    },
+    "SolNode173": {
+      "n": "Solium （阋神星）",
+      "e": "Infested",
+      "t": "移动防御"
+    },
+    "SolNode174": {
+      "n": "Sparga （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode175": {
+      "n": "Naeglar （阋神星）",
+      "e": "Infested",
+      "t": "清巢"
+    },
+    "SolNode176": {
+      "n": "Viver （阋神星）",
+      "e": "Infested",
+      "t": "远古惩戒"
+    },
+    "SolNode177": {
+      "n": "Kappa （赛德娜）",
+      "e": "Grineer",
+      "t": "中断"
+    },
+    "SolNode178": {
+      "n": "Hyosube （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode179": {
+      "n": "Jengu （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode180": {
+      "n": "Undine （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode181": {
+      "n": "Adaro （赛德娜）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode182": {
+      "n": "Camenae （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode183": {
+      "n": "Vodyanoi （赛德娜）",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "SolNode184": {
+      "n": "Rusalka （赛德娜）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode185": {
+      "n": "Berehynia （赛德娜）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode186": {
+      "n": "Phithale （赛德娜）",
+      "e": "Grineer",
+      "t": "破坏"
+    },
+    "SolNode187": {
+      "n": "Selkie （赛德娜）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SolNode188": {
+      "n": "Kelpie （赛德娜）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode189": {
+      "n": "Naga （赛德娜）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode190": {
+      "n": "Nakki （赛德娜）",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "SolNode191": {
+      "n": "Marid （赛德娜）",
+      "e": "Grineer",
+      "t": "劫持"
+    },
+    "SolNode192": {
+      "n": "Tikoloshe （赛德娜）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode193": {
+      "n": "Merrow （赛德娜）",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "SolNode194": {
+      "n": "Ponaturi （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode195": {
+      "n": "Hydron （赛德娜）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode196": {
+      "n": "Charybdis （赛德娜）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode197": {
+      "n": "Graeae （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode198": {
+      "n": "Scylla （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode199": {
+      "n": "Yam （赛德娜）",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "SolNode200": {
+      "n": "Veles （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode201": {
+      "n": "Tiamat （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode202": {
+      "n": "Yemaja （赛德娜）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode203": {
+      "n": "Abaddon （欧罗巴）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode204": {
+      "n": "Armaros （欧罗巴）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode205": {
+      "n": "Baal （欧罗巴）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SolNode206": {
+      "n": "Eligor （欧罗巴）",
+      "e": "",
+      "t": ""
+    },
+    "SolNode207": {
+      "n": "Gamygyn （欧罗巴）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode208": {
+      "n": "Lillith （欧罗巴）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode209": {
+      "n": "Morax （欧罗巴）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SolNode210": {
+      "n": "Naamah （欧罗巴）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "SolNode211": {
+      "n": "Ose （欧罗巴）",
+      "e": "Corpus",
+      "t": "拦截"
+    },
+    "SolNode212": {
+      "n": "Paimon （欧罗巴）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SolNode213": {
+      "n": "Shax （欧罗巴）",
+      "e": "",
+      "t": ""
+    },
+    "SolNode214": {
+      "n": "Sorath （欧罗巴）",
+      "e": "Corpus",
+      "t": "劫持"
+    },
+    "SolNode215": {
+      "n": "Valac （欧罗巴）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SolNode216": {
+      "n": "Valefor （欧罗巴）",
+      "e": "Corpus",
+      "t": "挖掘"
+    },
+    "SolNode217": {
+      "n": "Orias （欧罗巴）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode218": {
+      "n": "Zagan （欧罗巴）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode219": {
+      "n": "Beleth （欧罗巴）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SolNode220": {
+      "n": "Kokabiel （欧罗巴）",
+      "e": "Corpus",
+      "t": "破坏"
+    },
+    "SolNode221": {
+      "n": "Neruda （水星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode222": {
+      "n": "Eminescu （水星）",
+      "e": "Grineer",
+      "t": "远古惩戒"
+    },
+    "SolNode223": {
+      "n": "Boethius （水星）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode224": {
+      "n": "Odin （水星）",
+      "e": "Grineer",
+      "t": "拦截"
+    },
+    "SolNode225": {
+      "n": "Suisei （水星）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode226": {
+      "n": "Pantheon （水星）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode227": {
+      "n": "Verdi （水星）",
+      "e": "",
+      "t": ""
+    },
+    "SolNode228": {
+      "n": "夜灵平野（地球）",
+      "e": "Grineer",
+      "t": "自由探索"
+    },
+    "SolNode229": {
+      "n": "魔胎之境 （火卫二）",
+      "e": "Infested",
+      "t": "自由探索"
+    },
+    "SolNode230": {
+      "n": "永视弧域（扎里曼）",
+      "e": "双方交战",
+      "t": "虚空洪流"
+    },
+    "SolNode231": {
+      "n": "哈拉科防线（扎里曼）",
+      "e": "双方交战",
+      "t": "歼灭"
+    },
+    "SolNode232": {
+      "n": "涂沃主厅（扎里曼）",
+      "e": "双方交战",
+      "t": "虚空覆涌"
+    },
+    "SolNode233": {
+      "n": "奥金工场（扎里曼）",
+      "e": "双方交战",
+      "t": "Void Armageddon"
+    },
+    "SolNode234": {
+      "n": "居住舱（扎里曼）",
+      "e": "Tenno",
+      "t": "中继站"
+    },
+    "SolNode235": {
+      "n": "翠径（扎里曼）",
+      "e": "双方交战",
+      "t": "移动防御"
+    },
+    "SolNode236": {
+      "n": "双衍历程（双衍王境）",
+      "e": "双衍王境",
+      "t": "自由探索"
+    },
+    "SolNode237": {
+      "n": "孤独纪事（双衍王境）",
+      "e": "双衍王境",
+      "t": "自由探索"
+    },
+    "SolNode238": {
+      "n": "无尽回廊（双衍王境）",
+      "e": "双衍王境",
+      "t": "自由探索"
+    },
+    "SolNode239": {
+      "n": "Vesper 中继站 （金星）",
+      "e": "Corpus",
+      "t": "中继站"
+    },
+    "ZarimanHub": {
+      "n": "羽化之穹（扎里曼）",
+      "e": "Tenno",
+      "t": "中继站"
+    },
+    "SolNode400": {
+      "n": "Teshub （虚空）",
+      "e": "奥罗金",
+      "t": "歼灭"
+    },
+    "SolNode401": {
+      "n": "Hepit （虚空）",
+      "e": "奥罗金",
+      "t": "捕获"
+    },
+    "SolNode402": {
+      "n": "Taranis （虚空）",
+      "e": "奥罗金",
+      "t": "防御"
+    },
+    "SolNode403": {
+      "n": "Tiwaz （虚空）",
+      "e": "奥罗金",
+      "t": "移动防御"
+    },
+    "SolNode404": {
+      "n": "Stribog （虚空）",
+      "e": "奥罗金",
+      "t": "Orokin 破坏"
+    },
+    "SolNode405": {
+      "n": "Ani （虚空）",
+      "e": "奥罗金",
+      "t": "生存"
+    },
+    "SolNode406": {
+      "n": "Ukko （虚空）",
+      "e": "奥罗金",
+      "t": "捕获"
+    },
+    "SolNode407": {
+      "n": "Oxomoco （虚空）",
+      "e": "奥罗金",
+      "t": "歼灭"
+    },
+    "SolNode408": {
+      "n": "Belenus （虚空）",
+      "e": "奥罗金",
+      "t": "防御"
+    },
+    "SolNode409": {
+      "n": "Mot （虚空）",
+      "e": "奥罗金",
+      "t": "生存"
+    },
+    "SolNode410": {
+      "n": "Aten （虚空）",
+      "e": "奥罗金",
+      "t": "移动防御"
+    },
+    "SolNode411": {
+      "n": "Marduk （虚空）",
+      "e": "奥罗金",
+      "t": "破坏"
+    },
+    "SolNode412": {
+      "n": "Mithra （虚空）",
+      "e": "奥罗金",
+      "t": "拦截"
+    },
+    "SolNode413": {
+      "n": "虚空",
+      "e": "堕落",
+      "t": "远古惩戒"
+    },
+    "SolNode450": {
+      "n": "Tyana Pass （火星）",
+      "e": "双方交战",
+      "t": "镜像防御"
+    },
+    "DeimosHub": {
+      "n": "Necralisk （Deimos）",
+      "e": "Tenno",
+      "t": "中继站"
+    },
+    "SolNode706": {
+      "n": "Horend （火卫二）",
+      "e": "Infested",
+      "t": "捕获"
+    },
+    "SolNode707": {
+      "n": "Hyf （火卫二）",
+      "e": "Infested",
+      "t": "防御"
+    },
+    "SolNode708": {
+      "n": "Phlegyas （火卫二）",
+      "e": "Infested",
+      "t": "歼灭"
+    },
+    "SolNode709": {
+      "n": "Dirus （火卫二）",
+      "e": "Infested",
+      "t": "移动防御"
+    },
+    "SolNode710": {
+      "n": "Formido （火卫二）",
+      "e": "Infested",
+      "t": "破坏"
+    },
+    "SolNode711": {
+      "n": "Terrorem （火卫二）",
+      "e": "Infested",
+      "t": "生存"
+    },
+    "SolNode712": {
+      "n": "Magnacidium （火卫二）",
+      "e": "Infested",
+      "t": "刺杀"
+    },
+    "SolNode713": {
+      "n": "Exequias （火卫二）",
+      "e": "Infested",
+      "t": "刺杀"
+    },
+    "SolNode714": {
+      "n": "解剖圣所（火卫二）",
+      "e": "Tenno",
+      "t": "中继站"
+    },
+    "SolNode715": {
+      "n": "恶涌（火卫二）",
+      "e": "低语者",
+      "t": "刺杀"
+    },
+    "SolNode716": {
+      "n": "孽杀（火卫二）",
+      "e": "低语者",
+      "t": "歼灭"
+    },
+    "SolNode717": {
+      "n": "不灭之地（火卫二）",
+      "e": "低语者",
+      "t": "生存"
+    },
+    "SolNode718": {
+      "n": "异化区（火卫二）",
+      "e": "低语者",
+      "t": "元素转换"
+    },
+    "SolNode719": {
+      "n": "墓垒（火卫二）",
+      "e": "低语者",
+      "t": "镜像防御"
+    },
+    "SolNode720": {
+      "n": "孤冢（火卫二）",
+      "e": "低语者",
+      "t": "衰退室"
+    },
+    "SolNode721": {
+      "n": "Armatus （火卫二）",
+      "e": "低语者",
+      "t": "中断"
+    },
+    "SolNode251": {
+      "n": "Dark Refactory （Deimos）",
+      "e": "Anarch",
+      "t": "The Perita Rebellion"
+    },
+    "SolNode740": {
+      "n": "蝠力使 （木星）",
+      "e": "Sentient",
+      "t": "刺杀"
+    },
+    "SolNode741": {
+      "n": "Koro （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "强袭"
+    },
+    "SolNode742": {
+      "n": "Nabuk （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode743": {
+      "n": "Rotuma （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode744": {
+      "n": "Taveuni （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SolNode745": {
+      "n": "Tamu （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "中断"
+    },
+    "SolNode746": {
+      "n": "Dakata （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "SolNode747": {
+      "n": "Pago （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "间谍"
+    },
+    "SolNode748": {
+      "n": "Garus （Kuva 要塞）",
+      "e": "Grineer",
+      "t": "救援"
+    },
+    "SolNode901": {
+      "n": "Caduceus",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "SolNode902": {
+      "n": "Montes （金星）",
+      "e": "Corpus",
+      "t": "歼灭 (Archwing)"
+    },
+    "SolNode903": {
+      "n": "Erpo （地球）",
+      "e": "Grineer",
+      "t": "移动防御 (Archwing)"
+    },
+    "SolNode904": {
+      "n": "Syrtis （火星）",
+      "e": "Grineer",
+      "t": "歼灭 (Archwing)"
+    },
+    "SolNode905": {
+      "n": "Galilea （木星）",
+      "e": "Corpus",
+      "t": "破坏 (Archwing)"
+    },
+    "SolNode906": {
+      "n": "Pandora （土星）",
+      "e": "Grineer",
+      "t": "追击 (Archwing)"
+    },
+    "SolNode907": {
+      "n": "Caelus （天王星）",
+      "e": "Grineer",
+      "t": "拦截 (Archwing)"
+    },
+    "SolNode908": {
+      "n": "Salacia （海王星）",
+      "e": "Corpus",
+      "t": "移动防御 (Archwing)"
+    },
+    "SolNode300": {
+      "n": "Plato （月球）",
+      "e": "双方交战",
+      "t": "歼灭"
+    },
+    "SolNode301": {
+      "n": "Grimaldi （月球）",
+      "e": "Grineer",
+      "t": "移动防御"
+    },
+    "SolNode302": {
+      "n": "Tycho （月球）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "SolNode304": {
+      "n": "Copernicus （月球）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SolNode305": {
+      "n": "Stöfler （月球）",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "SolNode306": {
+      "n": "Pavlov （月球）",
+      "e": "双方交战",
+      "t": "间谍"
+    },
+    "SolNode307": {
+      "n": "Zeipel （月球）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SolNode308": {
+      "n": "Apollo （月球）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "SolNode309": {
+      "n": "Yuvarium （月球）",
+      "e": "奥罗金",
+      "t": "生存"
+    },
+    "SolNode310": {
+      "n": "Circulus （月球）",
+      "e": "Grineer",
+      "t": "生存"
+    },
+    "SettlementNode1": {
+      "n": "Roche （火卫一）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "SettlementNode2": {
+      "n": "Skyresh （火卫一）",
+      "e": "Corpus",
+      "t": "捕获"
+    },
+    "SettlementNode3": {
+      "n": "Stickney （火卫一）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "SettlementNode4": {
+      "n": "Drunlo （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode5": {
+      "n": "Grildrig （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode6": {
+      "n": "Limtoc （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode7": {
+      "n": "Hall （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode8": {
+      "n": "Reldresal （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode9": {
+      "n": "Clustril （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode10": {
+      "n": "Kepler （火卫一）",
+      "e": "Corpus",
+      "t": "追击 (Archwing)"
+    },
+    "SettlementNode11": {
+      "n": "Gulliver （火卫一）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "SettlementNode12": {
+      "n": "Monolith （火卫一）",
+      "e": "Corpus",
+      "t": "救援"
+    },
+    "SettlementNode13": {
+      "n": "D'Arrest （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode14": {
+      "n": "Shklovsky （火卫一）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "SettlementNode15": {
+      "n": "Sharpless （火卫一）",
+      "e": "Corpus",
+      "t": "移动防御"
+    },
+    "SettlementNode16": {
+      "n": "Wendell （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode17": {
+      "n": "Flimnap （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode18": {
+      "n": "Opik （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode19": {
+      "n": "Todd （火卫一）",
+      "e": "Corpus",
+      "t": "远古惩戒"
+    },
+    "SettlementNode20": {
+      "n": "Iliad （火卫一）",
+      "e": "Corpus",
+      "t": "刺杀"
+    },
+    "MercuryHUB": {
+      "n": "Larunda 中继站 （水星）",
+      "e": "Grineer",
+      "t": "中继站"
+    },
+    "VenusHUB": {
+      "n": "Vesper 中继站 （金星）",
+      "e": "Corpus",
+      "t": "中继站"
+    },
+    "EarthHUB": {
+      "n": "Strata 中继站 （地球）",
+      "e": "Grineer",
+      "t": "中继站"
+    },
+    "SaturnHUB": {
+      "n": "Kronia 中继站 （土星）",
+      "e": "Grineer",
+      "t": "中继站"
+    },
+    "ErisHUB": {
+      "n": "Kuiper 中继站 （阋神星）",
+      "e": "Infested",
+      "t": "中继站"
+    },
+    "EuropaHUB": {
+      "n": "Leonov 中继站 （欧罗巴）",
+      "e": "Corpus",
+      "t": "中继站"
+    },
+    "PlutoHUB": {
+      "n": "Orcus 中继站 （冥王星）",
+      "e": "Corpus",
+      "t": "中继站"
+    },
+    "TradeHUB1": {
+      "n": "Marro 的集市 （火星）",
+      "e": "Corpus",
+      "t": "中继站"
+    },
+    "EventNode0": {
+      "n": "Balor",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode1": {
+      "n": "Tethra",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode2": {
+      "n": "行动代号：摧毁传送门",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode3": {
+      "n": "Elatha",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode4": {
+      "n": "机械叛乱",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "EventNode5": {
+      "n": "Birog",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode6": {
+      "n": "Tyl Reygor 深海研究所",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode7": {
+      "n": "机械叛乱",
+      "e": "Corpus",
+      "t": "拦截"
+    },
+    "EventNode8": {
+      "n": "Corb",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode9": {
+      "n": "行动代号：摧毁传送门 Pt. 2",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode10": {
+      "n": "Lugh",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode11": {
+      "n": "Nemed",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode12": {
+      "n": "行动代号：永冻晶矿前线",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode13": {
+      "n": "流沙",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode14": {
+      "n": "摧毁传送门",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode15": {
+      "n": "行动代号：永冻晶矿前线",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode16": {
+      "n": "行动代号：永冻晶矿前线",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode17": {
+      "n": "机械叛乱",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "EventNode18": {
+      "n": "机械叛乱",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "EventNode19": {
+      "n": "火星",
+      "e": "Grineer",
+      "t": "防御"
+    },
+    "EventNode20": {
+      "n": "Tyl Regor 深海研究所",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode22": {
+      "n": "Tyl Regor 深海研究所",
+      "e": "Sentient",
+      "t": "远古惩戒"
+    },
+    "EventNode24": {
+      "n": "地球",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "EventNode25": {
+      "n": "地球",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "EventNode26": {
+      "n": "地球",
+      "e": "Grineer",
+      "t": "歼灭"
+    },
+    "EventNode27": {
+      "n": "虚空",
+      "e": "堕落者",
+      "t": "生存"
+    },
+    "EventNode28": {
+      "n": "土星",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "EventNode29": {
+      "n": "土星",
+      "e": "Grineer",
+      "t": "刺杀"
+    },
+    "EventNode30": {
+      "n": "Ganymede （木星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "EventNode31": {
+      "n": "Ganymede （木星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "EventNode32": {
+      "n": "Ganymede （木星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "EventNode33": {
+      "n": "Ganymede （木星）",
+      "e": "Corpus",
+      "t": "中断"
+    },
+    "EventNode34": {
+      "n": "地球",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "EventNode35": {
+      "n": "地球",
+      "e": "Grineer",
+      "t": "竞技场"
+    },
+    "EventNode761": {
+      "n": "指数之场",
+      "e": "Corpus",
+      "t": "竞技场"
+    },
+    "EventNode762": {
+      "n": "指数之场 Pt 2",
+      "e": "Corpus",
+      "t": "竞技场"
+    },
+    "EventNode763": {
+      "n": "指数之场：耐久",
+      "e": "Corpus",
+      "t": "竞技场"
+    },
+    "PvpNode0": {
+      "n": "武形密仪 夺取中枢",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode1": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode2": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode3": {
+      "n": "武形密仪 夺取中枢",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode4": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode5": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode6": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode7": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode8": {
+      "n": "武形密仪",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode9": {
+      "n": "武形密仪 团队歼夺",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode10": {
+      "n": "武形密仪 歼夺",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode11": {
+      "n": "武形密仪 歼夺",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode12": {
+      "n": "武形密仪 歼夺",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode13": {
+      "n": "战术警报 : 雪球大战!",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "PvpNode14": {
+      "n": "武形秘仪：急速锋刃",
+      "e": "Tenno",
+      "t": "武形密仪"
+    },
+    "ClanNode0": {
+      "n": "Romula （金星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode1": {
+      "n": "Malva （金星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode2": {
+      "n": "Coba （地球）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode3": {
+      "n": "Tikal （地球）",
+      "e": "Infested",
+      "t": "黑暗地带挖掘"
+    },
+    "ClanNode4": {
+      "n": "Sinai （木星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode5": {
+      "n": "Cameria （木星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode6": {
+      "n": "Larzac （欧罗巴）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode7": {
+      "n": "Cholistan （欧罗巴）",
+      "e": "Infested",
+      "t": "黑暗地带挖掘"
+    },
+    "ClanNode8": {
+      "n": "Kadesh （火星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode9": {
+      "n": "Wahiba （火星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode10": {
+      "n": "Memphis （火卫一）",
+      "e": "Infested",
+      "t": "黑暗地带叛逃"
+    },
+    "ClanNode11": {
+      "n": "Zeugma （火卫一）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode12": {
+      "n": "Caracol （土星）",
+      "e": "Infested",
+      "t": "黑暗地带叛逃"
+    },
+    "ClanNode13": {
+      "n": "Piscinas （土星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode14": {
+      "n": "Amarna （赛德娜）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode15": {
+      "n": "Sangeru （赛德娜）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode16": {
+      "n": "Ur （天王星）",
+      "e": "Infested",
+      "t": "黑暗地带中断"
+    },
+    "ClanNode17": {
+      "n": "Assur （天王星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode18": {
+      "n": "Akkad （阋神星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode19": {
+      "n": "Zabala （阋神星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode20": {
+      "n": "Yursa （海王星）",
+      "e": "Infested",
+      "t": "黑暗地带叛逃"
+    },
+    "ClanNode21": {
+      "n": "Kelashin （海王星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode22": {
+      "n": "Seimeni （谷神星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode23": {
+      "n": "Gabii （谷神星）",
+      "e": "Infested",
+      "t": "黑暗地带生存"
+    },
+    "ClanNode24": {
+      "n": "Sechura （冥王星）",
+      "e": "Infested",
+      "t": "黑暗地带防御"
+    },
+    "ClanNode25": {
+      "n": "Hieracon （冥王星）",
+      "e": "Infested",
+      "t": "黑暗地带挖掘"
+    },
+    "/Lotus/Types/Keys/SortieBossKeyPhorid": {
+      "n": "突击 Boss: Phorid",
+      "e": "Infested",
+      "t": "刺杀"
+    },
+    "CrewBattleNode501": {
+      "n": "魔多星团 （土星比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode502": {
+      "n": "深眠峡道 （地球比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode503": {
+      "n": "虹桥回声 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "CrewBattleNode504": {
+      "n": "时空坐标 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "CrewBattleNode505": {
+      "n": "Ruse 战场 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode509": {
+      "n": "虚无神殿 （地球比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode510": {
+      "n": "Gian 点 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode511": {
+      "n": "卫标星环 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "爆发"
+    },
+    "CrewBattleNode512": {
+      "n": "欧文－哈克 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "CrewBattleNode513": {
+      "n": "维斯珀峡道 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "奥菲斯"
+    },
+    "CrewBattleNode514": {
+      "n": "落没之耀 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "CrewBattleNode515": {
+      "n": "无垠华盖 （金星比邻星域）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "CrewBattleNode516": {
+      "n": "女娲之矿 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "CrewBattleNode518": {
+      "n": "奥加尔星团 （地球比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode519": {
+      "n": "克姆地带 （地球比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode521": {
+      "n": "初裔冰渍区 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "CrewBattleNode522": {
+      "n": "本达尔星团 （地球比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode523": {
+      "n": "诱惑之景 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "奥菲斯"
+    },
+    "CrewBattleNode524": {
+      "n": "星主之握 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "爆发"
+    },
+    "CrewBattleNode525": {
+      "n": "薄暮星团 （海王星比邻星域）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "CrewBattleNode526": {
+      "n": "胡夫之遣 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "奥菲斯"
+    },
+    "CrewBattleNode527": {
+      "n": "七魅之息 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "CrewBattleNode528": {
+      "n": "冥渡 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "CrewBattleNode529": {
+      "n": "利益外缘 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "爆发"
+    },
+    "CrewBattleNode530": {
+      "n": "卡希欧安息处 （土星比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode531": {
+      "n": "芬顿之地 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "CrewBattleNode533": {
+      "n": "诺朵星峡 （土星比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode534": {
+      "n": "卢帕星道 （土星比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode535": {
+      "n": "水域星团 （土星比邻星域）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode536": {
+      "n": "外域星轴 （冥王星比邻星域）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "CrewBattleNode538": {
+      "n": "蒲芦 （面纱）",
+      "e": "Corpus",
+      "t": "歼灭"
+    },
+    "CrewBattleNode539": {
+      "n": "努秘 （面纱）",
+      "e": "Corpus",
+      "t": "爆发"
+    },
+    "CrewBattleNode540": {
+      "n": "曲银之地 （面纱）",
+      "e": "Corpus",
+      "t": "防御"
+    },
+    "CrewBattleNode541": {
+      "n": "深情之域 （面纱）",
+      "e": "Corpus",
+      "t": "奥菲斯"
+    },
+    "CrewBattleNode542": {
+      "n": "鹿岩 （面纱）",
+      "e": "Corpus",
+      "t": "生存"
+    },
+    "CrewBattleNode543": {
+      "n": "萨米尔星云 （面纱）",
+      "e": "Corpus",
+      "t": "间谍"
+    },
+    "CrewBattleNode550": {
+      "n": "恩斯尤区格 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode551": {
+      "n": "Ganalen 之墓 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode552": {
+      "n": "Rya （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode553": {
+      "n": "弗雷沙 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode554": {
+      "n": "H-2 星云 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "CrewBattleNode555": {
+      "n": "R-9 星云 （面纱）",
+      "e": "Grineer",
+      "t": "前哨战"
+    },
+    "SolNode723": {
+      "n": "Brutus （Uranus）",
+      "e": "Corpus",
+      "t": "Ascension"
+    },
+    "SolarisUnitedHub1": {
+      "n": "Fortuna （Venus）",
+      "e": "Corpus",
+      "t": "中继站"
+    }
+  },
+  "missionTypes": {
+    "MT_ARENA": "竞技场",
+    "MT_ARTIFACT": "中断",
+    "MT_ASSAULT": "强袭",
+    "MT_ASSASSINATION": "刺杀",
+    "MT_CAPTURE": "捕获",
+    "MT_CORRUPTION": "虚空洪流",
+    "MT_DEFENSE": "防御",
+    "MT_DISRUPTION": "中断",
+    "MT_EVACUATION": "叛逃",
+    "MT_EXCAVATE": "挖掘",
+    "MT_EXTERMINATION": "歼灭",
+    "MT_HIVE": "清巢",
+    "MT_INTEL": "间谍",
+    "MT_LANDSCAPE": "自由探索",
+    "MT_MOBILE_DEFENSE": "移动防御",
+    "MT_PURIFY": "疫变体资源回收",
+    "MT_PVP": "武形秘仪",
+    "MT_RESCUE": "救援",
+    "MT_RETRIEVAL": "劫持",
+    "MT_SABOTAGE": "破坏",
+    "MT_SECTOR": "黑暗地带",
+    "MT_SURVIVAL": "生存",
+    "MT_TERRITORY": "拦截",
+    "MT_DEFAULT": "未知",
+    "MT_VOID_CASCADE": "虚空覆涌",
+    "MT_ASCENSION": "升腾（Ascension）",
+    "MT_ALCHEMY": "元素转换",
+    "MT_ENDLESS_CAPTURE": "Legacyte 收割（无尽捕获）"
+  },
+  "factions": {
+    "FC_CORPUS": "Corpus 科普斯",
+    "FC_CORRUPTED": "堕落者",
+    "FC_GRINEER": "Grineer 克隆尼",
+    "FC_INFESTATION": "Infested 疫变体",
+    "FC_OROKIN": "奥罗金",
+    "FC_SENTIENT": "Sentient 心智者",
+    "FC_MITW": "墙中人",
+    "FC_NARMER": "Narmer 纳尔默",
+    "FC_SCALDRA": "Scaldra",
+    "FC_TECHROT": "Techrot",
+    "FC_TENNO": "Tenno 天诺",
+    "FC_NEUTRAL": "中立",
+    "FC_UMBRA": "Umbra 暗影"
+  },
+  "syndicates": {
+    "ArbitersSyndicate": "均衡仲裁者",
+    "CephalonSudaSyndicate": "中枢苏达",
+    "NewLokaSyndicate": "新世间",
+    "PerrinSyndicate": "佩兰数列",
+    "SteelMeridianSyndicate": "钢铁防线",
+    "RedVeilSyndicate": "血色面纱",
+    "CetusSyndicate": "奥斯特隆人（希图斯）",
+    "QuillsSyndicate": "夜羽",
+    "AssassinsSyndicate": "刺客集团",
+    "EventSyndicate": "活动集团",
+    "SolarisSyndicate": "索拉里斯联盟",
+    "VoxSyndicate": "索拉里斯之声",
+    "VentKidsSyndicate": "通风小子",
+    "EntratiSyndicate": "英择谛",
+    "NecraloidSyndicate": "殁世械灵",
+    "KahlSyndicate": "卡尔驻军",
+    "ZarimanSyndicate": "坚守者",
+    "RadioLegionSyndicate": "土星六号之狼",
+    "RadioLegion2Syndicate": "使徒",
+    "RadioLegion3Syndicate": "玻璃匠",
+    "RadioLegionIntermissionSyndicate": "间歇",
+    "RadioLegionIntermission2Syndicate": "间歇II",
+    "RadioLegionIntermission3Syndicate": "间歇III",
+    "RadioLegionIntermission4Syndicate": "Nora 的精选",
+    "RadioLegionIntermission5Syndicate": "Nora 的混选 Vol. 1",
+    "RadioLegionIntermission6Syndicate": "Nora 的混选 Vol. 2",
+    "EntratiLabSyndicate": "科维兽",
+    "HexSyndicate": "The Hex 六人组"
+  },
+  "sortieModifiers": {
+    "SORTIE_MODIFIER_LOW_ENERGY": "能量减少",
+    "SORTIE_MODIFIER_IMPACT": "敌人物理强化（冲击）",
+    "SORTIE_MODIFIER_SLASH": "敌人物理强化（切割）",
+    "SORTIE_MODIFIER_PUNCTURE": "敌人物理强化（穿刺）",
+    "SORTIE_MODIFIER_EXIMUS": "卓越者大本营",
+    "SORTIE_MODIFIER_MAGNETIC": "敌人元素强化（磁力）",
+    "SORTIE_MODIFIER_CORROSIVE": "敌人元素强化（腐蚀）",
+    "SORTIE_MODIFIER_VIRAL": "敌人元素强化（病毒）",
+    "SORTIE_MODIFIER_ELECTRICITY": "敌人元素强化（电击）",
+    "SORTIE_MODIFIER_RADIATION": "敌人元素强化（辐射）",
+    "SORTIE_MODIFIER_GAS": "敌人元素强化（毒气）",
+    "SORTIE_MODIFIER_FIRE": "敌人元素强化（火焰）",
+    "SORTIE_MODIFIER_EXPLOSION": "敌人元素强化（爆炸）",
+    "SORTIE_MODIFIER_FREEZE": "敌人元素强化（冰冻）",
+    "SORTIE_MODIFIER_TOXIN": "敌人元素强化（毒素）",
+    "SORTIE_MODIFIER_POISON": "敌人元素强化（毒素）",
+    "SORTIE_MODIFIER_HAZARD_RADIATION": "辐射灾害",
+    "SORTIE_MODIFIER_HAZARD_MAGNETIC": "电磁异常",
+    "SORTIE_MODIFIER_HAZARD_FOG": "浓雾",
+    "SORTIE_MODIFIER_HAZARD_FIRE": "环境危害：火灾",
+    "SORTIE_MODIFIER_HAZARD_ICE": "低温外泄",
+    "SORTIE_MODIFIER_HAZARD_COLD": "极度寒冷",
+    "SORTIE_MODIFIER_ARMOR": "敌人护甲强化",
+    "SORTIE_MODIFIER_SHIELDS": "敌人护盾强化",
+    "SORTIE_MODIFIER_SECONDARY_ONLY": "副武器限定",
+    "SORTIE_MODIFIER_SHOTGUN_ONLY": "霰弹枪限定",
+    "SORTIE_MODIFIER_SNIPER_ONLY": "狙击枪限定",
+    "SORTIE_MODIFIER_RIFLE_ONLY": "突击步枪限定",
+    "SORTIE_MODIFIER_MELEE_ONLY": "仅限近战",
+    "SORTIE_MODIFIER_BOW_ONLY": "弓箭限定"
+  },
+  "sortieDesc": {
+    "SORTIE_MODIFIER_LOW_ENERGY": "战甲的能量上限降低为四分之一，并且能量恢复速率也会大大降低。",
+    "SORTIE_MODIFIER_IMPACT": "敌人造成更高的冲击伤害，终结伤害不会被减免。",
+    "SORTIE_MODIFIER_SLASH": "敌人造成更高的切割伤害，终结伤害不会被减免。",
+    "SORTIE_MODIFIER_PUNCTURE": "敌人造成更高的穿刺伤害，终结伤害不会被减免。",
+    "SORTIE_MODIFIER_EXIMUS": "卓越者单位在这个任务中的生成率更高，并且携带的光环数量更多。",
+    "SORTIE_MODIFIER_MAGNETIC": "敌人造成更高的磁力伤害，并对磁力伤害具有更高的抗性",
+    "SORTIE_MODIFIER_CORROSIVE": "敌人造成更高的腐蚀伤害，并对腐蚀伤害具有更高的抗性",
+    "SORTIE_MODIFIER_VIRAL": "敌人造成更高的病毒伤害，并对病毒伤害具有更高的抗性",
+    "SORTIE_MODIFIER_ELECTRICITY": "敌人造成更高的电元素伤害，并对电元素伤害具有更高的抗性",
+    "SORTIE_MODIFIER_RADIATION": "敌人造成更高的辐射伤害，并对辐射伤害具有更高的抗性",
+    "SORTIE_MODIFIER_GAS": "敌人造成更高的毒气伤害，并对毒气伤害具有更高的抗性",
+    "SORTIE_MODIFIER_FIRE": "敌人造成更高的火焰伤害，并对火焰伤害具有更高的抗性",
+    "SORTIE_MODIFIER_EXPLOSION": "敌人造成更高的爆炸伤害，并对爆炸伤害具有更高的抗性",
+    "SORTIE_MODIFIER_FREEZE": "敌人造成更高的冰冻伤害，并对冰冻伤害具有更高的抗性",
+    "SORTIE_MODIFIER_TOXIN": "敌人造成更高的毒元素伤害，并对毒元素伤害具有更高的抗性",
+    "SORTIE_MODIFIER_POISON": "敌人造成更高的毒元素伤害，并对毒元素伤害具有更高的抗性",
+    "SORTIE_MODIFIER_HAZARD_RADIATION": "任何收到的伤害以及版图中的绿云都将触发辐射效果。",
+    "SORTIE_MODIFIER_HAZARD_MAGNETIC": "重力减弱，蓝色磁体气泡会对穿过它的玩家造成磁力伤害。",
+    "SORTIE_MODIFIER_HAZARD_FOG": "由于浓雾在区域内聚集，区域内的可视距离受到限制。星球的强制夜间循环就像地球一样。",
+    "SORTIE_MODIFIER_HAZARD_FIRE": "版图中有火灾危险。战甲生命值减半。崩溃迫在眉睫。",
+    "SORTIE_MODIFIER_HAZARD_ICE": "最大护盾容量减半。触及冰块会导致冰冻异常。",
+    "SORTIE_MODIFIER_HAZARD_COLD": "行动能力大幅下降。此模式的冲刺功能已被禁用。",
+    "SORTIE_MODIFIER_ARMOR": "敌人已有强化护甲，腐蚀触发效果将减半",
+    "SORTIE_MODIFIER_SHIELDS": "敌人已有强化护盾，建议使用磁力元素。",
+    "SORTIE_MODIFIER_SECONDARY_ONLY": "此任务中只能使用次要武器，其他类型的武器将会自动被换掉",
+    "SORTIE_MODIFIER_SHOTGUN_ONLY": "此任务中只能使用霰弹枪，其他类型的武器将会自动被换掉",
+    "SORTIE_MODIFIER_SNIPER_ONLY": "此任务中只能使用狙击枪，其他类型的武器将会自动被换掉",
+    "SORTIE_MODIFIER_RIFLE_ONLY": "此任务中只能使用突击步枪，其他类型的武器将会自动被换掉",
+    "SORTIE_MODIFIER_MELEE_ONLY": "此任务中只能使用近战武器，其他类型的武器将会自动被换掉",
+    "SORTIE_MODIFIER_BOW_ONLY": "此任务中只能使用弓箭类武器，其他类型的武器将会自动被换掉"
+  },
+  "sortieBosses": {
+    "SORTIE_BOSS_HYENA": {
+      "name": "鬣狗群",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_KELA": {
+      "name": "Kela De Thaym",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_VOR": {
+      "name": "Vor 上尉",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_RUK": {
+      "name": "Sargas Ruk 将军",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_HEK": {
+      "name": "Vay Hek 议员",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_KRIL": {
+      "name": "Lech Kril 中尉",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_TYL": {
+      "name": "Tyl Regor",
+      "faction": "Grineer"
+    },
+    "SORTIE_BOSS_JACKAL": {
+      "name": "豺狼",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_ALAD": {
+      "name": "Alad V",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_AMBULAS": {
+      "name": "Ambulas",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_NEF": {
+      "name": "Nef Anyo",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_RAPTOR": {
+      "name": "猛禽",
+      "faction": "Corpus"
+    },
+    "SORTIE_BOSS_PHORID": {
+      "name": "Phorid",
+      "faction": "Infestation"
+    },
+    "SORTIE_BOSS_LEPHANTIS": {
+      "name": "Lephantis",
+      "faction": "Infestation"
+    },
+    "SORTIE_BOSS_INFALAD": {
+      "name": "异融者 Alad V",
+      "faction": "Infestation"
+    },
+    "SORTIE_BOSS_CORRUPTED_VOR": {
+      "name": "堕落 Vor",
+      "faction": "堕落者"
+    },
+    "SORTIE_BOSS_BOREAL": {
+      "name": "诡文枭主",
+      "faction": "合一众"
+    },
+    "SORTIE_BOSS_AMAR": {
+      "name": "欺谋狼主",
+      "faction": "合一众"
+    },
+    "SORTIE_BOSS_NIRA": {
+      "name": "混沌蛇主",
+      "faction": "合一众"
+    },
+    "SORTIE_BOSS_PAAZUL": {
+      "name": "帕祖",
+      "faction": "合一众"
+    }
+  },
+  "upgrades": {
+    "GAMEPLAY_KILL_XP_AMOUNT": "任务击杀经验",
+    "GAMEPLAY_PICKUP_AMOUNT": "资源掉落加成",
+    "GAMEPLAY_MONEY_REWARD_AMOUNT": "现金奖励数量",
+    "GAMEPLAY_MONEY_PICKUP_AMOUNT": "现金掉落加成"
+  },
+  "operations": {
+    "MULTIPLY": {
+      "value": "乘以",
+      "symbol": "×"
+    }
+  },
+  "tiers": {
+    "VoidT1": "古纪",
+    "VoidT2": "前纪",
+    "VoidT3": "中纪",
+    "VoidT4": "后纪",
+    "VoidT5": "安魂",
+    "VoidT6": "全能"
+  },
+  "lang": {
+    "/Lotus/Language/G1Quests/HeatFissuresEventScore": "已封印裂缝数",
+    "/Lotus/Language/Menu/CorpusInvasionGeneric": "Corpus 入侵",
+    "/Lotus/Language/Menu/InfestedInvasionGeneric": "疫变体入侵",
+    "/Lotus/Language/Menu/GrineerInvasionGeneric": "Grineer 入侵",
+    "/Lotus/Language/Menu/InfestedInvasionBoss": "疫变体首领入侵",
+    "/Lotus/Language/G1Quests/HeatFissuresEventName": "热美亚裂缝",
+    "/Lotus/Language/G1Quests/HeatFissuresEventDesc": "封印热美亚裂缝，阻止熔岩蔓延。",
+    "/Lotus/Language/TauPrologue/RoadToTauEventName": "纪元行动：通往 Tau",
+    "/Lotus/Language/TauPrologue/RoadToTauShortEventDesc": "在阋神星周边的疫变体节点击败感染者，收割月之血肉！",
+    "/Lotus/Language/TauPrologue/RoadToTauEventScore": "全球收割进度",
+    "/Lotus/Language/TauPrologue/EventAlertTitle": "检测到月之血肉聚集点",
+    "/Lotus/Language/GameModes/RecurringNightwave": "循环赛季活动",
+    "/Lotus/Language/GameModes/RecurringGhoulAlert": "复发的食尸鬼警报",
+    "/Lotus/Language/GameModes/RecurringGhoulAlertDesc": "周期性出现的食尸鬼警报活动。",
+    "/Lotus/Language/Locations/Earth": "地球",
+    "/Lotus/Language/Locations/Fortress": "Kuva 要塞",
+    "/Lotus/Language/Store/NewPlayerCategoryTitle": "新手推荐",
+    "/Lotus/Language/Menu/Store_New": "新品上架",
+    "/Lotus/Language/Store/CommunityCategoryTitle": "社区精选",
+    "/Lotus/Language/Menu/StorePopular": "热门商品",
+    "/Lotus/Language/Menu/Store_Tennogen": "TennoGen 创意工坊",
+    "/Lotus/Language/Store/HeirloomCategoryTitle": "传承典藏",
+    "/Lotus/Language/Menu/Store_Sale": "特惠促销",
+    "/Lotus/Language/Menu/Store_Wishlist": "愿望清单",
+    "/Lotus/Language/Store/Store_PremiumBundles": "高级组合包",
+    "/Lotus/Language/CommunityMessages/JoinDiscord": "加入官方 Discord"
+  },
+  "items": {
+    "Forma": "塑形块 Forma",
+    "Kuva": "赤毒 Kuva",
+    "50000Credits": "50000 现金",
+    "RoadToTauEventResource": "通往 Tau 活动资源",
+    "SortieRewards": "突击奖励池",
+    "ArchonSortieRewards": "执政官突击奖励池",
+    "BioComponent": "生物组件",
+    "EnergyComponent": "能量组件",
+    "OrokinCatalyst": "奥罗金催化剂",
+    "OrokinReactor": "奥罗金反应堆",
+    "ExilusAdapter": "Exilus 槽连接器",
+    "NitainExtract": "尼坦精华",
+    "Aya": "阿耶 Aya",
+    "VoidTraces": "虚空印痕",
+    "Endo": "融合单元 Endo",
+    "Cryotic": "低温合金",
+    "Oxium": "氧化合金",
+    "Tellurium": "碲元素",
+    "ArgonCrystal": "氩结晶",
+    "NeuralSensors": "神经元",
+    "OrokinCell": "奥罗金电池",
+    "Morphics": "形态场",
+    "Gallium": "镓",
+    "ControlModule": "控制模块",
+    "AlloyPlate": "合金板",
+    "Ferrite": "铁氧体",
+    "NanoSpores": "纳米孢子",
+    "Circuits": "电路板",
+    "PolymerBundle": "聚合束",
+    "Plastids": "质体",
+    "Rubedo": "红化结晶",
+    "Salvage": "回收金属",
+    "Neurodes": "神经电极",
+    "Neurode": "神经电极",
+    "SnipetronVandalBlueprint": "Snipetron Vandal 蓝图（狙击枪）",
+    "KarakWraithBarrel": "卡拉卡·亡魂 枪管",
+    "VandalCrpBFG": "Vandal 系 Corpus 武器",
+    "Fist": "拳套类武器",
+    "HeatFissuresEventScore": "已封印裂缝数"
+  },
+  "itemRules": {
+    "/Bundles/": "组合包",
+    "/Packages/": "礼包",
+    "/Packs/": "礼包",
+    "/AvatarImages/": "头像",
+    "/Glyph": "头像图案",
+    "/Skins/": "外观",
+    "/Ephemera": "幻纹",
+    "/Syandana": "披饰",
+    "/Sigil": "纹章",
+    "/Emblem": "徽章",
+    "/Armor/": "护甲",
+    "/Armour/": "护甲",
+    "/Tattoo": "纹身",
+    "/Display": "展示物",
+    "/Deco": "装饰",
+    "/Recipes/": "蓝图",
+    "/Weapons/": "武器",
+    "/Warframes/": "战甲",
+    "/StoreItems/Types/": "商城物品",
+    "/Upgrades/": "强化",
+    "/Mods/": "MOD",
+    "/Helmets/": "头盔",
+    "/Sugatra": "武器挂饰",
+    "/Palette": "配色",
+    "/Relics/": "遗物",
+    "/Resources/": "资源",
+    "/Blueprints/": "蓝图"
+  },
+  "hubNames": {
+    "SaturnHUB": "土星中继站",
+    "TradeHUB1": "贸易中继站",
+    "EarthHUB": "地球中继站",
+    "EuropaHUB": "木卫二中继站",
+    "ErisHUB": "阋神星中继站",
+    "VenusHUB": "金星中继站",
+    "MercuryHUB": "水星中继站",
+    "MarsHUB": "火星中继站",
+    "JupiterHUB": "木星中继站",
+    "NeptuneHUB": "海王星中继站",
+    "PlutoHUB": "冥王星中继站",
+    "SednaHUB": "塞德娜中继站",
+    "UranusHUB": "天王星中继站",
+    "CeresHUB": "谷神星中继站",
+    "LuaHUB": "月球中继站",
+    "VoidHUB": "虚空中继站",
+    "RelayHUB": "中继站"
+  },
+  "fieldDesc": {
+    "WorldSeed": "世界种子，客户端用于校验与生成随机内容",
+    "Version": "世界状态协议版本号",
+    "MobileVersion": "移动端客户端版本",
+    "BuildLabel": "当前构建标签（时间 / 哈希）",
+    "Time": "本次快照生成时间，Unix 秒",
+    "Events": "社区公告、新闻与多语言推广文案，Prop 为跳转链接",
+    "Goals": "全服社区目标与活动进度（HealthPct、Count、Goal）",
+    "Alerts": "限时警报任务，含任务信息与奖励",
+    "Sorties": "每日突击，三阶段任务与词缀，首领 Boss",
+    "LiteSorties": "执政官猎杀（Archon Hunt），三阶段任务，首领为执政官",
+    "SyndicateMissions": "各集团每日刷新的任务节点集合",
+    "ActiveMissions": "虚空裂隙任务，Modifier 为遗物纪元，Hard 表示钢铁之路",
+    "GlobalUpgrades": "全局增益，如双倍击杀经验",
+    "FlashSales": "商城限时促销条目（含大量长期组合包）",
+    "SkuSales": "SKU 级促销，通常为空",
+    "InGameMarket": "游戏内商城落地页分类与商品",
+    "Invasions": "入侵事件，攻防双方进度与各自奖励",
+    "HubEvents": "中继站事件，通常为空",
+    "NodeOverrides": "星图节点显隐覆写",
+    "VoidTraders": "虚空商人 Baro，出现时间、位置与商品清单",
+    "PrimeVaultTraders": "Prime 宝库商人，上架物品与轮换排期",
+    "VoidStorms": "九重天虚空风暴节点与强度层",
+    "PrimeAccessAvailability": "Prime Access 当前售卖状态",
+    "DailyDeals": "每日特惠，折扣、价格与限量库存",
+    "LibraryInfo": "资料库 / Simaris 最近完成的研究目标",
+    "PVPChallengeInstances": "Conclave 每日与每周挑战实例",
+    "PersistentEnemies": "持久敌人（追猎者一类），通常为空",
+    "PVPAlternativeModes": "PVP 替代模式，通常为空",
+    "PVPActiveTournaments": "PVP 锦标赛，通常为空",
+    "ProjectPct": "建造项目进度百分比数组",
+    "ConstructionProjects": "氏族 / 社区建造项目，通常为空",
+    "TwitchPromos": "Twitch 掉宝推广，通常为空",
+    "ExperimentRecommended": "实验性推荐内容，通常为空",
+    "EndlessXpSchedule": "无尽任务经验加成轮换与可选奖励",
+    "ForceLogoutVersion": "强制客户端下线的版本号，0 表示不强制",
+    "FeaturedGuilds": "推荐展示的氏族信息",
+    "SeasonInfo": "赛季（Nightwave 类）信息、参数与活跃挑战",
+    "KnownCalendarSeasons": "日历季节配置与每日条目",
+    "Conquests": "征服模式任务、难度与变量",
+    "Descents": "Descent 模式挑战组（暂无统一中文译名）",
+    "Tmp": "临时多语言文本，本身是字符串化的 JSON",
+    "WeeklyVaultBonusRewards": "周常宝库加成星球与奖励"
+  }
+}
