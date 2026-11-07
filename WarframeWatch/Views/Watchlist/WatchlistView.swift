@@ -2,15 +2,9 @@ import SwiftUI
 
 public struct WatchlistView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
-    @State private var selectedTab: WatchTab = .catalog
+    @State private var onlySubscribed: Bool = false
+    @State private var searchQuery: String = ""
     @State private var selectedCategory: WatchCategory = .all
-    
-    public enum WatchTab: String, CaseIterable, Identifiable {
-        case catalog = "监控大盘"
-        case watchlist = "已关注"
-        case diff = "数据变动"
-        public var id: String { rawValue }
-    }
     
     public init() {}
     
@@ -19,26 +13,58 @@ public struct WatchlistView: View {
             ZStack {
                 WFTheme.bgPrimary.ignoresSafeArea()
                 
-                VStack(spacing: 10) {
-                    // Main Segment Picker
-                    Picker("模式", selection: $selectedTab) {
-                        ForEach(WatchTab.allCases) { tab in
-                            Text(tab.rawValue).tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
-                    .padding(.top, 4)
+                VStack(spacing: 8) {
+                    // Single Compact Filter Bar (Search + Star Toggle)
+                    topSearchBar
+                    
+                    // Simple Category Strip
+                    categoryStrip
                     
                     ScrollView {
-                        LazyVStack(spacing: 12) {
-                            switch selectedTab {
-                            case .catalog:
-                                catalogContent
-                            case .watchlist:
-                                watchlistContent
-                            case .diff:
-                                DiffListView(diffs: vm.currentDiffs)
+                        LazyVStack(spacing: 10) {
+                            let items = filteredItems
+                            
+                            if items.isEmpty {
+                                emptyState
+                            } else {
+                                // 1. Active Section
+                                let activeItems = items.filter { $0.state.isActive }
+                                if !activeItems.isEmpty {
+                                    sectionHeader("正在发生 (\(activeItems.count))", color: WFTheme.green)
+                                    ForEach(activeItems) { evaluated in
+                                        WatchCatalogRowView(evaluated: evaluated) {
+                                            toggleSubscription(evaluated)
+                                        }
+                                    }
+                                }
+                                
+                                // 2. Deterministic Cycles Section
+                                let deterministicItems = items.filter {
+                                    if case .deterministic = $0.state { return true }
+                                    return false
+                                }
+                                if !deterministicItems.isEmpty {
+                                    sectionHeader("确定性周期与重置 (\(deterministicItems.count))", color: WFTheme.cyan)
+                                    ForEach(deterministicItems) { evaluated in
+                                        WatchCatalogRowView(evaluated: evaluated) {
+                                            toggleSubscription(evaluated)
+                                        }
+                                    }
+                                }
+                                
+                                // 3. Probabilistic & Upcoming Section
+                                let probabilisticItems = items.filter {
+                                    if case .probabilistic = $0.state { return true }
+                                    return false
+                                }
+                                if !probabilisticItems.isEmpty {
+                                    sectionHeader("监控库与预测 (\(probabilisticItems.count))", color: WFTheme.gold)
+                                    ForEach(probabilisticItems) { evaluated in
+                                        WatchCatalogRowView(evaluated: evaluated) {
+                                            toggleSubscription(evaluated)
+                                        }
+                                    }
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -49,260 +75,174 @@ public struct WatchlistView: View {
                     }
                 }
             }
-            .navigationTitle("全景监控与关注")
+            .navigationTitle("关注中心")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
     
-    // MARK: - 监控大盘 (全量穷举 + 实时评估 + 概率拟合)
-    @ViewBuilder
-    private var catalogContent: some View {
-        // Category Pills Filter
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(WatchCategory.allCases) { cat in
-                    CategoryPillView(category: cat, isSelected: selectedCategory == cat) {
-                        selectedCategory = cat
-                    }
-                }
-            }
-            .padding(.horizontal, 2)
-            .padding(.vertical, 2)
-        }
-        
-        let allItems = vm.evaluatedCatalogItems
-        let filteredItems = allItems.filter { item in
-            selectedCategory == .all || item.item.category == selectedCategory
-        }
-        
-        // Summary KPI Banner
-        let activeCount = allItems.filter { $0.state.isActive }.count
-        let subscribedCount = vm.subscribedCatalogIds.count
-        
-        WFCard {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("当前正在发生")
-                        .font(.system(size: 11))
-                        .foregroundColor(WFTheme.textMuted)
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(WFTheme.green)
-                            .frame(width: 8, height: 8)
-                        Text("\(activeCount)")
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(WFTheme.green)
-                        Text("项")
-                            .font(.system(size: 12))
-                            .foregroundColor(WFTheme.textSecondary)
-                    }
-                }
-                
-                Divider()
-                    .frame(height: 24)
-                    .background(WFTheme.border)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("我的关注项目")
-                        .font(.system(size: 11))
-                        .foregroundColor(WFTheme.textMuted)
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(WFTheme.gold)
-                        Text("\(subscribedCount)")
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundColor(WFTheme.gold)
-                        Text("项")
-                            .font(.system(size: 12))
-                            .foregroundColor(WFTheme.textSecondary)
-                    }
-                }
-                
-                Spacer()
-                
-                Text("优先呈现进行中")
-                    .font(.system(size: 11))
+    // MARK: - Single Compact Search & Star Bar
+    private var topSearchBar: some View {
+        HStack(spacing: 8) {
+            HStack {
+                Image(systemName: "magnifyingglass")
                     .foregroundColor(WFTheme.textMuted)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(WFTheme.bgSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-        }
-        
-        // Catalog Items List
-        ForEach(filteredItems) { evaluated in
-            WatchCatalogRowView(evaluated: evaluated) {
-                vm.toggleCatalogSubscription(evaluated.item.id)
-            }
-        }
-    }
-    
-    // MARK: - 已关注清单
-    @ViewBuilder
-    private var watchlistContent: some View {
-        // Notification permission banner if not authorized
-        if !vm.isNotificationAuthorized {
-            WFCard {
-                HStack(spacing: 10) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(WFTheme.gold)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("开启到期提醒通知")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(WFTheme.textPrimary)
-                        Text("在关注任务到期前 30 分钟向您发送本地通知提醒。")
-                            .font(.system(size: 11))
-                            .foregroundColor(WFTheme.textSecondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Button("开启") {
-                        vm.requestNotificationPermission()
-                    }
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(WFTheme.bgPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(WFTheme.gold)
-                    .clipShape(Capsule())
-                }
-            }
-        }
-        
-        let subscribedCatalog = vm.evaluatedCatalogItems.filter { $0.isSubscribed }
-        let manualItems = vm.sortedWatchItems
-        
-        if subscribedCatalog.isEmpty && manualItems.isEmpty {
-            VStack(spacing: 12) {
-                Image(systemName: "star.slash.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(WFTheme.textMuted)
+                    .font(.system(size: 13))
                 
-                Text("还没有关注任何条目")
-                    .font(.system(size: 14, weight: .semibold))
+                TextField("搜索监控目标 / 道具 / 模式…", text: $searchQuery)
                     .foregroundColor(WFTheme.textPrimary)
+                    .font(.system(size: 13))
                 
-                Text("切换到【监控大盘】点击 ★，或在任务列表点击右上角星标，即可在此集中追踪。")
-                    .font(.system(size: 12))
-                    .foregroundColor(WFTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 60)
-        } else {
-            if !subscribedCatalog.isEmpty {
-                HStack {
-                    Text("监控大盘已关注 (\(subscribedCatalog.count))")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(WFTheme.gold)
-                    Spacer()
-                }
-                .padding(.top, 4)
-                
-                ForEach(subscribedCatalog) { evaluated in
-                    WatchCatalogRowView(evaluated: evaluated) {
-                        vm.toggleCatalogSubscription(evaluated.item.id)
-                    }
-                }
-            }
-            
-            if !manualItems.isEmpty {
-                HStack {
-                    Text("单节点手动星标 (\(manualItems.count))")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(WFTheme.cyan)
-                    Spacer()
-                }
-                .padding(.top, 8)
-                
-                ForEach(manualItems) { item in
-                    manualWatchItemRow(item: item)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func manualWatchItemRow(item: WatchItem) -> some View {
-        WFCard(isHighlighted: item.isExpiringSoon) {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        TagView(item.section, style: .gold)
-                        
-                        Text(item.label)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(WFTheme.textPrimary)
-                            .lineLimit(1)
-                    }
-                    
-                    if let exp = item.expiry {
-                        Text("到期: \(exp.formatted(date: .abbreviated, time: .shortened))")
-                            .font(.system(size: 11, design: .monospaced))
+                if !searchQuery.isEmpty {
+                    Button {
+                        searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
                             .foregroundColor(WFTheme.textMuted)
+                            .font(.system(size: 12))
                     }
                 }
-                
-                Spacer()
-                
-                CountdownView(targetDate: item.expiry)
-                
-                // Toggle reminder
-                Button {
-                    vm.toggleReminder(for: item.key)
-                } label: {
-                    Image(systemName: item.isReminderEnabled ? "bell.fill" : "bell.slash")
-                        .font(.system(size: 14))
-                        .foregroundColor(item.isReminderEnabled ? WFTheme.gold : WFTheme.textMuted)
-                        .frame(width: 28, height: 28)
-                }
-                
-                // Delete
-                Button {
-                    withAnimation {
-                        vm.toggleWatchItem(key: item.key, label: item.label, section: item.section, expiry: item.expiry)
-                    }
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 13))
-                        .foregroundColor(WFTheme.red)
-                        .frame(width: 28, height: 28)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Category Pill Component
-private struct CategoryPillView: View {
-    let category: WatchCategory
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: category.icon)
-                    .font(.system(size: 11))
-                Text(category.rawValue)
-                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .foregroundColor(isSelected ? WFTheme.bgPrimary : WFTheme.textSecondary)
-            .background(isSelected ? WFTheme.gold : WFTheme.panel)
-            .clipShape(Capsule())
+            .padding(.vertical, 7)
+            .background(WFTheme.panelElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
-                Capsule()
-                    .stroke(isSelected ? Color.clear : WFTheme.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(WFTheme.border, lineWidth: 1)
             )
+            
+            // Only Subscribed Toggle
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    onlySubscribed.toggle()
+                    HapticService.selection()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: onlySubscribed ? "star.fill" : "star")
+                        .font(.system(size: 12))
+                    Text("仅看关注")
+                        .font(.system(size: 12, weight: onlySubscribed ? .bold : .medium))
+                }
+                .foregroundColor(onlySubscribed ? WFTheme.gold : WFTheme.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(onlySubscribed ? WFTheme.gold.opacity(0.15) : WFTheme.panelElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(onlySubscribed ? WFTheme.gold.opacity(0.4) : WFTheme.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal)
+        .padding(.top, 4)
+    }
+    
+    // MARK: - Category Strip
+    private var categoryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(WatchCategory.allCases) { cat in
+                    let isSelected = selectedCategory == cat
+                    Button {
+                        selectedCategory = cat
+                        HapticService.selection()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: cat.icon)
+                                .font(.system(size: 10))
+                            Text(cat.rawValue)
+                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .foregroundColor(isSelected ? WFTheme.bgPrimary : WFTheme.textSecondary)
+                        .background(isSelected ? WFTheme.gold : WFTheme.panelElevated)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? Color.clear : WFTheme.border, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 2)
+        }
+    }
+    
+    // MARK: - Section Header
+    @ViewBuilder
+    private func sectionHeader(_ title: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(color)
+            
+            Spacer()
+        }
+        .padding(.top, 8)
+        .padding(.horizontal, 2)
+    }
+    
+    // MARK: - Filtered Items Logic
+    private var filteredItems: [EvaluatedWatchItem] {
+        vm.evaluatedCatalogItems.filter { item in
+            if onlySubscribed && !item.isSubscribed {
+                return false
+            }
+            if selectedCategory != .all && item.item.category != selectedCategory {
+                return false
+            }
+            if searchQuery.isEmpty {
+                return true
+            }
+            return item.item.title.localizedCaseInsensitiveContains(searchQuery) ||
+                   item.item.subtitle.localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
+    
+    private func toggleSubscription(_ item: EvaluatedWatchItem) {
+        vm.toggleCatalogSubscription(item.item.id)
+        HapticService.impact(.medium)
+        
+        // Native local notification scheduling for deterministic items
+        if case let .deterministic(nextDate, _, note) = item.state {
+            if !item.isSubscribed {
+                // Scheduled
+                let watch = WatchItem(key: item.item.id, label: item.item.title, section: note, expiry: nextDate)
+                NotificationService.shared.scheduleReminder(for: watch)
+            } else {
+                NotificationService.shared.cancelReminder(for: item.item.id)
+            }
+        }
+    }
+    
+    // MARK: - Empty State
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "star.slash")
+                .font(.system(size: 32))
+                .foregroundColor(WFTheme.textMuted)
+            
+            Text(onlySubscribed ? "暂无已关注条目" : "未搜索到匹配项")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(WFTheme.textPrimary)
+            
+            Text(onlySubscribed ? "点击卡片右侧 ★ 即可加入关注，或取消「仅看关注」浏览全量监控库。" : "尝试更换搜索词或切换分类。")
+                .font(.system(size: 11))
+                .foregroundColor(WFTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 }

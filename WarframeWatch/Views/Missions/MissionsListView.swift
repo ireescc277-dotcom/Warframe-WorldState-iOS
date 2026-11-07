@@ -51,32 +51,14 @@ public struct MissionsListView: View {
     
     // MARK: - Category Picker
     private var categoryPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(WorldStateViewModel.MissionCategory.allCases) { cat in
-                    let isSelected = vm.selectedMissionCategory == cat
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            vm.selectedMissionCategory = cat
-                        }
-                    } label: {
-                        Text(cat.rawValue)
-                            .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                            .foregroundColor(isSelected ? WFTheme.gold : WFTheme.textSecondary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .background(isSelected ? WFTheme.gold.opacity(0.15) : WFTheme.panelElevated)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(isSelected ? WFTheme.gold.opacity(0.4) : WFTheme.border, lineWidth: 1)
-                            )
-                    }
-                }
+        Picker("任务类别", selection: $vm.selectedMissionCategory) {
+            ForEach(WorldStateViewModel.MissionCategory.allCases) { cat in
+                Text(cat.rawValue).tag(cat)
             }
-            .padding(.horizontal)
-            .padding(.top, 4)
         }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.top, 4)
     }
     
     // MARK: - Fissures Extra Filter Bar
@@ -85,13 +67,13 @@ public struct MissionsListView: View {
             // Era Picker
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    eraPill(title: "全部纪元", value: nil)
-                    eraPill(title: "古纪 T1", value: "VoidT1")
-                    eraPill(title: "前纪 T2", value: "VoidT2")
-                    eraPill(title: "中纪 T3", value: "VoidT3")
-                    eraPill(title: "后纪 T4", value: "VoidT4")
-                    eraPill(title: "安魂 T5", value: "VoidT5")
-                    eraPill(title: "全能 T6", value: "VoidT6")
+                    eraPill(title: "全部", value: nil)
+                    eraPill(title: "古纪", value: "VoidT1")
+                    eraPill(title: "前纪", value: "VoidT2")
+                    eraPill(title: "中纪", value: "VoidT3")
+                    eraPill(title: "后纪", value: "VoidT4")
+                    eraPill(title: "安魂", value: "VoidT5")
+                    eraPill(title: "全能", value: "VoidT6")
                 }
                 .padding(.horizontal)
             }

@@ -73,10 +73,10 @@ public final class DictionaryService {
             "VoidT4": "后纪", "VoidT5": "安魂", "VoidT6": "全能"
         ]
         factions = [
-            "FC_CORPUS": "Corpus 科普斯", "FC_GRINEER": "Grineer 克隆尼",
-            "FC_INFESTATION": "Infested 疫变体", "FC_CORRUPTED": "堕落者",
-            "FC_OROKIN": "奥罗金", "FC_SENTIENT": "Sentient 心智者",
-            "FC_TENNO": "Tenno 天诺", "FC_MITW": "墙中人", "FC_NARMER": "Narmer 纳尔默"
+            "FC_CORPUS": "Corpus", "FC_GRINEER": "Grineer",
+            "FC_INFESTATION": "Infested", "FC_CORRUPTED": "堕落者",
+            "FC_OROKIN": "奥罗金", "FC_SENTIENT": "Sentient",
+            "FC_TENNO": "Tenno", "FC_MITW": "低语者", "FC_NARMER": "合一众"
         ]
         missionTypes = [
             "MT_DEFENSE": "防御", "MT_SURVIVAL": "生存", "MT_CAPTURE": "捕获",
@@ -137,12 +137,12 @@ public final class DictionaryService {
     public func tierName(_ t: String?) -> String {
         guard let t = t, !t.isEmpty else { return "未知纪元" }
         switch t {
-        case "VoidT1": return "古纪 T1"
-        case "VoidT2": return "前纪 T2"
-        case "VoidT3": return "中纪 T3"
-        case "VoidT4": return "后纪 T4"
-        case "VoidT5": return "安魂 T5"
-        case "VoidT6": return "全能 T6"
+        case "VoidT1": return "古纪"
+        case "VoidT2": return "前纪"
+        case "VoidT3": return "中纪"
+        case "VoidT4": return "后纪"
+        case "VoidT5": return "安魂"
+        case "VoidT6": return "全能"
         default: return tiers[t] ?? t
         }
     }
