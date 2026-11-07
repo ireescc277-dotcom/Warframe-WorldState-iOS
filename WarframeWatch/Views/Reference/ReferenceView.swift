@@ -80,7 +80,7 @@ public struct ReferenceView: View {
                         metadataSection
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 90)
                 }
             }
             .navigationTitle("资料库与工具")

@@ -35,7 +35,7 @@ public struct HubEventsView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 24)
+                        .padding(.bottom, 90)
                     }
                     .refreshable {
                         await vm.refreshData()

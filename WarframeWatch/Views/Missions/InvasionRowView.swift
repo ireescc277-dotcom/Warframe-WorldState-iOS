@@ -17,14 +17,9 @@ public struct InvasionRowView: View {
         let key = "invasions|\(invasion.Node)"
         
         WFCard {
+            // Line 1: Status tag + Star
             HStack(alignment: .center) {
-                HStack(spacing: 6) {
-                    TagView(invasion.Completed ? "已结束" : "入侵争夺", style: invasion.Completed ? .neutral : .red, icon: "swords")
-                    
-                    Text(nodeName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(WFTheme.textPrimary)
-                }
+                TagView(invasion.Completed ? "已结束" : "入侵争夺", style: invasion.Completed ? .neutral : .red, icon: "swords")
                 
                 Spacer()
                 
@@ -36,7 +31,15 @@ public struct InvasionRowView: View {
                 )
             }
             
-            // Tug-of-war progress
+            // Line 2: Node Name (Full width)
+            Text(nodeName)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(WFTheme.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+            
+            // Line 3: Tug-of-war progress
             DuelProgressBarView(
                 count: invasion.Count,
                 goal: invasion.targetGoal,
@@ -45,12 +48,12 @@ public struct InvasionRowView: View {
             )
             .padding(.vertical, 4)
             
-            // Rewards for both factions
+            // Line 4: Rewards for both factions
             HStack(alignment: .top) {
                 // Attacker reward
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("攻方支持奖励")
-                        .font(.system(size: 10))
+                    Text("攻方: \(attacker)")
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(WFTheme.cyan)
                     
                     rewardItems(invasion.AttackerReward)
@@ -58,47 +61,47 @@ public struct InvasionRowView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Divider()
-                    .background(WFTheme.border)
-                    .frame(height: 36)
                 
                 // Defender reward
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("守方支持奖励")
-                        .font(.system(size: 10))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("守方: \(defender)")
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(WFTheme.gold)
                     
                     rewardItems(invasion.DefenderReward)
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(8)
-            .background(WFTheme.panelElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .padding(.top, 2)
         }
     }
     
     @ViewBuilder
     private func rewardItems(_ reward: MissionReward?) -> some View {
-        if let counted = reward?.countedItems, !counted.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(counted) { item in
+        if let reward = reward {
+            if let items = reward.countedItems, !items.isEmpty {
+                ForEach(items) { item in
                     Text("\(dict.itemName(item.ItemType)) ×\(item.ItemCount)")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(WFTheme.textPrimary)
-                        .lineLimit(1)
                 }
-            }
-        } else if let items = reward?.items, !items.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
+            } else if let items = reward.items, !items.isEmpty {
                 ForEach(items, id: \.self) { item in
                     Text(dict.itemName(item))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(WFTheme.textPrimary)
-                        .lineLimit(1)
                 }
+            } else if let credits = reward.credits, credits > 0 {
+                Text("\(credits.formatted()) 现金")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(WFTheme.textSecondary)
+            } else {
+                Text("暂无奖励")
+                    .font(.system(size: 11))
+                    .foregroundColor(WFTheme.textMuted)
             }
         } else {
-            Text("无奖励 / 阵营战败")
+            Text("暂无奖励")
                 .font(.system(size: 11))
                 .foregroundColor(WFTheme.textMuted)
         }

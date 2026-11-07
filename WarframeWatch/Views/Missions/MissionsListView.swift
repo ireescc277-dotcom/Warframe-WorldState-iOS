@@ -35,7 +35,7 @@ public struct MissionsListView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 24)
+                        .padding(.bottom, 90)
                     }
                     .refreshable {
                         await vm.refreshData()
@@ -129,10 +129,12 @@ public struct MissionsListView: View {
             }
         } label: {
             Text(title)
-                .font(.system(size: 11, weight: isSelected ? .bold : .medium, design: .monospaced))
+                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .foregroundColor(isSelected ? WFTheme.cyan : WFTheme.textSecondary)
                 .padding(.horizontal, 9)
-                .padding(.vertical, 4)
+                .padding(.vertical, 5)
                 .background(isSelected ? WFTheme.cyan.opacity(0.15) : WFTheme.panelElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(

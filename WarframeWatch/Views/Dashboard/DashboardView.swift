@@ -38,7 +38,7 @@ public struct DashboardView: View {
                         }
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 90)
                 }
                 .refreshable {
                     await vm.refreshData()

@@ -136,10 +136,15 @@ public final class DictionaryService {
     
     public func tierName(_ t: String?) -> String {
         guard let t = t, !t.isEmpty else { return "未知纪元" }
-        if let name = tiers[t] {
-            return "\(name) (\(t))"
+        switch t {
+        case "VoidT1": return "古纪 T1"
+        case "VoidT2": return "前纪 T2"
+        case "VoidT3": return "中纪 T3"
+        case "VoidT4": return "后纪 T4"
+        case "VoidT5": return "安魂 T5"
+        case "VoidT6": return "全能 T6"
+        default: return tiers[t] ?? t
         }
-        return t
     }
     
     public func upgradeName(_ u: String?) -> String {

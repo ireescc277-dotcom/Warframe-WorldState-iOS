@@ -40,17 +40,19 @@ public struct TagView: View {
     }
     
     public var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             if let icon = icon {
                 Image(systemName: icon)
                     .font(.system(size: 9, weight: .bold))
             }
             Text(title)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundColor(style.foregroundColor)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2.5)
         .background(style.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: WFTheme.badgeRadius))
         .overlay(

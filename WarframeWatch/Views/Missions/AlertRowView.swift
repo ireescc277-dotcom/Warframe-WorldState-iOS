@@ -17,14 +17,9 @@ public struct AlertRowView: View {
         let key = "alerts|\(location) · \(mType)"
         
         WFCard {
+            // Line 1: Badge + Countdown + Star
             HStack(alignment: .center) {
-                HStack(spacing: 6) {
-                    TagView(alert.Tag ?? "警报", style: .gold, icon: "bell.badge.fill")
-                    
-                    Text("\(mType) · \(location)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(WFTheme.textPrimary)
-                }
+                TagView(alert.Tag ?? "限时警报", style: .gold, icon: "bell.badge.fill")
                 
                 Spacer()
                 
@@ -32,29 +27,36 @@ public struct AlertRowView: View {
                 
                 StarButton(
                     key: key,
-                    label: "警报 · \(location)",
+                    label: "警报 · \(mType) · \(location)",
                     section: "限时警报",
                     expiry: alert.Expiry?.date
                 )
             }
             
-            HStack {
-                HStack(spacing: 8) {
-                    Text(faction)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(WFTheme.textSecondary)
-                    
-                    if let minL = alert.MissionInfo?.minEnemyLevel, let maxL = alert.MissionInfo?.maxEnemyLevel {
-                        Text("等级 \(minL) - \(maxL)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(WFTheme.textMuted)
-                    }
+            // Line 2: Main title (Mission + Node)
+            Text("\(mType) · \(location)")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(WFTheme.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+            
+            // Line 3: Faction & Level
+            HStack(spacing: 8) {
+                Text(faction)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(WFTheme.textSecondary)
+                
+                if let minL = alert.MissionInfo?.minEnemyLevel, let maxL = alert.MissionInfo?.maxEnemyLevel {
+                    Text("等级 \(minL) - \(maxL)")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(WFTheme.textMuted)
                 }
                 
                 Spacer()
             }
             
-            // Reward badges
+            // Line 4: Reward badges
             if let reward = alert.MissionInfo?.missionReward {
                 HStack(spacing: 6) {
                     if let credits = reward.credits, credits > 0 {

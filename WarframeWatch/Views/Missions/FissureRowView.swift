@@ -17,6 +17,7 @@ public struct FissureRowView: View {
         let key = "fissures|\(fissure.id)"
         
         WFCard {
+            // Line 1: Badges + Countdown + Star
             HStack(alignment: .center) {
                 HStack(spacing: 6) {
                     TagView(eraName, style: eraStyle(fissure.Modifier), icon: "circle.circle.fill")
@@ -24,11 +25,6 @@ public struct FissureRowView: View {
                     if fissure.isSteelPath {
                         TagView("钢铁之路", style: .red, icon: "shield.slash.fill")
                     }
-                    
-                    Text(nodeName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(WFTheme.textPrimary)
-                        .lineLimit(1)
                 }
                 
                 Spacer()
@@ -37,19 +33,28 @@ public struct FissureRowView: View {
                 
                 StarButton(
                     key: key,
-                    label: "虚空裂隙 · \(nodeName)",
+                    label: "虚空裂隙 · \(mType) · \(nodeName)",
                     section: "虚空裂隙",
                     expiry: fissure.Expiry?.date
                 )
             }
             
-            HStack {
+            // Line 2: Mission Type & Node/Planet (Prominent, Full Width, No Truncation)
+            Text("\(mType) · \(nodeName)")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundColor(WFTheme.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+            
+            // Line 3: Meta details
+            HStack(spacing: 8) {
                 HStack(spacing: 4) {
                     Image(systemName: "flag.fill")
                         .font(.system(size: 10))
                         .foregroundColor(WFTheme.cyan)
-                    Text("任务模式: \(mType)")
-                        .font(.system(size: 12))
+                    Text("裂隙探索")
+                        .font(.system(size: 11))
                         .foregroundColor(WFTheme.textSecondary)
                 }
                 
@@ -57,7 +62,7 @@ public struct FissureRowView: View {
                 
                 if let region = fissure.Region {
                     Text("区域 #\(region)")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(WFTheme.textMuted)
                 }
             }
