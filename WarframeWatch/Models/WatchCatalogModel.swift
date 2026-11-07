@@ -332,7 +332,7 @@ public final class WatchCatalogDatabase {
                 icon: "shield.checkered",
                 frequencyHint: "每日固定时间，必得紫卡/塑形块/雕塑",
                 evaluate: { ws in
-                    if let s = ws.Sortie, let exp = s.Expiry?.date {
+                    if let s = ws.Sorties?.first, let exp = s.Expiry?.date {
                         return .deterministic(nextDate: exp, timeRemaining: max(0, exp.timeIntervalSinceNow), note: "距离今日突击任务结算")
                     }
                     return .deterministic(nextDate: Date().addingTimeInterval(43200), timeRemaining: 43200, note: "每日固定周期")
@@ -433,7 +433,7 @@ public final class WatchCatalogDatabase {
                         if deal.Discount >= 50 {
                             let exp = deal.Expiry?.date
                             let rem = exp?.timeIntervalSinceNow ?? 0
-                            return .active(location: "\(deal.Discount)% 折扣 · \(deal.Item)", expiry: exp, remainingSeconds: rem)
+                            return .active(location: "\(deal.Discount)% 折扣 · \(deal.StoreItem)", expiry: exp, remainingSeconds: rem)
                         } else {
                             let exp = deal.Expiry?.date ?? Date().addingTimeInterval(3600 * 12)
                             return .deterministic(nextDate: exp, timeRemaining: max(0, exp.timeIntervalSinceNow), note: "当前折扣 \(deal.Discount)%，距离下次进货")
