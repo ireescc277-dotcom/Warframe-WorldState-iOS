@@ -51,10 +51,13 @@ public struct NightwaveActsView: View {
     @ViewBuilder
     private func actRow(ch: SeasonChallenge) -> some View {
         let isDone = completedActs.contains(ch.id)
-        let actName = dict.humanize(ch.Challenge.split(separator: "/").last.map(String.init) ?? ch.Challenge)
+        let info = dict.challengeInfo(ch.Challenge)
+        let isHard = ch.Challenge.contains("/WeeklyHard/")
+        let badgeStyle: TagStyle = ch.isDaily ? .cyan : (isHard ? .red : .gold)
+        let badgeText = ch.isDaily ? "每日 +\(info.points)" : (isHard ? "精英周常 +\(info.points)" : "每周 +\(info.points)")
         
         WFCard {
-            HStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 Button {
                     withAnimation(.spring()) {
                         if isDone {
@@ -65,29 +68,31 @@ public struct NightwaveActsView: View {
                     }
                 } label: {
                     Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18))
+                        .font(.system(size: 20))
                         .foregroundColor(isDone ? WFTheme.green : WFTheme.textMuted)
+                        .padding(.top, 2)
                 }
                 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        TagView(ch.isDaily ? "每日行动" : "每周行动", style: ch.isDaily ? .cyan : .gold)
+                        TagView(badgeText, style: badgeStyle)
                         
-                        Text(actName)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(isDone ? WFTheme.textMuted : WFTheme.textPrimary)
-                            .strikethrough(isDone)
+                        Spacer()
+                        
+                        CountdownView(targetDate: ch.Expiry?.date, showSeconds: false)
                     }
                     
-                    Text(ch.Challenge)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(WFTheme.textMuted)
-                        .lineLimit(1)
+                    Text(info.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(isDone ? WFTheme.textMuted : WFTheme.textPrimary)
+                        .strikethrough(isDone)
+                    
+                    Text(info.desc)
+                        .font(.system(size: 12))
+                        .foregroundColor(isDone ? WFTheme.textMuted : WFTheme.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                
-                Spacer()
-                
-                CountdownView(targetDate: ch.Expiry?.date, showSeconds: false)
             }
         }
     }

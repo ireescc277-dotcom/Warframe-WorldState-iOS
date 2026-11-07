@@ -24,8 +24,8 @@ targets:
       path: WarframeWatch/Info.plist
       properties:
         CFBundleDisplayName: "Warframe 世界状态"
-        CFBundleShortVersionString: "1.0.5"
-        CFBundleVersion: "5"
+        CFBundleShortVersionString: "1.0.6"
+        CFBundleVersion: "6"
         UILaunchStoryboardName: LaunchScreen
         LSRequiresIPhoneOS: true
         UIDeviceFamily: [1]

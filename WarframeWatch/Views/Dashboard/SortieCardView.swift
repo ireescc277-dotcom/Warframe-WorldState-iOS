@@ -12,25 +12,13 @@ public struct SortieCardView: View {
     
     public var body: some View {
         let bossName = dict.bossName(sortie.Boss)
+        let faction = dict.faction(sortie.Faction)
         let key = "sortie|\(sortie.Boss)"
         
         WFCard(isHighlighted: true) {
             // Header
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        TagView("每日突击", style: .gold, icon: "shield.checkered")
-                        Text(bossName)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(WFTheme.gold)
-                    }
-                    
-                    if let reward = sortie.Reward {
-                        Text("奖励池: \(dict.itemName(reward))")
-                            .font(.system(size: 11))
-                            .foregroundColor(WFTheme.textMuted)
-                    }
-                }
+                TagView("每日突击", style: .gold, icon: "shield.checkered")
                 
                 Spacer()
                 
@@ -43,6 +31,20 @@ public struct SortieCardView: View {
                     expiry: sortie.Expiry?.date
                 )
             }
+            
+            // Boss Title (Full Width)
+            HStack {
+                Text(bossName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(WFTheme.gold)
+                
+                Text("(\(faction))")
+                    .font(.system(size: 13))
+                    .foregroundColor(WFTheme.textSecondary)
+                
+                Spacer()
+            }
+            .padding(.vertical, 1)
             
             Divider()
                 .background(WFTheme.border)
@@ -68,13 +70,12 @@ public struct SortieCardView: View {
         
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("第 \(index) 关 · \(node)")
+                Text("第 \(index) 关 · \(mType) · \(node)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
+                    .lineLimit(1)
                 
                 Spacer()
-                
-                TagView(mType, style: .cyan)
             }
             
             HStack(alignment: .top, spacing: 6) {
@@ -85,6 +86,7 @@ public struct SortieCardView: View {
                         .font(.system(size: 11))
                         .foregroundColor(WFTheme.textSecondary)
                         .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

@@ -152,11 +152,50 @@ public final class DictionaryService {
         return upgrades[u] ?? u
     }
     
-    public func localizedDesc(_ tag: String?) -> String {
-        guard let tag = tag, !tag.isEmpty else { return "" }
-        if let str = lang[tag] { return str }
-        let last = tag.split(separator: "/").last.map(String.init) ?? tag
-        return humanize(last)
+    // MARK: - Nightwave Challenge Lookups
+    
+    private let nightwaveChallenges: [String: (title: String, desc: String)] = [
+        "SeasonDailyCompleteMission": ("任务执行者", "完成任意 1 次战役或任务"),
+        "SeasonDailyKillEnemiesWithFinishers": ("处决消灭", "使用终结攻击消灭 10 名敌人"),
+        "SeasonDailyKillEnemiesWithHeadshots": ("精确爆头", "使用爆头射击消灭 20 名敌人"),
+        "SeasonDailyBulletJump": ("旋身飞跃", "执行 150 次旋身飞跃"),
+        "SeasonDailyGlide": ("飞身瞄准", "在飞身瞄准状态下消灭 20 名敌人"),
+        "SeasonDailyHack": ("黑客入侵", "成功破解 8 个控制台"),
+        "SeasonDailyPickUpEnergy": ("能量补给", "收集 20 个能量球"),
+        "SeasonDailyPickUpMods": ("MOD 收集", "收集 8 张 MOD"),
+        "SeasonDailySlideKill": ("滑行击杀", "在滑行状态下消灭 20 名敌人"),
+        "SeasonDailyDeploySpecter": ("部署魅影", "部署任意 1 个魅影"),
+        "SeasonWeeklyPermanentCompleteMissions": ("行动前锋", "完成 15 次任意任务"),
+        "SeasonWeeklyPermanentKillEximus": ("卓越者猎手", "消灭 30 名卓越者敌人"),
+        "SeasonWeeklyPermanentKillEnemies": ("大扫荡", "消灭 500 名敌人"),
+        "SeasonWeeklyCollectHundredResources": ("丰饶收获", "收集 100 份地图资源"),
+        "SeasonWeeklyMineRarePlainsResources": ("夜灵矿工", "在夜灵平野采掘 6 块稀有宝石"),
+        "SeasonWeeklyHardFriendsMirrorDefense": ("镜像倒影", "在镜像防御任务中完成 20 轮/波"),
+        "SeasonWeeklyHardTheManyMadeWhole": ("合众为一", "在钢铁之路消灭 100 名敌人"),
+        "SeasonWeeklySortie": ("突击专家", "完成 1 次每日突击任务"),
+        "SeasonWeeklyOpenRelics": ("遗物开启者", "开启 10 个虚空遗物"),
+        "SeasonWeeklySanctuaryOnslaught": ("圣殿狂热", "在圣殿突袭中通过第 8 轮"),
+        "SeasonWeeklyEliminateArchon": ("执政官斩首", "击溃 1 名执政官"),
+        "SeasonWeeklyNetracell": ("牢狱守卫", "完成 3 次奈忒拉牢狱任务"),
+        "SeasonWeeklyDeepArchimedea": ("深层探险", "完成深层阿尔希米亚研究"),
+        "SeasonWeeklyHelminth": ("喂养巨兽", "向 Helminth 喂食任意资源"),
+        "SeasonWeeklyCatchRareFish": ("垂钓达人", "捕获 6 条稀有鱼类")
+    ]
+    
+    public func challengeInfo(_ raw: String) -> (title: String, desc: String, points: String) {
+        let tag = raw.split(separator: "/").last.map(String.init) ?? raw
+        let cleanTag = tag.replacingOccurrences(of: #"[0-9]+$"#, with: "", options: .regularExpression)
+        
+        let isDaily = raw.contains("/Daily/")
+        let isHard = raw.contains("/WeeklyHard/")
+        let points = isDaily ? "1,000" : (isHard ? "7,000" : "4,500")
+        
+        if let info = nightwaveChallenges[cleanTag] ?? nightwaveChallenges[tag] {
+            return (info.title, info.desc, points)
+        }
+        
+        let human = humanize(tag.replacingOccurrences(of: "Season", with: "").replacingOccurrences(of: "Challenge", with: ""))
+        return (human, human, points)
     }
     
     public func itemName(_ path: String?) -> String {

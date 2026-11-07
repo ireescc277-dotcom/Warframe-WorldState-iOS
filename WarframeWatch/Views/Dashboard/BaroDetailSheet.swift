@@ -117,9 +117,10 @@ public struct BaroDetailSheet: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text(item.ItemType.split(separator: "/").last.map(String.init) ?? "")
                     .font(.system(size: 10, design: .monospaced))
