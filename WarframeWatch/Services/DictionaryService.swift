@@ -24,8 +24,8 @@ public final class DictionaryService {
     
     private func loadDictionary() {
         // Attempt to load from Bundle
-        if let url = Bundle.module.url(forResource: "DefaultDict", withExtension: "json") ??
-                     Bundle.main.url(forResource: "DefaultDict", withExtension: "json"),
+        if let url = Bundle.main.url(forResource: "DefaultDict", withExtension: "json") ??
+                     Bundle(for: DictionaryService.self).url(forResource: "DefaultDict", withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             parseDict(json)

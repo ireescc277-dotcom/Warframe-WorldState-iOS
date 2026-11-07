@@ -45,8 +45,8 @@ public final class WorldStateService {
     }
     
     public func loadBundledSnapshot() -> WorldState? {
-        if let url = Bundle.module.url(forResource: "DefaultSnapshot", withExtension: "json") ??
-                     Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json"),
+        if let url = Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json") ??
+                     Bundle(for: WorldStateService.self).url(forResource: "DefaultSnapshot", withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let state = try? JSONDecoder().decode(WorldState.self, from: data) {
             return state
