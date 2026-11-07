@@ -29,6 +29,61 @@ public struct MissionReward: Codable {
     public let countedItems: [CountedItem]?
     public let ItemType: String?
     public let ItemCount: Int?
+    
+    private enum CodingKeys: String, CodingKey {
+        case credits, xp, items, countedItems, ItemType, ItemCount
+    }
+    
+    public init(credits: Int? = nil, xp: Int? = nil, items: [String]? = nil, countedItems: [CountedItem]? = nil, ItemType: String? = nil, ItemCount: Int? = nil) {
+        self.credits = credits
+        self.xp = xp
+        self.items = items
+        self.countedItems = countedItems
+        self.ItemType = ItemType
+        self.ItemCount = ItemCount
+    }
+    
+    public init(from decoder: Decoder) throws {
+        // 1. If it's a keyed container (a standard JSON dictionary object)
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            self.credits = try? container.decodeIfPresent(Int.self, forKey: .credits)
+            self.xp = try? container.decodeIfPresent(Int.self, forKey: .xp)
+            self.items = try? container.decodeIfPresent([String].self, forKey: .items)
+            self.countedItems = try? container.decodeIfPresent([CountedItem].self, forKey: .countedItems)
+            self.ItemType = try? container.decodeIfPresent(String.self, forKey: .ItemType)
+            self.ItemCount = try? container.decodeIfPresent(Int.self, forKey: .ItemCount)
+            return
+        }
+        
+        // 2. If it's an unkeyed container (DE often sends empty array `[]` when no rewards)
+        if (try? decoder.unkeyedContainer()) != nil {
+            self.credits = nil
+            self.xp = nil
+            self.items = nil
+            self.countedItems = nil
+            self.ItemType = nil
+            self.ItemCount = nil
+            return
+        }
+        
+        // 3. Fallback
+        self.credits = nil
+        self.xp = nil
+        self.items = nil
+        self.countedItems = nil
+        self.ItemType = nil
+        self.ItemCount = nil
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(credits, forKey: .credits)
+        try container.encodeIfPresent(xp, forKey: .xp)
+        try container.encodeIfPresent(items, forKey: .items)
+        try container.encodeIfPresent(countedItems, forKey: .countedItems)
+        try container.encodeIfPresent(ItemType, forKey: .ItemType)
+        try container.encodeIfPresent(ItemCount, forKey: .ItemCount)
+    }
 }
 
 public struct CountedItem: Codable, Identifiable {
