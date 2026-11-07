@@ -15,9 +15,11 @@ public struct MissionsListView: View {
                     // Category Picker Bar
                     categoryPicker
                     
-                    // Extra Filters for Fissures
+                    // Extra Filters for Fissures & Invasions
                     if vm.selectedMissionCategory == .fissures {
                         fissureFiltersBar
+                    } else if vm.selectedMissionCategory == .invasions {
+                        invasionFiltersBar
                     }
                     
                     // Missions List Feed
@@ -116,6 +118,65 @@ public struct MissionsListView: View {
                         .stroke(vm.isSteelPathOnly ? WFTheme.red.opacity(0.5) : WFTheme.border, lineWidth: 1)
                 )
             }
+            .padding(.trailing)
+        }
+    }
+    
+    // MARK: - Invasions Extra Filter Bar
+    private var invasionFiltersBar: some View {
+        HStack {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(WorldStateViewModel.InvasionFilter.allCases) { filter in
+                        let isSelected = vm.selectedInvasionFilter == filter
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                vm.selectedInvasionFilter = filter
+                                HapticService.selection()
+                            }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                .foregroundColor(isSelected ? WFTheme.bgPrimary : WFTheme.textSecondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(isSelected ? WFTheme.gold : WFTheme.panelElevated)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(isSelected ? Color.clear : WFTheme.border, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            
+            // Hide Completed Toggle
+            Button {
+                withAnimation {
+                    vm.hideCompletedInvasions.toggle()
+                    HapticService.selection()
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: vm.hideCompletedInvasions ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 11))
+                    Text("仅未结算")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(vm.hideCompletedInvasions ? WFTheme.green : WFTheme.textMuted)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(vm.hideCompletedInvasions ? WFTheme.green.opacity(0.12) : WFTheme.panelElevated)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(vm.hideCompletedInvasions ? WFTheme.green.opacity(0.4) : WFTheme.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
             .padding(.trailing)
         }
     }

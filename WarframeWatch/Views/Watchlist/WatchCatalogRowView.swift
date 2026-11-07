@@ -42,6 +42,7 @@ public struct WatchCatalogRowView: View {
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                             onToggleSubscription()
+                            HapticService.impact(.medium)
                         }
                     } label: {
                         Image(systemName: evaluated.isSubscribed ? "star.fill" : "star")

@@ -20,6 +20,19 @@ public final class WorldStateViewModel: ObservableObject {
     @Published public var selectedMissionCategory: MissionCategory = .fissures
     @Published public var selectedHubCategory: HubCategory = .goals
     
+    // Invasions Filter
+    public enum InvasionFilter: String, CaseIterable, Identifiable {
+        case all = "全部奖励"
+        case potato = "土豆"
+        case forma = "Forma"
+        case exilus = "特殊槽"
+        case parts = "武器部件"
+        case resources = "道场材料"
+        public var id: String { rawValue }
+    }
+    @Published public var selectedInvasionFilter: InvasionFilter = .all
+    @Published public var hideCompletedInvasions: Bool = true
+    
     // Watchlist & Notifications
     @Published public var watchItems: [String: WatchItem] = [:]
     @Published public var subscribedCatalogIds: Set<String> = []
@@ -380,6 +393,48 @@ public final class WorldStateViewModel: ObservableObject {
     public var filteredInvasions: [Invasion] {
         guard let list = worldState?.Invasions else { return [] }
         return list.filter { inv in
+            if hideCompletedInvasions && inv.Completed { return false }
+            
+            let att = inv.AttackerReward
+            let def = inv.DefenderReward
+            
+            switch selectedInvasionFilter {
+            case .all:
+                break
+            case .potato:
+                let hasPotato = (att?.containsKeyword("Catalyst") ?? false) ||
+                                (att?.containsKeyword("Reactor") ?? false) ||
+                                (att?.containsKeyword("催化剂") ?? false) ||
+                                (att?.containsKeyword("反应堆") ?? false) ||
+                                (def?.containsKeyword("Catalyst") ?? false) ||
+                                (def?.containsKeyword("Reactor") ?? false) ||
+                                (def?.containsKeyword("催化剂") ?? false) ||
+                                (def?.containsKeyword("反应堆") ?? false)
+                if !hasPotato { return false }
+            case .forma:
+                let hasForma = (att?.containsKeyword("Forma") ?? false) ||
+                               (def?.containsKeyword("Forma") ?? false)
+                if !hasForma { return false }
+            case .exilus:
+                let hasExilus = (att?.containsKeyword("Exilus") ?? false) ||
+                                (def?.containsKeyword("Exilus") ?? false)
+                if !hasExilus { return false }
+            case .parts:
+                let hasParts = (att?.containsKeyword("Wraith") ?? false) ||
+                               (att?.containsKeyword("Vandal") ?? false) ||
+                               (def?.containsKeyword("Wraith") ?? false) ||
+                               (def?.containsKeyword("Vandal") ?? false)
+                if !hasParts { return false }
+            case .resources:
+                let hasRes = (att?.containsKeyword("Mutagen") ?? false) ||
+                             (att?.containsKeyword("Fieldron") ?? false) ||
+                             (att?.containsKeyword("Detonite") ?? false) ||
+                             (def?.containsKeyword("Mutagen") ?? false) ||
+                             (def?.containsKeyword("Fieldron") ?? false) ||
+                             (def?.containsKeyword("Detonite") ?? false)
+                if !hasRes { return false }
+            }
+            
             let nodeName = dict.nodeName(inv.Node)
             let key = "invasions|\(inv.Node)"
             
