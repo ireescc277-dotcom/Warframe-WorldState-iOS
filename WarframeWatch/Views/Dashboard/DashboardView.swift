@@ -3,6 +3,7 @@ import SwiftUI
 public struct DashboardView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
     private let dict = DictionaryService.shared
+    @State private var showDebugSheet: Bool = false
     
     public init() {}
     
@@ -16,6 +17,11 @@ public struct DashboardView: View {
                         // Top Header & Stats
                         headerSection
                         
+                        // Error/Notice Banner
+                        if let err = vm.errorMessage {
+                            errorBanner(err)
+                        }
+                        
                         // KPI Grid
                         kpiGridSection
                         
@@ -24,8 +30,12 @@ public struct DashboardView: View {
                             watchlistQuickStrip
                         }
                         
-                        // Main Focus Cards
-                        focusCardsFeed
+                        // Main Focus Cards or Empty Fallback
+                        if vm.worldState == nil {
+                            emptyDataFallbackCard
+                        } else {
+                            focusCardsFeed
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 30)
@@ -38,35 +48,131 @@ public struct DashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(vm.isLive ? WFTheme.green : WFTheme.gold)
-                            .frame(width: 8, height: 8)
-                            .shadow(color: vm.isLive ? WFTheme.green : WFTheme.gold, radius: 4)
-                        
-                        Text(vm.isLive ? "实时同步" : "快照模式")
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundColor(WFTheme.textSecondary)
+                    Button {
+                        showDebugSheet = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(vm.isLive ? WFTheme.green : WFTheme.gold)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: vm.isLive ? WFTheme.green : WFTheme.gold, radius: 4)
+                            
+                            Text(vm.isLive ? "实时同步" : "快照模式")
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundColor(WFTheme.textSecondary)
+                        }
                     }
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task {
-                            await vm.refreshData()
+                    HStack(spacing: 12) {
+                        Button {
+                            showDebugSheet = true
+                        } label: {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(WFTheme.textSecondary)
                         }
-                    } label: {
-                        if vm.isLoading {
-                            ProgressView()
-                                .tint(WFTheme.cyan)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(WFTheme.cyan)
+                        
+                        Button {
+                            Task {
+                                await vm.refreshData()
+                            }
+                        } label: {
+                            if vm.isLoading {
+                                ProgressView()
+                                    .tint(WFTheme.cyan)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(WFTheme.cyan)
+                            }
                         }
                     }
                 }
             }
+            .sheet(isPresented: $showDebugSheet) {
+                DebugSheetView()
+            }
+        }
+    }
+    
+    // MARK: - Error Banner
+    private func errorBanner(_ err: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .foregroundColor(WFTheme.gold)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(err)
+                    .font(.system(size: 11))
+                    .foregroundColor(WFTheme.textPrimary)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+            
+            Button("设置/重试") {
+                showDebugSheet = true
+            }
+            .font(.system(size: 11, weight: .bold))
+            .foregroundColor(WFTheme.cyan)
+        }
+        .padding(10)
+        .background(WFTheme.gold.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(WFTheme.gold.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Empty State Fallback
+    private var emptyDataFallbackCard: some View {
+        WFCard {
+            VStack(spacing: 12) {
+                Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                    .font(.system(size: 32))
+                    .foregroundColor(WFTheme.textMuted)
+                
+                Text("暂未加载世界状态数据")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(WFTheme.textPrimary)
+                
+                Text("可能由于设备未授权局域网/蜂窝网络，或官方 API 连接受阻。您可以点击下方直接载入内置离线数据包，或配置电脑局域网 Mock 源。")
+                    .font(.system(size: 11))
+                    .foregroundColor(WFTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                
+                HStack(spacing: 12) {
+                    Button {
+                        vm.loadBundledSnapshotDirectly()
+                    } label: {
+                        Text("载入内置离线数据")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Color.black)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(WFTheme.gold)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    
+                    Button {
+                        showDebugSheet = true
+                    } label: {
+                        Text("打开调试配置")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(WFTheme.cyan)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(WFTheme.cyan.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
         }
     }
     

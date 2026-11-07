@@ -1,6 +1,51 @@
 import Foundation
 
-/// Custom date decoder handling MongoDB Extended JSON format, Unix milliseconds, and Unix seconds.
+// MARK: - Safe OID Decoder
+private enum OIDCodingKeys: String, CodingKey {
+    case oid = "$oid"
+}
+
+public struct WFOID: Codable, Equatable, Hashable {
+    public let id: String
+    
+    public init(_ id: String) {
+        self.id = id
+    }
+    
+    public init(from decoder: Decoder) throws {
+        // 1. Try keyed container: {"$oid": "..."}
+        if let container = try? decoder.container(keyedBy: OIDCodingKeys.self),
+           let oid = try? container.decode(String.self, forKey: .oid) {
+            self.id = oid
+            return
+        }
+        
+        // 2. Try single value: "string_id"
+        if let single = try? decoder.singleValueContainer(),
+           let str = try? single.decode(String.self) {
+            self.id = str
+            return
+        }
+        
+        // 3. Fallback: never fail decoding of an ID
+        self.id = UUID().uuidString
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: OIDCodingKeys.self)
+        try container.encode(id, forKey: .oid)
+    }
+}
+
+// MARK: - Safe Date Decoder
+private enum DateCodingKeys: String, CodingKey {
+    case date = "$date"
+}
+
+private enum NumberLongCodingKeys: String, CodingKey {
+    case numberLong = "$numberLong"
+}
+
 public struct WFDate: Codable, Equatable, Comparable, Hashable {
     public let date: Date
     
@@ -13,47 +58,67 @@ public struct WFDate: Codable, Equatable, Comparable, Hashable {
     }
     
     public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        
-        // 1. Try decoding extended JSON: {"$date": {"$numberLong": "12345"}} or {"$date": 12345}
-        if let dict = try? container.decode([String: AnyCodable].self),
-           let dateVal = dict["$date"] {
-            if let numLong = (dateVal.value as? [String: Any])?["$numberLong"] as? String,
-               let ms = Double(numLong) {
+        // 1. Try keyed container: {"$date": ...}
+        if let container = try? decoder.container(keyedBy: DateCodingKeys.self) {
+            // Case A: {"$date": {"$numberLong": "1793984400000"}}
+            if let nested = try? container.nestedContainer(keyedBy: NumberLongCodingKeys.self, forKey: .date),
+               let numLongStr = try? nested.decode(String.self, forKey: .numberLong),
+               let ms = Double(numLongStr) {
                 self.date = Date(timeIntervalSince1970: ms / 1000.0)
                 return
-            } else if let ms = dateVal.value as? Double {
-                self.date = Date(timeIntervalSince1970: ms / 1000.0)
+            }
+            
+            // Case B: {"$date": 1793984400000} (Double or Int)
+            if let ms = try? container.decode(Double.self, forKey: .date) {
+                let sec = ms > 1e11 ? ms / 1000.0 : ms
+                self.date = Date(timeIntervalSince1970: sec)
                 return
-            } else if let str = dateVal.value as? String, let ms = Double(str) {
-                self.date = Date(timeIntervalSince1970: ms / 1000.0)
+            }
+            
+            // Case C: {"$date": "1793984400000"} (String timestamp)
+            if let str = try? container.decode(String.self, forKey: .date), let ms = Double(str) {
+                let sec = ms > 1e11 ? ms / 1000.0 : ms
+                self.date = Date(timeIntervalSince1970: sec)
+                return
+            }
+            
+            // Case D: {"$date": "2026-11-08T03:20:00Z"} (ISO8601 string)
+            if let str = try? container.decode(String.self, forKey: .date),
+               let iso = ISO8601DateFormatter().date(from: str) {
+                self.date = iso
                 return
             }
         }
         
-        // 2. Try decoding as Double / Int timestamp directly
-        if let timestamp = try? container.decode(Double.self) {
-            let seconds = timestamp > 1e11 ? timestamp / 1000.0 : timestamp
-            self.date = Date(timeIntervalSince1970: seconds)
-            return
+        // 2. Try single value container: 1794053628 (Double / Int / String)
+        if let single = try? decoder.singleValueContainer() {
+            if let ms = try? single.decode(Double.self) {
+                let sec = ms > 1e11 ? ms / 1000.0 : ms
+                self.date = Date(timeIntervalSince1970: sec)
+                return
+            }
+            if let str = try? single.decode(String.self) {
+                if let ms = Double(str) {
+                    let sec = ms > 1e11 ? ms / 1000.0 : ms
+                    self.date = Date(timeIntervalSince1970: sec)
+                    return
+                }
+                if let iso = ISO8601DateFormatter().date(from: str) {
+                    self.date = iso
+                    return
+                }
+            }
         }
         
-        // 3. Try string timestamp
-        if let str = try? container.decode(String.self), let timestamp = Double(str) {
-            let seconds = timestamp > 1e11 ? timestamp / 1000.0 : timestamp
-            self.date = Date(timeIntervalSince1970: seconds)
-            return
-        }
-        
-        throw DecodingError.dataCorruptedError(
-            in: container,
-            debugDescription: "Cannot decode WFDate from provided value"
-        )
+        // 3. Fallback: Never fail decoding!
+        self.date = Date()
     }
     
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(Int64(date.timeIntervalSince1970 * 1000))
+        var container = encoder.container(keyedBy: DateCodingKeys.self)
+        var nested = container.nestedContainer(keyedBy: NumberLongCodingKeys.self, forKey: .date)
+        let msStr = String(Int64(date.timeIntervalSince1970 * 1000))
+        try nested.encode(msStr, forKey: .numberLong)
     }
     
     public static func < (lhs: WFDate, rhs: WFDate) -> Bool {
@@ -61,34 +126,7 @@ public struct WFDate: Codable, Equatable, Comparable, Hashable {
     }
 }
 
-/// Custom ID decoder handling MongoDB Extended JSON `{"$oid": "..."}` or string id
-public struct WFOID: Codable, Equatable, Hashable {
-    public let id: String
-    
-    public init(_ id: String) {
-        self.id = id
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let dict = try? container.decode([String: String].self), let oid = dict["$oid"] {
-            self.id = oid
-            return
-        }
-        if let str = try? container.decode(String.self) {
-            self.id = str
-            return
-        }
-        self.id = UUID().uuidString
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(["$oid": id])
-    }
-}
-
-/// Helper for heterogeneous JSON values in extended JSON structures
+// MARK: - Safe AnyCodable Helper
 public struct AnyCodable: Codable {
     public let value: Any
     
@@ -97,27 +135,45 @@ public struct AnyCodable: Codable {
     }
     
     public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self.value = NSNull()
-        } else if let bool = try? container.decode(Bool.self) {
-            self.value = bool
-        } else if let int = try? container.decode(Int.self) {
-            self.value = int
-        } else if let double = try? container.decode(Double.self) {
-            self.value = double
-        } else if let string = try? container.decode(String.self) {
-            self.value = string
-        } else if let array = try? container.decode([AnyCodable].self) {
-            self.value = array.map { $0.value }
-        } else if let dict = try? container.decode([String: AnyCodable].self) {
-            self.value = dict.mapValues { $0.value }
-        } else {
-            throw DecodingError.dataCorruptedError(
-                in: container,
-                debugDescription: "Unsupported AnyCodable value"
-            )
+        if let single = try? decoder.singleValueContainer() {
+            if single.decodeNil() {
+                self.value = NSNull()
+                return
+            } else if let bool = try? single.decode(Bool.self) {
+                self.value = bool
+                return
+            } else if let int = try? single.decode(Int.self) {
+                self.value = int
+                return
+            } else if let double = try? single.decode(Double.self) {
+                self.value = double
+                return
+            } else if let string = try? single.decode(String.self) {
+                self.value = string
+                return
+            }
         }
+        if var arr = try? decoder.unkeyedContainer() {
+            var values: [Any] = []
+            while !arr.isAtEnd {
+                if let v = try? arr.decode(AnyCodable.self) {
+                    values.append(v.value)
+                }
+            }
+            self.value = values
+            return
+        }
+        if let keyed = try? decoder.container(keyedBy: DynamicCodingKeys.self) {
+            var dict: [String: Any] = [:]
+            for k in keyed.allKeys {
+                if let v = try? keyed.decode(AnyCodable.self, forKey: k) {
+                    dict[k.stringValue] = v.value
+                }
+            }
+            self.value = dict
+            return
+        }
+        self.value = NSNull()
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -137,4 +193,11 @@ public struct AnyCodable: Codable {
             try container.encodeNil()
         }
     }
+}
+
+private struct DynamicCodingKeys: CodingKey {
+    var stringValue: String
+    init?(stringValue: String) { self.stringValue = stringValue }
+    var intValue: Int?
+    init?(intValue: Int) { return nil }
 }

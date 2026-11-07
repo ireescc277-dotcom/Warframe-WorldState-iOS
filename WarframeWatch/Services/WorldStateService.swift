@@ -5,30 +5,67 @@ public final class WorldStateService {
     
     public let defaultApiUrl = URL(string: "https://api.warframe.com/cdn/worldState.php")!
     private let cacheKey = "wf_ws_cached_response"
+    public let customUrlKey = "wf_custom_api_url"
+    
+    public private(set) var lastFetchDuration: TimeInterval = 0
+    public private(set) var lastResponseBytes: Int = 0
+    public private(set) var lastErrorDetails: String? = nil
+    public private(set) var lastHttpStatus: Int = 0
     
     private init() {}
     
+    public var activeApiUrl: URL {
+        if let customStr = UserDefaults.standard.string(forKey: customUrlKey),
+           let url = URL(string: customStr.trimmingCharacters(in: .whitespacesAndNewlines)),
+           !customStr.isEmpty {
+            return url
+        }
+        return defaultApiUrl
+    }
+    
+    public func setCustomApiUrl(_ urlString: String?) {
+        if let str = urlString?.trimmingCharacters(in: .whitespacesAndNewlines), !str.isEmpty {
+            UserDefaults.standard.set(str, forKey: customUrlKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: customUrlKey)
+        }
+    }
+    
     public func fetchWorldState(customUrl: URL? = nil) async throws -> (WorldState, Bool) {
-        let url = customUrl ?? defaultApiUrl
-        var request = URLRequest(url: url)
+        let startTime = Date()
+        let targetUrl = customUrl ?? activeApiUrl
+        var request = URLRequest(url: targetUrl)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.timeoutInterval = 15.0
+        request.timeoutInterval = 12.0
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            let duration = Date().timeIntervalSince(startTime)
+            self.lastFetchDuration = duration
+            self.lastResponseBytes = data.count
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+            self.lastHttpStatus = httpResponse.statusCode
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
                 throw URLError(.badServerResponse)
             }
             
             let decoder = JSONDecoder()
             let state = try decoder.decode(WorldState.self, from: data)
             
-            // Cache on disk
             UserDefaults.standard.set(data, forKey: cacheKey)
-            
-            return (state, true) // True = isLive
+            self.lastErrorDetails = nil
+            return (state, true)
         } catch {
+            let duration = Date().timeIntervalSince(startTime)
+            self.lastFetchDuration = duration
+            self.lastErrorDetails = "网络/解析异常: \(error.localizedDescription)"
+            print("❌ fetchWorldState error: \(error)")
+            
             // Try loading cached data
             if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
                let state = try? JSONDecoder().decode(WorldState.self, from: cachedData) {
@@ -45,12 +82,21 @@ public final class WorldStateService {
     }
     
     public func loadBundledSnapshot() -> WorldState? {
-        if let url = Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json") ??
-                     Bundle(for: WorldStateService.self).url(forResource: "DefaultSnapshot", withExtension: "json"),
-           let data = try? Data(contentsOf: url),
-           let state = try? JSONDecoder().decode(WorldState.self, from: data) {
-            return state
+        guard let url = Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json") ??
+                        Bundle(for: WorldStateService.self).url(forResource: "DefaultSnapshot", withExtension: "json") else {
+            print("❌ DefaultSnapshot.json resource not found!")
+            return nil
         }
-        return nil
+        
+        do {
+            let data = try Data(contentsOf: url)
+            let state = try JSONDecoder().decode(WorldState.self, from: data)
+            print("✅ Successfully loaded bundled snapshot (\(data.count) bytes)")
+            return state
+        } catch {
+            print("❌ Failed decoding bundled snapshot: \(error)")
+            self.lastErrorDetails = "内置快照解析失败: \(error)"
+            return nil
+        }
     }
 }

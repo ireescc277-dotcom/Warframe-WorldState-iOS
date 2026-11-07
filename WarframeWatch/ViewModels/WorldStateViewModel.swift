@@ -104,10 +104,50 @@ public final class WorldStateViewModel: ObservableObject {
             self.lastUpdated = Date()
             computeDiff(newWorldState: state)
         } catch {
-            self.errorMessage = "刷新失败: \(error.localizedDescription)"
+            let details = service.lastErrorDetails ?? error.localizedDescription
+            self.errorMessage = "刷新失败: \(details)"
+            if self.worldState == nil {
+                if let fallback = service.loadBundledSnapshot() {
+                    self.worldState = fallback
+                    self.isLive = false
+                    computeDiff(newWorldState: fallback)
+                }
+            }
         }
         
         isLoading = false
+    }
+    
+    // MARK: - Debug & Custom API Host
+    public var activeApiUrlString: String {
+        service.activeApiUrl.absoluteString
+    }
+    
+    public func updateCustomApiUrl(_ urlString: String) {
+        service.setCustomApiUrl(urlString)
+        Task {
+            await refreshData()
+        }
+    }
+    
+    public func resetToDefaultApiUrl() {
+        service.setCustomApiUrl(nil)
+        Task {
+            await refreshData()
+        }
+    }
+    
+    public func loadBundledSnapshotDirectly() {
+        if let initial = service.loadBundledSnapshot() {
+            self.worldState = initial
+            self.isLive = false
+            self.errorMessage = nil
+            computeDiff(newWorldState: initial)
+        }
+    }
+    
+    public var diagnosticInfo: (duration: TimeInterval, bytes: Int, status: Int, error: String?) {
+        (service.lastFetchDuration, service.lastResponseBytes, service.lastHttpStatus, service.lastErrorDetails)
     }
     
     // MARK: - Watchlist Management

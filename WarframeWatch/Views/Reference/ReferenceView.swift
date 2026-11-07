@@ -4,6 +4,7 @@ public struct ReferenceView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
     @State private var searchNodeQuery: String = ""
     @State private var showRawJson: Bool = false
+    @State private var showDebugSheet: Bool = false
     
     private let dict = DictionaryService.shared
     
@@ -44,6 +45,34 @@ public struct ReferenceView: View {
                             }
                         }
                         
+                        // Debug & Host Config Card
+                        WFCard {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("数据源与局域网调试")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(WFTheme.cyan)
+                                    Text("配置电脑 Mock 地址、测算网络延迟或切换数据")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(WFTheme.textMuted)
+                                }
+                                
+                                Spacer()
+                                
+                                Button {
+                                    showDebugSheet = true
+                                } label: {
+                                    Text("配置")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(WFTheme.cyan)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(WFTheme.cyan.opacity(0.15))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                        
                         // Sortie Modifiers Handbook
                         sortieModifiersSection
                         
@@ -58,6 +87,9 @@ public struct ReferenceView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showRawJson) {
                 RawJsonView(worldState: vm.worldState)
+            }
+            .sheet(isPresented: $showDebugSheet) {
+                DebugSheetView()
             }
         }
     }
