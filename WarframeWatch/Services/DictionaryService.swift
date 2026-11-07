@@ -23,13 +23,21 @@ public final class DictionaryService {
     }
     
     private func loadDictionary() {
-        // Attempt to load from Bundle
-        if let url = Bundle.main.url(forResource: "DefaultDict", withExtension: "json") ??
-                     Bundle(for: DictionaryService.self).url(forResource: "DefaultDict", withExtension: "json"),
-           let data = try? Data(contentsOf: url),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            parseDict(json)
-            return
+        let candidates: [URL?] = [
+            Bundle.main.url(forResource: "DefaultDict", withExtension: "json"),
+            Bundle.main.url(forResource: "DefaultDict", withExtension: "json", subdirectory: "Resources"),
+            Bundle.main.bundleURL.appendingPathComponent("DefaultDict.json"),
+            Bundle.main.bundleURL.appendingPathComponent("Resources/DefaultDict.json")
+        ]
+        
+        for candidate in candidates {
+            guard let url = candidate, FileManager.default.fileExists(atPath: url.path) else { continue }
+            if let data = try? Data(contentsOf: url),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                parseDict(json)
+                print("✅ Successfully loaded dictionary from \(url.lastPathComponent)")
+                return
+            }
         }
         
         // Fallback: minimal built-ins

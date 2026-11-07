@@ -23,16 +23,30 @@ targets:
     info:
       path: WarframeWatch/Info.plist
       properties:
+        CFBundleDisplayName: "Warframe 世界状态"
+        CFBundleShortVersionString: "1.0.4"
+        CFBundleVersion: "4"
         UILaunchStoryboardName: LaunchScreen
+        LSRequiresIPhoneOS: true
+        UIDeviceFamily: [1]
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSUserNotificationsUsageDescription: "用于在关注的任务或特惠即将到期前发送提醒通知。"
+        NSLocalNetworkUsageDescription: "用于连接局域网开发服务器进行本地数据热调试与实时预览。"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.warframe.watch
         PRODUCT_NAME: WarframeWatch
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
+        INFOPLIST_KEY_CFBundleDisplayName: "Warframe 世界状态"
+        INFOPLIST_KEY_LSRequiresIPhoneOS: YES
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
         DEVELOPMENT_TEAM: ""
         ENABLE_BITCODE: NO
-        GENERATE_INFOPLIST_FILE: NO
+        GENERATE_INFOPLIST_FILE: YES

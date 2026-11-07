@@ -82,21 +82,27 @@ public final class WorldStateService {
     }
     
     public func loadBundledSnapshot() -> WorldState? {
-        guard let url = Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json") ??
-                        Bundle(for: WorldStateService.self).url(forResource: "DefaultSnapshot", withExtension: "json") else {
-            print("❌ DefaultSnapshot.json resource not found!")
-            return nil
+        let candidates: [URL?] = [
+            Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json"),
+            Bundle.main.url(forResource: "DefaultSnapshot", withExtension: "json", subdirectory: "Resources"),
+            Bundle.main.bundleURL.appendingPathComponent("DefaultSnapshot.json"),
+            Bundle.main.bundleURL.appendingPathComponent("Resources/DefaultSnapshot.json")
+        ]
+        
+        for candidate in candidates {
+            guard let url = candidate, FileManager.default.fileExists(atPath: url.path) else { continue }
+            do {
+                let data = try Data(contentsOf: url)
+                let state = try JSONDecoder().decode(WorldState.self, from: data)
+                print("✅ Successfully loaded bundled snapshot from \(url.lastPathComponent) (\(data.count) bytes)")
+                return state
+            } catch {
+                print("❌ Failed decoding bundled snapshot from \(url.path): \(error)")
+                self.lastErrorDetails = "内置快照解析失败: \(error)"
+            }
         }
         
-        do {
-            let data = try Data(contentsOf: url)
-            let state = try JSONDecoder().decode(WorldState.self, from: data)
-            print("✅ Successfully loaded bundled snapshot (\(data.count) bytes)")
-            return state
-        } catch {
-            print("❌ Failed decoding bundled snapshot: \(error)")
-            self.lastErrorDetails = "内置快照解析失败: \(error)"
-            return nil
-        }
+        print("❌ DefaultSnapshot.json resource not found in any candidate path!")
+        return nil
     }
 }
