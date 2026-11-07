@@ -1,0 +1,66 @@
+name: Capture iOS Simulator Screenshot
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  screenshot:
+    name: Boot Simulator & Capture Screenshot
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || true
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+
+      - name: Boot Simulator & Build App
+        run: |
+          echo "=== Finding Available iPhone Simulator ==="
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone (15|16)" | head -n 1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          if [ -z "$UDID" ]; then
+            UDID=$(xcrun simctl list devices available | grep "iPhone" | head -n 1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          fi
+          echo "Selected Simulator UDID: $UDID"
+          
+          echo "=== Booting Simulator ==="
+          xcrun simctl boot $UDID || true
+          
+          echo "=== Building WarframeWatch for Simulator ==="
+          xcodebuild \
+            -project WarframeWatch.xcodeproj \
+            -scheme WarframeWatch \
+            -configuration Debug \
+            -destination "id=$UDID" \
+            -derivedDataPath build_sim \
+            build
+          
+          echo "=== Installing App into Simulator ==="
+          APP_PATH=$(find build_sim/Build/Products -name "WarframeWatch.app" -type d | head -n 1)
+          echo "App path: $APP_PATH"
+          xcrun simctl install $UDID "$APP_PATH"
+          
+          echo "=== Launching App ==="
+          xcrun simctl launch $UDID com.warframe.watch
+          
+          echo "=== Waiting 5 seconds for rendering ==="
+          sleep 5
+          
+          echo "=== Taking Screenshot ==="
+          xcrun simctl io $UDID screenshot simulator_screenshot.png
+          ls -lh simulator_screenshot.png
+
+      - name: Upload Simulator Screenshot Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-screenshot
+          path: simulator_screenshot.png
