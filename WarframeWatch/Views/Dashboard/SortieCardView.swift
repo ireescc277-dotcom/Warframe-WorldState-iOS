@@ -12,7 +12,6 @@ public struct SortieCardView: View {
     
     public var body: some View {
         let bossName = dict.bossName(sortie.Boss)
-        let faction = dict.faction(sortie.Faction)
         let key = "sortie|\(sortie.Boss)"
         
         WFCard(isHighlighted: true) {
@@ -37,10 +36,6 @@ public struct SortieCardView: View {
                 Text(bossName)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(WFTheme.gold)
-                
-                Text("(\(faction))")
-                    .font(.system(size: 13))
-                    .foregroundColor(WFTheme.textSecondary)
                 
                 Spacer()
             }

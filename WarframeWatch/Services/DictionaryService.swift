@@ -198,6 +198,13 @@ public final class DictionaryService {
         return (human, human, points)
     }
     
+    public func localizedDesc(_ tag: String?) -> String {
+        guard let tag = tag, !tag.isEmpty else { return "" }
+        if let str = lang[tag] { return str }
+        let last = tag.split(separator: "/").last.map(String.init) ?? tag
+        return humanize(last)
+    }
+    
     public func itemName(_ path: String?) -> String {
         guard let path = path, !path.isEmpty else { return "—" }
         if let exact = items[path] { return exact }
