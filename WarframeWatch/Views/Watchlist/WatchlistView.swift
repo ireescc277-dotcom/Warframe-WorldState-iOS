@@ -61,26 +61,9 @@ public struct WatchlistView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(WatchCategory.allCases) { cat in
-                    Button {
+                    CategoryPillView(category: cat, isSelected: selectedCategory == cat) {
                         selectedCategory = cat
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: cat.icon)
-                                .font(.system(size: 11))
-                            Text(cat.rawValue)
-                                .font(.system(size: 12, weight: selectedCategory == cat ? .bold : .medium))
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .foregroundColor(selectedCategory == cat ? WFTheme.bgPrimary : WFTheme.textSecondary)
-                        .background(selectedCategory == cat ? WFTheme.gold : WFTheme.cardBg)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(selectedCategory == cat ? Color.clear : WFTheme.cardBorder, lineWidth: 1)
-                        )
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 2)
@@ -117,7 +100,7 @@ public struct WatchlistView: View {
                 
                 Divider()
                     .frame(height: 24)
-                    .background(WFTheme.cardBorder)
+                    .background(WFTheme.border)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("我的关注项目")
@@ -293,5 +276,33 @@ public struct WatchlistView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Category Pill Component
+private struct CategoryPillView: View {
+    let category: WatchCategory
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 11))
+                Text(category.rawValue)
+                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundColor(isSelected ? WFTheme.bgPrimary : WFTheme.textSecondary)
+            .background(isSelected ? WFTheme.gold : WFTheme.panel)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? Color.clear : WFTheme.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

@@ -54,7 +54,7 @@ public struct WatchCatalogRowView: View {
                 }
                 
                 Divider()
-                    .background(WFTheme.cardBorder.opacity(0.5))
+                    .background(WFTheme.border.opacity(0.5))
                 
                 // Tier 2: Real-time Evaluation Details
                 stateContent
