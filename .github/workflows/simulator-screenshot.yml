@@ -32,8 +32,9 @@ jobs:
           fi
           echo "Selected Simulator UDID: $UDID"
           
-          echo "=== Booting Simulator ==="
+          echo "=== Booting Simulator & Waiting for SpringBoard ==="
           xcrun simctl boot $UDID || true
+          xcrun simctl bootstatus $UDID -b
           
           echo "=== Building WarframeWatch for Simulator ==="
           xcodebuild \
@@ -42,18 +43,17 @@ jobs:
             -configuration Debug \
             -destination "id=$UDID" \
             -derivedDataPath build_sim \
-            build
+            clean build
           
           echo "=== Installing App into Simulator ==="
           APP_PATH=$(find build_sim/Build/Products -name "WarframeWatch.app" -type d | head -n 1)
           echo "App path: $APP_PATH"
+          xcrun simctl uninstall $UDID com.warframe.watch || true
           xcrun simctl install $UDID "$APP_PATH"
           
           echo "=== Launching App ==="
           xcrun simctl launch $UDID com.warframe.watch
-          
-          echo "=== Waiting 5 seconds for rendering ==="
-          sleep 5
+          sleep 4
           
           echo "=== Taking Screenshot ==="
           xcrun simctl io $UDID screenshot simulator_screenshot.png

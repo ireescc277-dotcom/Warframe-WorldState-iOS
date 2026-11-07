@@ -22,11 +22,14 @@ targets:
           - "Info.plist"
     info:
       path: WarframeWatch/Info.plist
+      properties:
+        UILaunchStoryboardName: LaunchScreen
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.warframe.watch
         PRODUCT_NAME: WarframeWatch
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGN_IDENTITY: ""
