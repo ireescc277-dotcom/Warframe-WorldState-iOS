@@ -26,6 +26,6 @@ jobs:
             WarframeWatch/Models/SnapshotDiff.swift \
             WarframeWatch/Models/WatchItem.swift \
             WarframeWatch/Models/WorldState.swift \
-            Tests/test_runner.swift \
+            Tests/main.swift \
             -o test_runner
           ./test_runner
