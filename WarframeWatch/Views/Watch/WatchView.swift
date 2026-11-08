@@ -195,6 +195,15 @@ public struct WatchView: View {
         .padding(16)
     }
 
+    /// 面包屑在根节点上就是它自己的标题（「仲裁 / 仲裁」），那样等于白占一行。
+    /// 这种情况下换成节点的说明文字（「任务类型 / 星球 / 节点」）。
+    private func subtitle(for path: String) -> String {
+        let title = vm.watchTree.node(path)?.title ?? ""
+        let crumb = vm.watchTree.breadcrumb(of: path)
+        if crumb != title { return crumb }
+        return vm.watchTree.node(path)?.subtitle ?? ""
+    }
+
     // MARK: - Alerts
 
     /// 通知开关放在蹲守页而不是「更多」：它跟「蹲什么」是同一件事，放在设置里
@@ -330,10 +339,13 @@ public struct WatchView: View {
                                     .font(.wfTitle)
                                     .foregroundColor(WFTheme.textPrimary)
                                     .lineLimit(1)
-                                Text(vm.watchTree.breadcrumb(of: path))
-                                    .font(.wfBody)
-                                    .foregroundColor(WFTheme.textMuted)
-                                    .lineLimit(1)
+                                let subtitle = subtitle(for: path)
+                                if !subtitle.isEmpty {
+                                    Text(subtitle)
+                                        .font(.wfBody)
+                                        .foregroundColor(WFTheme.textMuted)
+                                        .lineLimit(1)
+                                }
                             }
                             Spacer(minLength: 0)
                         }
