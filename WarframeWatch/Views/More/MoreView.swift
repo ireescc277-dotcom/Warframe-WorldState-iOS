@@ -117,22 +117,18 @@ public struct MoreView: View {
         .buttonStyle(.plain)
     }
 
+    /// The API host and protocol version used to sit here as three lines of
+    /// body text — they belong in 连接与诊断, not on a screen a player opens.
+    /// What is left is the one thing a person actually looks for: the build.
     private var footer: some View {
-        VStack(alignment: .leading, spacing: WFUI.s1) {
-            Text("数据源 api.warframe.com")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-            if let version = vm.worldState?.Version {
-                Text("协议版本 v\(version)")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-            }
-            Text(vm.activeApiUrlString)
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, WFUI.s1)
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return Text("Warframe Watch \(version) (\(build))")
+            .font(.wfLabel)
+            .foregroundColor(WFTheme.textMuted.opacity(0.75))
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, WFUI.s2)
     }
 }
 

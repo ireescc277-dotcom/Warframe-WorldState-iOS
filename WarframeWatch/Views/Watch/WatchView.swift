@@ -72,29 +72,91 @@ public struct WatchView: View {
 
     // MARK: - Summary
 
+    /// The big number is only worth 46pt when it is counting something. At
+    /// zero it said "0 个目标正在出现" in the largest type on the screen, which
+    /// reads as a broken page rather than a quiet one, so the card becomes an
+    /// instruction when nothing is selected and a plain status line when
+    /// nothing is hitting.
+    @ViewBuilder
     private var summary: some View {
         let hits = vm.matchedLiveHits.count
-        return WFSurface {
-            VStack(alignment: .leading, spacing: WFUI.s3) {
-                HStack(alignment: .firstTextBaseline, spacing: WFUI.s2) {
-                    Text("\(hits)")
-                        .font(.wfHero)
-                        .foregroundColor(hits > 0 ? WFTheme.green : WFTheme.textMuted)
-                    Text("个目标正在出现")
-                        .font(.wfBody)
-                        .foregroundColor(WFTheme.textSecondary)
-                    Spacer(minLength: 0)
-                }
-
-                Text(hits > 0
-                     ? "下面每一条都在你勾选的范围内，点进去看具体节点。"
-                     : "勾选的目标一旦出现在盘面上，会立刻列在下面。")
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
+        WFSurface {
+            if vm.watchSelection.isEmpty {
+                setupCard
+            } else if hits == 0 {
+                waitingCard
+            } else {
+                hitCard(hits)
             }
-            .padding(16)
         }
+    }
+
+    private var setupCard: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            Text("还没有蹲守目标")
+                .font(.wfTitle)
+                .foregroundColor(WFTheme.textPrimary)
+
+            Text("从任务树上勾选组合，比如「中纪 · 钢铁 · 中断」。组里任何一个节点出现，都会列在下面。")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                showTree = true
+            } label: {
+                Text("选择目标")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color(hex: "0A0E17"))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .background(WFTheme.gold)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+    }
+
+    private var waitingCard: some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            HStack(alignment: .center, spacing: WFUI.s2) {
+                Text("没有命中")
+                    .font(.wfTitle)
+                    .foregroundColor(WFTheme.textPrimary)
+                Spacer(minLength: 0)
+                Image(systemName: "hourglass")
+                    .font(.system(size: 14))
+                    .foregroundColor(WFTheme.textMuted)
+            }
+
+            Text("正在等 \(vm.watchSelection.count) 组目标。盘面轮换后出现的会立刻列在这里。")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+    }
+
+    private func hitCard(_ hits: Int) -> some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            HStack(alignment: .firstTextBaseline, spacing: WFUI.s2) {
+                Text("\(hits)")
+                    .font(.wfHero)
+                    .foregroundColor(WFTheme.green)
+                Text("个目标正在出现")
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.textSecondary)
+                Spacer(minLength: 0)
+            }
+
+            Text("下面每一条都在你勾选的范围内。")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
     }
 
     // MARK: - Hits
@@ -102,13 +164,10 @@ public struct WatchView: View {
     @ViewBuilder
     private var hitSection: some View {
         let hits = Array(vm.matchedLiveHits.prefix(12))
-        let hint: String? = hits.isEmpty ? nil : "\(vm.matchedLiveHits.count) 项"
-        VStack(alignment: .leading, spacing: WFUI.s2) {
-            WFSectionHeader("正在命中", trailing: hint)
+        if !hits.isEmpty {
+            VStack(alignment: .leading, spacing: WFUI.s2) {
+                WFSectionHeader("正在命中", trailing: "\(vm.matchedLiveHits.count) 项")
 
-            if hits.isEmpty {
-                emptyHits
-            } else {
                 WFSurface {
                     ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
                         WFEventRow(
@@ -123,19 +182,6 @@ public struct WatchView: View {
                 }
             }
         }
-    }
-
-    private var emptyHits: some View {
-        VStack(spacing: WFUI.s2) {
-            Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.system(size: 20))
-                .foregroundColor(WFTheme.textMuted)
-            Text("暂无命中")
-                .font(.wfBody)
-                .foregroundColor(WFTheme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
     }
 
     // MARK: - Targets
