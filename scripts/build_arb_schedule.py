@@ -108,9 +108,26 @@ def main() -> int:
     parser.add_argument("--source", choices=["auto", "remote", "local"], default="auto")
     parser.add_argument("--forecast", default=None, help="AlecaFrame 的 forecast.json 路径")
     parser.add_argument("--check", action="store_true", help="只打印覆盖率，不写文件")
+    parser.add_argument("--max-age", type=float, default=0,
+                        help="已有文件不超过 N 小时就复用，不再请求 browse.wf（默认 0 = 总是刷新）")
     args = parser.parse_args()
 
     now = int(time.time())
+
+    # 监听脚本每抓一次背包就会走一遍这里，而排程一天只变一次。
+    # 有新鲜的就不再请求 browse.wf，省 960 KB 一次的下行。
+    if args.max_age > 0 and not args.check and os.path.exists(args.out):
+        try:
+            with open(args.out, encoding="utf-8") as fh:
+                old = json.load(fh)
+            age = now - int(old.get("builtAt") or 0)
+            if 0 <= age < args.max_age * 3600 and old.get("slots"):
+                print("沿用 %s（%.1f 小时前生成，%d 条）"
+                      % (os.path.relpath(args.out, ROOT), age / 3600, len(old["slots"])))
+                return 0
+        except (OSError, ValueError):
+            pass
+
     rows: list[tuple[int, str]] | None = None
 
     if args.source in ("auto", "remote"):
