@@ -74,20 +74,15 @@ public struct ArbitrationSchedule: Decodable {
 
     /// 某个节点下一次出现的时间。界面上的「下次 04:00」用它。
     public func nextDate(forNode node: String, after now: Date) -> Date? {
-        guard let dates = byNode[node], !dates.isEmpty else { return nil }
-        var low = 0
-        var high = dates.count - 1
-        var found = dates.count
-        while low <= high {
-            let mid = (low + high) / 2
-            if dates[mid] > now {
-                found = mid
-                high = mid - 1
-            } else {
-                low = mid + 1
-            }
-        }
-        return found < dates.count ? dates[found] : nil
+        upcomingDates(forNode: node, after: now, limit: 1).first
+    }
+
+    /// 某个节点接下来的若干次开始时间。本地通知按这个提前排。
+    public func upcomingDates(forNode node: String, after now: Date, limit: Int = 2) -> [Date] {
+        guard limit > 0, let dates = byNode[node], !dates.isEmpty else { return [] }
+        let index = firstIndex(after: now, in: dates)
+        guard index < dates.count else { return [] }
+        return Array(dates[index..<min(index + limit, dates.count)])
     }
 
     private func lastIndex(atOrBefore date: Date) -> Int? {
@@ -107,12 +102,16 @@ public struct ArbitrationSchedule: Decodable {
     }
 
     private func firstIndex(after date: Date) -> Int {
+        firstIndex(after: date, in: starts)
+    }
+
+    private func firstIndex(after date: Date, in dates: [Date]) -> Int {
         var low = 0
-        var high = starts.count - 1
-        var found = starts.count
+        var high = dates.count - 1
+        var found = dates.count
         while low <= high {
             let mid = (low + high) / 2
-            if starts[mid] > date {
+            if dates[mid] > date {
                 found = mid
                 high = mid - 1
             } else {

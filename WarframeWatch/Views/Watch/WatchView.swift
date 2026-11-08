@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
 /// The watch tab answers one question: did anything I am waiting for show up.
 ///
 /// The tree of 3102 selectable nodes used to be this screen, which meant the
@@ -7,6 +11,7 @@ import SwiftUI
 /// configuration surface, not a dashboard, so it now lives one push away.
 public struct WatchView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
+    @Environment(\.openURL) private var openURL
 
     @State private var showTree: Bool = false
 
@@ -21,6 +26,9 @@ public struct WatchView: View {
                     VStack(alignment: .leading, spacing: WFUI.s4) {
                         header
                         summary
+                        if !vm.watchSelection.isEmpty {
+                            alertRow
+                        }
                         hitSection
                         if !vm.watchSelection.isEmpty {
                             targetSection
@@ -185,6 +193,75 @@ public struct WatchView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
+    }
+
+    // MARK: - Alerts
+
+    /// 通知开关放在蹲守页而不是「更多」：它跟「蹲什么」是同一件事，放在设置里
+    /// 就成了第二个需要想起来的地方。权限被拒的时候开关没有意义，所以那一路
+    /// 直接把右侧换成「设置」，点了跳系统页。
+    private var alertRow: some View {
+        WFSurface {
+            HStack(spacing: WFUI.s3) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(vm.notificationsEnabled ? WFTheme.gold : WFTheme.textMuted)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("开打提醒")
+                        .font(.wfTitle)
+                        .foregroundColor(WFTheme.textPrimary)
+                    Text(hint)
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: WFUI.s2)
+
+                if vm.notificationPermission == .denied {
+                    #if canImport(UIKit)
+                    Button("设置") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(WFTheme.cyan)
+                    .buttonStyle(.plain)
+                    #endif
+                } else {
+                    Toggle("", isOn: Binding(
+                        get: { vm.notificationsEnabled },
+                        set: { vm.setNotificationsEnabled($0) }
+                    ))
+                    .labelsHidden()
+                    .tint(WFTheme.gold)
+                }
+            }
+            .padding(14)
+        }
+    }
+
+    private var icon: String {
+        vm.notificationsEnabled ? "bell.fill" : "bell"
+    }
+
+    private var hint: String {
+        switch vm.notificationPermission {
+        case .denied:
+            return "系统里关掉了通知，点右边去开"
+        case .notDetermined, .authorized:
+            break
+        }
+        guard vm.notificationsEnabled else {
+            return "仲裁和周期会提前 5 分钟响，关掉 App 也算数"
+        }
+        guard vm.pendingAlertCount > 0 else {
+            return "已开启，暂时没有排得上时间的条目"
+        }
+        return "已排 \(vm.pendingAlertCount) 条：仲裁 / 周期提前 5 分钟，目标提前 30 分钟"
     }
 
     // MARK: - Hits

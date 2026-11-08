@@ -241,6 +241,97 @@ if let arbRoot = tree.roots.first(where: { $0.id == "arb" }),
     print("✅ arbitration rows carry a next date: \(arbLeaf.title) @ \(expected)")
 }
 
+// ---- 通知计划：只有确定性事件能提前排。这里断言提前量、去重 id、预算上限，
+//      刻意不碰 UserNotifications —— 那一层要在真机上才编得进去。
+var wholeArb = WatchSelection()
+wholeArb.select("arb")
+let allArbLeaves = tree.coveredLeaves(wholeArb)
+precondition(allArbLeaves.count > 100, "仲裁叶子应上百，实际 \(allArbLeaves.count)")
+precondition(allArbLeaves.allSatisfy { $0.isLeaf && $0.id.hasPrefix("arb|") },
+             "选中仲裁根只该返回仲裁叶子")
+
+if let planLeaf = allArbLeaves.first,
+   let planNodeID = planLeaf.id.split(separator: "|").last.map(String.init) {
+    let start = Date(timeIntervalSince1970: 1794146400)
+    let planJSON = """
+    {"builtAt":0,"slot":3600,"slots":[
+     {"t":1794146400,"n":"\(planNodeID)"},
+     {"t":1794175200,"n":"\(planNodeID)"}
+    ]}
+    """.data(using: .utf8)!
+    let planSchedule = try JSONDecoder().decode(ArbitrationSchedule.self, from: planJSON)
+
+    var oneLeaf = WatchSelection()
+    oneLeaf.select(planLeaf.id)
+
+    // 提前一小时看：两场都该排上，第一场提前 5 分钟
+    let before = start.addingTimeInterval(-3600)
+    let alerts = NotificationPlan.build(
+        selection: oneLeaf, tree: tree, schedule: planSchedule, state: treeState, now: before
+    )
+    precondition(alerts.count == 2, "两场都该排，实际 \(alerts.count)")
+    precondition(alerts[0].fireAt == start.addingTimeInterval(-NotificationPlan.arbitrationLead))
+    precondition(alerts[0].id == "arb.\(planNodeID).\(Int(start.timeIntervalSince1970))",
+                 "id 必须由节点和开始时刻组成，重复排才去得掉重：\(alerts[0].id)")
+    precondition(alerts[0].body.contains("分钟后"), "正文要写清还有多久：\(alerts[0].body)")
+
+    // 已经在跑的那场不该再提醒
+    let insideSlot = start.addingTimeInterval(60)
+    let late = NotificationPlan.build(
+        selection: oneLeaf, tree: tree, schedule: planSchedule, state: treeState, now: insideSlot
+    )
+    precondition(late.count == 1, "过去的那场要跳过，实际 \(late.count)")
+    precondition(late[0].fireAt > insideSlot)
+
+    // 全选仲裁时按预算截断：iOS 只给 64 条待发，这里留 40
+    var slots: [String] = []
+    for (index, leaf) in allArbLeaves.prefix(20).enumerated() {
+        guard let node = leaf.id.split(separator: "|").last.map(String.init) else { continue }
+        slots.append("{\"t\":\(1794146400 + index * 3600),\"n\":\"\(node)\"}")
+    }
+    let wideJSON = "{\"builtAt\":0,\"slot\":3600,\"slots\":[\(slots.joined(separator: ","))]}"
+        .data(using: .utf8)!
+    let wide = try JSONDecoder().decode(ArbitrationSchedule.self, from: wideJSON)
+    let capped = NotificationPlan.build(
+        selection: wholeArb, tree: tree, schedule: wide, state: treeState,
+        now: Date(timeIntervalSince1970: 1794140000), limit: 5
+    )
+    precondition(capped.count == 5, "超出预算要截到 5 条，实际 \(capped.count)")
+    precondition(capped == capped.sorted { $0.fireAt < $1.fireAt }, "结果必须按触发时间升序")
+
+    print("✅ NotificationPlan: 单节点 \(alerts.count) 条（提前 5 分钟），整树封顶 \(capped.count) 条")
+}
+
+// 周期：突击重置靠 worldState 里的 expiry 反推，不需要排程
+if let treeState = treeState, let sortieExpiry = treeState.Sorties?.first?.Expiry?.date {
+    var cycleSelection = WatchSelection()
+    cycleSelection.select("cycle|reset|sortie")
+    let cycleAlerts = NotificationPlan.build(
+        selection: cycleSelection, tree: tree, schedule: nil, state: treeState,
+        now: sortieExpiry.addingTimeInterval(-7200)
+    )
+    precondition(cycleAlerts.count == 1, "突击重置应排出一条，实际 \(cycleAlerts.count)")
+    precondition(cycleAlerts[0].fireAt == sortieExpiry.addingTimeInterval(-NotificationPlan.cycleLead))
+    print("✅ NotificationPlan 周期：\(cycleAlerts[0].title) @ \(cycleAlerts[0].fireAt)")
+}
+
+// 星标的社区目标：带 expiry 的才能排，提前 30 分钟
+let starredGoal = WatchItem(
+    key: "goal|test", label: "目标 · 测试", section: "社区目标",
+    expiry: Date(timeIntervalSince1970: 1794146400)
+)
+let goalAlerts = NotificationPlan.build(
+    selection: WatchSelection(), tree: tree, schedule: nil, state: nil,
+    starred: [starredGoal], now: Date(timeIntervalSince1970: 1794140000)
+)
+precondition(goalAlerts.count == 1, "星标目标应排出一条，实际 \(goalAlerts.count)")
+precondition(goalAlerts[0].fireAt == Date(timeIntervalSince1970: 1794144600))
+precondition(NotificationPlan.build(
+    selection: WatchSelection(), tree: tree, schedule: nil, state: nil,
+    now: Date(timeIntervalSince1970: 1794140000)
+).isEmpty, "什么都没选就不该有任何提醒")
+print("✅ NotificationPlan 星标：\(goalAlerts[0].title) 提前 30 分钟")
+
 // ---- 资产快照：真实那份在 .gitignore 里（含账号余额），仓库里只有裁剪过的
 //      样例。CI 上没有真文件，就用样例验证解码路径；本地两种都该过。
 let realPath = "\(currentDir)/WarframeWatch/Resources/InventoryData.json"

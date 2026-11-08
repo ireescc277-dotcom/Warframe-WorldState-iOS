@@ -37,6 +37,7 @@ jobs:
             WarframeWatch/Models/InventoryModel.swift \
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
+            WarframeWatch/Models/NotificationPlan.swift \
             WarframeWatch/Models/SnapshotDiff.swift \
             WarframeWatch/Models/WatchItem.swift \
             WarframeWatch/Models/WatchTree.swift \

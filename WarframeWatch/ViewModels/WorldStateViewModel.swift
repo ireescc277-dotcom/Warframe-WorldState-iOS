@@ -2,8 +2,16 @@ import Foundation
 import Combine
 import SwiftUI
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
 @MainActor
 public final class WorldStateViewModel: ObservableObject {
+    /// 后台刷新任务在没有 SwiftUI 视图的情况下也要拿到同一个实例，
+    /// 所以这里只能有一个。App 里用 `@StateObject` 挂的就是它。
+    public static let shared = WorldStateViewModel()
+
     // MARK: - Published Properties
     @Published public var worldState: WorldState?
     @Published public var isLoading: Bool = false
@@ -38,7 +46,11 @@ public final class WorldStateViewModel: ObservableObject {
     
     // Watchlist & Notifications
     @Published public var watchItems: [String: WatchItem] = [:]
-    @Published public var isNotificationAuthorized: Bool = false
+    /// 开打提醒总开关。权限是另一件事：开关打开时才去问系统要。
+    @Published public var notificationsEnabled: Bool = false
+    @Published public var notificationPermission: NotificationPermission = .notDetermined
+    /// 当前排出去的计划条数，界面上要给个数，否则用户不知道有没有生效。
+    @Published public var pendingAlertCount: Int = 0
 
     // Exhaustive watch tree
     public let watchTree: WatchTreeIndex
@@ -85,6 +97,7 @@ public final class WorldStateViewModel: ObservableObject {
 
         self.watchItems = storage.loadWatchItems()
         self.schedule = ArbitrationScheduleStore.localized()
+        self.notificationsEnabled = storage.loadNotificationsEnabled()
         setupTimer()
         checkNotificationStatus()
         loadInitialData()
@@ -100,15 +113,87 @@ public final class WorldStateViewModel: ObservableObject {
     }
     
     private func checkNotificationStatus() {
-        notificationService.checkPermission { [weak self] authorized in
-            self?.isNotificationAuthorized = authorized
+        notificationService.permission { [weak self] permission in
+            guard let self else { return }
+            self.notificationPermission = permission
+            if permission.isAuthorized, self.notificationsEnabled {
+                self.rebuildNotifications()
+            }
         }
     }
-    
-    public func requestNotificationPermission() {
-        notificationService.requestPermission { [weak self] granted in
-            self?.isNotificationAuthorized = granted
+
+    /// 打开开关时才问权限。第一次进 App 就弹系统框，多数人只会条件反射点拒绝，
+    /// 之后再想开就得去设置里翻。
+    public func setNotificationsEnabled(_ enabled: Bool) {
+        notificationsEnabled = enabled
+        storage.saveNotificationsEnabled(enabled)
+
+        guard enabled else {
+            notificationService.clearPlanned()
+            pendingAlertCount = 0
+            return
         }
+
+        if notificationPermission.isAuthorized {
+            rebuildNotifications()
+        } else {
+            notificationService.requestPermission { [weak self] permission in
+                guard let self else { return }
+                self.notificationPermission = permission
+                if permission.isAuthorized {
+                    self.rebuildNotifications()
+                } else {
+                    // 拒了就落回关闭状态，别留一个永远排不出东西的开关。
+                    self.notificationsEnabled = false
+                    self.storage.saveNotificationsEnabled(false)
+                    self.pendingAlertCount = 0
+                }
+            }
+        }
+    }
+
+    /// 按当前选择重排「确定性事件」的提醒。刷新、改选择、换到新排程之后都要调。
+    public func rebuildNotifications() {
+        guard notificationsEnabled, notificationPermission.isAuthorized else {
+            pendingAlertCount = 0
+            return
+        }
+        let alerts = NotificationPlan.build(
+            selection: watchSelection,
+            tree: watchTree,
+            schedule: schedule,
+            state: worldState,
+            starred: watchItems.values.filter(\.isReminderEnabled)
+        )
+        notificationService.apply(alerts) { [weak self] in
+            guard let self else { return }
+            self.notificationService.pendingCount { count in
+                self.pendingAlertCount = count
+            }
+        }
+    }
+
+    /// 裂隙、入侵、风暴没有排程，刷新到的那一刻才知道，只能立刻发。
+    ///
+    /// 两条克制：只在 App 退到后台时发（在前台你自己就看见了）；同一条命中
+    /// 只报一次，靠 `notifiedHits` 账本去重。
+    private func postNewLiveHits() {
+        let now = Date()
+        var ledger = storage.loadNotifiedHits().filter { $0.value > now.timeIntervalSince1970 }
+
+        var fresh: [WatchHit] = []
+        for hit in matchedLiveHits where ledger[hit.id] == nil {
+            ledger[hit.id] = (hit.expiry ?? now.addingTimeInterval(24 * 3600)).timeIntervalSince1970
+            fresh.append(hit)
+        }
+        storage.saveNotifiedHits(ledger)
+
+        guard notificationsEnabled, notificationPermission.isAuthorized, !fresh.isEmpty else { return }
+        #if canImport(UIKit)
+        // .inactive 也算前台：冷启动那一瞬间就是 inactive，那时候不需要提醒。
+        guard UIApplication.shared.applicationState == .background else { return }
+        notificationService.post(fresh)
+        #endif
     }
     
     // MARK: - Data Loading & Refresh
@@ -204,27 +289,17 @@ public final class WorldStateViewModel: ObservableObject {
     public func toggleWatchItem(key: String, label: String, section: String, expiry: Date?) {
         if watchItems[key] != nil {
             watchItems.removeValue(forKey: key)
-            notificationService.cancelReminder(for: key)
         } else {
-            let item = WatchItem(key: key, label: label, section: section, expiry: expiry)
-            watchItems[key] = item
-            if item.isReminderEnabled {
-                notificationService.scheduleReminder(for: item)
-            }
+            watchItems[key] = WatchItem(key: key, label: label, section: section, expiry: expiry)
         }
         storage.saveWatchItems(watchItems)
+        rebuildNotifications()
     }
-    
+
     public func toggleReminder(for key: String) {
         guard var item = watchItems[key] else { return }
         item.isReminderEnabled.toggle()
         watchItems[key] = item
-        
-        if item.isReminderEnabled {
-            notificationService.scheduleReminder(for: item)
-        } else {
-            notificationService.cancelReminder(for: key)
-        }
         storage.saveWatchItems(watchItems)
     }
     
@@ -246,6 +321,7 @@ public final class WorldStateViewModel: ObservableObject {
         updated.toggle(id, tree: watchTree)
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
+        rebuildNotifications()
     }
 
     /// Adds a whole branch in one tap, used by the empty-state presets. Adding
@@ -258,6 +334,7 @@ public final class WorldStateViewModel: ObservableObject {
         }
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
+        rebuildNotifications()
     }
     
     public func isWatchExpanded(_ id: String) -> Bool {
@@ -288,6 +365,8 @@ public final class WorldStateViewModel: ObservableObject {
         return watchTree.nextOccurrence(for: id, in: state, schedule: schedule)
     }
 
+    /// 盘面一变就把三件派生的事一次做完：界面上的命中列表、要提前排的提醒、
+    /// 以及「刚才在后台时新冒出来的」事件通知。分开写容易出现某条路径漏掉一步。
     private func refreshLiveWatchHits() {
         guard let state = worldState else {
             liveWatchHits = []
@@ -300,6 +379,9 @@ public final class WorldStateViewModel: ObservableObject {
             hits.append(hit)
         }
         liveWatchHits = hits
+
+        rebuildNotifications()
+        postNewLiveHits()
     }
 
     // MARK: - 仲裁

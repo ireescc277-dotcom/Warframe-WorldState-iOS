@@ -320,6 +320,32 @@ public final class WatchTreeIndex {
         parentIndex[id]
     }
 
+    /// 被选中范围覆盖到的叶子。选中父级时整棵子树都算，所以这里走一遍树、
+    /// 不带选中后代的枝直接剪掉——比起先取全量 3102 个叶子再逐个 isCovered
+    /// 少一大截，排提醒每次刷新都要跑。
+    public func coveredLeaves(_ selection: WatchSelection) -> [WatchNode] {
+        guard !selection.isEmpty else { return [] }
+        var leaves: [WatchNode] = []
+
+        func walk(_ node: WatchNode) {
+            if !selection.isCovered(node.id) && !selection.hasSelectedDescendant(node.id) {
+                return
+            }
+            if node.isLeaf {
+                leaves.append(node)
+                return
+            }
+            for child in node.children {
+                walk(child)
+            }
+        }
+
+        for root in roots {
+            walk(root)
+        }
+        return leaves
+    }
+
     public func breadcrumb(of id: String) -> String {
         var parts: [String] = []
         var cursor: String? = id

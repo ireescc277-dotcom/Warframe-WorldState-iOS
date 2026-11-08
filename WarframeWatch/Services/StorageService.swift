@@ -92,4 +92,34 @@ public final class StorageService {
         map[targetId] = stat
         saveEventHistory(map)
     }
+
+    // MARK: - Notifications
+
+    private let notificationsEnabledKey = "wf_notify_enabled_v1"
+    private let notifiedHitsKey = "wf_notified_hits_v1"
+
+    public func loadNotificationsEnabled() -> Bool {
+        UserDefaults.standard.bool(forKey: notificationsEnabledKey)
+    }
+
+    public func saveNotificationsEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: notificationsEnabledKey)
+    }
+
+    /// 已经提醒过的命中：id -> 失效时刻（epoch 秒）。
+    ///
+    /// 没有 expiry 的（入侵）按下发时刻加一天记，过期就自然被清掉，
+    /// 不用单独维护一个上限。
+    public func loadNotifiedHits() -> [String: Double] {
+        guard let data = UserDefaults.standard.data(forKey: notifiedHitsKey),
+              let ledger = try? JSONDecoder().decode([String: Double].self, from: data) else {
+            return [:]
+        }
+        return ledger
+    }
+
+    public func saveNotifiedHits(_ ledger: [String: Double]) {
+        guard let data = try? JSONEncoder().encode(ledger) else { return }
+        UserDefaults.standard.set(data, forKey: notifiedHitsKey)
+    }
 }
