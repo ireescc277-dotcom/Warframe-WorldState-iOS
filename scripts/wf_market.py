@@ -46,14 +46,17 @@ VIEW_PATH = os.path.join(ROOT, "data", "inventory", "view.json")
 AYA_CACHE = os.path.join(ROOT, "data", "inventory", "aya_cache.json")
 
 API = "https://api.warframe.market/v2"
-UA = "WarframeWatch/1.0 (+local inventory tool)"
+UA = "WarframeWatch/1.2 (+https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS)"
 TIMEOUT = 25
 
-# 站点没公布配额，但社区里 429 一直存在。这里做两层保守：
+# 官方文档写明了配额：公共 API 3 req/s（滑动窗口），部分端点更严，
+# 契约搜索那类只有 10~20 req/min。规则页还要求 UA 能识别出是谁在访问、
+# 要求缓存而不是紧密轮询。
+# 所以这里主动压到配额的一半：
 #   1. 全局限速，任意两次请求之间至少间隔 MIN_GAP 秒（加抖动，免得整齐得像脚本）
-#   2. 并发数压到 2，835 件大约 8 分钟；这是后台跑的活，不差这点时间
+#   2. 并发数压到 2，835 件大约 9 分钟；后台跑的活，不差这点时间
 # 遇到 429 时优先读 Retry-After，没有就按 5s 起步退避。
-MIN_GAP = 0.45
+MIN_GAP = 0.55
 GAP_JITTER = 0.20
 
 # 这几种状态代表卖家此刻在游戏里，报价可信；offline 的挂单可能一周没人理
