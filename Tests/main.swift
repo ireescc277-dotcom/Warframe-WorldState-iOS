@@ -1,5 +1,9 @@
 import Foundation
 
+// 断言失败是 SIGTRAP 直接终止进程，stdout 接的是管道、默认 4KB 块缓冲，
+// 缓冲区里那些 print 会一起丢掉——崩溃前跑到哪一步就再也看不出来了。
+setvbuf(stdout, nil, _IONBF, 0)
+
 print("=== STARTING SWIFT RUNTIME TEST ===")
 
 // 1. Locate DefaultSnapshot.json
@@ -245,6 +249,7 @@ if let arbRoot = tree.roots.first(where: { $0.id == "arb" }),
 //      刻意不碰 UserNotifications —— 那一层要在真机上才编得进去。
 var wholeArb = WatchSelection()
 wholeArb.select("arb")
+print("· 通知计划：收集仲裁叶子")
 let allArbLeaves = tree.coveredLeaves(wholeArb)
 precondition(allArbLeaves.count > 100, "仲裁叶子应上百，实际 \(allArbLeaves.count)")
 precondition(allArbLeaves.allSatisfy { $0.isLeaf && $0.id.hasPrefix("arb|") },
@@ -283,6 +288,7 @@ if let planLeaf = allArbLeaves.first,
     precondition(late.count == 1, "过去的那场要跳过，实际 \(late.count)")
     precondition(late[0].fireAt > insideSlot)
 
+    print("· 通知计划：预算截断")
     // 全选仲裁时按预算截断：iOS 只给 64 条待发，这里留 40
     var slots: [String] = []
     for (index, leaf) in allArbLeaves.prefix(20).enumerated() {
@@ -303,6 +309,7 @@ if let planLeaf = allArbLeaves.first,
 }
 
 // 周期：突击重置靠 worldState 里的 expiry 反推，不需要排程
+print("· 通知计划：周期")
 if let treeState = treeState, let sortieExpiry = treeState.Sorties?.first?.Expiry?.date {
     var cycleSelection = WatchSelection()
     cycleSelection.select("cycle|reset|sortie")
@@ -316,6 +323,7 @@ if let treeState = treeState, let sortieExpiry = treeState.Sorties?.first?.Expir
 }
 
 // 星标的社区目标：带 expiry 的才能排，提前 30 分钟
+print("· 通知计划：星标目标")
 let starredGoal = WatchItem(
     key: "goal|test", label: "目标 · 测试", section: "社区目标",
     expiry: Date(timeIntervalSince1970: 1794146400)
