@@ -53,7 +53,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--token", default=os.environ.get("WF_PUBLISH_TOKEN", ""))
     parser.add_argument("--base-url", default=os.environ.get("WF_PUBLISH_BASE", ""),
-                        help="用来回显最终链接，例如 http://113.20.2.21")
+                        help="用来回显最终链接，例如 https://example.com")
     parser.add_argument("--nginx", action="store_true", help="顺带写入 nginx location 并 reload")
     args = parser.parse_args()
 
