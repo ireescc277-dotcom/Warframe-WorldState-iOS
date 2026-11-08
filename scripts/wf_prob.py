@@ -48,14 +48,13 @@ def main():
             json.dump(stats, fh, ensure_ascii=False, indent=1)
         print("wrote %s (%d targets)" % (args.json, len(stats["targets"])))
 
-    arrivals = sum(entry["occurrences"] for entry in stats["targets"])
     print(
-        "exposure %.2f days / %d polls / %d rows stored / %d arrivals since recording started / %d targets"
+        "exposure %.2f days live + %.2f days backfilled / %d polls / %d rows / %d targets"
         % (
             stats["exposure_days"],
+            stats.get("exposure_backfill_days", 0),
             stats["polls"],
             stats["occurrences"],
-            arrivals,
             len(stats["targets"]),
         )
     )

@@ -30,6 +30,7 @@ FILES = [
     ("scripts/wf_store.py", "wf_store.py", 0o644),
     ("scripts/wf_record.py", "wf_record.py", 0o644),
     ("scripts/wf_prob.py", "wf_prob.py", 0o644),
+    ("scripts/wf_arb_backfill.py", "wf_arb_backfill.py", 0o644),
 ]
 
 UNIT = """[Unit]

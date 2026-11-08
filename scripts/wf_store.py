@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS occurrence (
     first_seen INTEGER NOT NULL,
     last_seen  INTEGER NOT NULL,
     seen       INTEGER NOT NULL DEFAULT 1,
-    meta       TEXT
+    meta       TEXT,
+    source     TEXT NOT NULL DEFAULT 'live'
 ) WITHOUT ROWID;
 
 CREATE INDEX IF NOT EXISTS occurrence_kind_target
@@ -114,6 +115,10 @@ def init_db(path=DEFAULT_DB):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     conn = sqlite3.connect(path, timeout=30)
     conn.executescript(SCHEMA)
+    # 老库没有 source 列：加列比重建安全，回填的数据都是新增行。
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(occurrence)")}
+    if "source" not in cols:
+        conn.execute("ALTER TABLE occurrence ADD COLUMN source TEXT NOT NULL DEFAULT 'live'")
     conn.commit()
     return conn
 
@@ -336,9 +341,9 @@ def extract_rows(state, node_meta, poll_ts, arbitration=None):
 UPSERT = """
 INSERT INTO occurrence
     (key, kind, target, node_id, mode, era, hard, planet,
-     starts_at, ends_at, first_seen, last_seen, seen, meta)
+     starts_at, ends_at, first_seen, last_seen, seen, meta, source)
 VALUES (:key, :kind, :target, :node_id, :mode, :era, :hard, :planet,
-        :starts_at, :ends_at, :first_seen, :first_seen, 1, :meta)
+        :starts_at, :ends_at, :first_seen, :first_seen, 1, :meta, :source)
 ON CONFLICT(key) DO UPDATE SET
     last_seen = excluded.last_seen,
     ends_at   = COALESCE(excluded.ends_at, occurrence.ends_at),
@@ -358,8 +363,9 @@ def record_poll(conn, ts, ok, ms=None, byte_count=None, note=None):
 def write_rows(conn, rows):
     if not rows:
         return 0
+    payload = [r if "source" in r else {**r, "source": "live"} for r in rows]
     before = conn.total_changes
-    conn.executemany(UPSERT, rows)
+    conn.executemany(UPSERT, payload)
     return conn.total_changes - before
 
 
@@ -405,7 +411,13 @@ def target_stats(conn, prefix=None):
     first_ok, last_ok = conn.execute(
         "SELECT MIN(ts), MAX(ts) FROM poll WHERE ok = 1"
     ).fetchone()
-    window_start = first_ok or 0
+    # 回填进来的仲裁历史比实际观测早一年半，窗口起点必须跟着退回去；
+    # 否则那些行会被当成"观测开始之前就在跑"而被整段排除。
+    back_first, back_last = conn.execute(
+        "SELECT MIN(starts_at), MAX(COALESCE(ends_at, starts_at))"
+        " FROM occurrence WHERE source = 'backfill'"
+    ).fetchone() or (None, None)
+    window_start = min([x for x in (first_ok, back_first) if x] or [0])
 
     clause = "AND COALESCE(starts_at, first_seen) >= ?"
     args = [window_start]
@@ -429,6 +441,9 @@ def target_stats(conn, prefix=None):
     ).fetchall()
 
     exposure = exposure_seconds(conn)
+    # 仲裁的分母不能是"我们开机了多久"，那是回填数据覆盖的时长。
+    back_exposure = (back_last - back_first) if (back_first and back_last) else 0
+    arb_exposure = max(exposure, back_exposure)
     horizons = (900, 1800, 3600, 7200, 21600, 86400)
     out = []
 
@@ -444,10 +459,11 @@ def target_stats(conn, prefix=None):
         gaps = [b - a for a, b in zip(starts, starts[1:]) if b > a]
         gaps.sort()
 
-        lam = (n / exposure) if exposure else 0.0
-        if exposure < MIN_EXPOSURE_SECONDS or n < MIN_ARRIVALS:
+        span = arb_exposure if kind == "arbitration" else exposure
+        lam = (n / span) if span else 0.0
+        if span < MIN_EXPOSURE_SECONDS or n < MIN_ARRIVALS:
             confidence = "insufficient"
-        elif exposure < MIN_EXPOSURE_SECONDS * 3.5 or n < MIN_ARRIVALS * 3:
+        elif span < MIN_EXPOSURE_SECONDS * 3.5 or n < MIN_ARRIVALS * 3:
             confidence = "low"
         else:
             confidence = "ok"
@@ -478,6 +494,7 @@ def target_stats(conn, prefix=None):
     return {
         "exposure_seconds": exposure,
         "exposure_days": round(exposure / 86400, 3),
+        "exposure_backfill_days": round(back_exposure / 86400, 3),
         "polls": conn.execute("SELECT COUNT(*) FROM poll").fetchone()[0],
         "occurrences": conn.execute("SELECT COUNT(*) FROM occurrence").fetchone()[0],
         "thresholds": {
