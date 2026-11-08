@@ -11,11 +11,9 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 
 目前已编译打包未签名 IPA，不需要开 Xcode 即可直接安装：
 
-1. **局域网直接下载（同一 WiFi 下手机浏览器打开）**：
-   - 链接：`http://192.168.0.112:8080/WarframeWatch-unsigned.ipa`
-   - 或者本地文件：`C:\WarframeWorldState\WarframeWatch-v1.1.0.ipa`
-2. **GitHub Releases**：
-   - [v1.1.0 页面下载](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.1.0)
+1. **直接下载（手机浏览器打开即可）**：
+   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.2.0.ipa`
+2. **GitHub Releases**：[v1.2.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.2.0)
 3. **安装方式**：
    - **TrollStore (巨魔)**：直接分享到 TrollStore 点击 Install，永不过期。
    - **自签 / 证书**：导入爱思助手、SideStore、AltStore 或使用自备个人证书签名安装。
@@ -70,6 +68,26 @@ python scripts/wf_publish.py             # 推到 VPS，App 启动时从这里�
 ```
 
 `wf_market.py sync --missing` 只补没抓过的，日常刷新用它。价格是快照，App 顶部会显示快照时间。
+
+**抓价有限速**：任意两次请求之间至少隔 0.45 秒（加 0~0.2 秒抖动），并发 2，全量 835 件约 8 分钟；遇到 429 优先按 `Retry-After` 退避。别把 `--workers` 调大，`api.warframe.market` 没公布配额，但确实会挡。
+
+**不想手动跑就交给监听**：
+
+```bash
+python scripts/wf_watch.py            # 常驻，10 秒看一眼 lastData.dat
+python scripts/wf_watch.py --once     # 立刻同步一次
+```
+
+文件一变就走完整条链路（解密 → 重建 → 打包数据 → 推 VPS）。AlecaFrame 每几十秒重写一次这个文件，所以脚本要求 `(mtime, size)` 连续两次采样一致才动手，避免读到写了一半的内容。价格不跟着背包变化重抓，默认 12 小时补一次缺（`--market-every 0` 关掉）。Windows 上双击 `scripts/wf_watch.cmd` 即可在后台跑，日志在 `data/watch.log`。
+
+凭据放 `.env.local`（已 gitignore）：
+
+```
+WF_VPS_HOST=...
+WF_VPS_PASS=...
+WF_PUBLISH_TOKEN=...
+WF_PUBLISH_BASE=https://data.ireescc.com
+```
 
 **账号数据不随 App 发布**：`InventoryData.json` 里有白金、星币和每件部件的持有数，等同账号信息，所以文件在 `.gitignore` 里。仓库只提交 `InventoryData.sample.json`（裁到 14 套 / 12 个遗物、余额归零），CI 打包时复制成正式名。真数据推到 VPS 后，App 用 CI 从 secret `INVENTORY_URL` 注入的地址去拉，缓存在本机；拉不到就用手里那份。
 
