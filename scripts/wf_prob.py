@@ -8,6 +8,10 @@
 `p_model` is the Poisson fit (1 - e^(-lambda t)); `p_empirical` is the share of
 observed gaps that were <= t. With little data they disagree, and the empirical
 one is the safer read — it makes no assumption about arrivals being memoryless.
+
+Neither is printed until there are 2 days of uptime and 3 arrivals per target;
+below that the horizon cells show `-`. One arrival in a 20-minute window yields
+a perfectly valid 49%-within-15-minutes, and it would be a lie.
 """
 
 import argparse
@@ -74,6 +78,7 @@ def main():
     print("-" * len(head))
 
     shown = 0
+    withheld = 0
     for entry in stats["targets"]:
         if entry["occurrences"] < args.min_occurrences:
             continue
@@ -82,12 +87,27 @@ def main():
         shown += 1
         median = entry["median_gap_seconds"]
         median_txt = "%dm" % (median // 60) if median else "-"
-        cells = " ".join(
-            "%5.1f%%" % (entry["p_model"].get(h, 0) * 100) for h, _ in HORIZON_LABEL
-        )
+        if entry["confidence"] == "insufficient":
+            withheld += 1
+            cells = " ".join("%6s" % "-" for _ in HORIZON_LABEL)
+            mark = "  (insufficient)"
+        else:
+            cells = " ".join(
+                "%5.1f%%" % (entry["p_model"].get(h, 0) * 100) for h, _ in HORIZON_LABEL
+            )
+            mark = "" if entry["confidence"] == "ok" else "  (low)"
         print(
-            "%-46s %6d %9.2f %9s  %s"
-            % (entry["target"][:46], entry["occurrences"], entry["lambda_per_day"], median_txt, cells)
+            "%-46s %6d %9.2f %9s  %s%s"
+            % (entry["target"][:46], entry["occurrences"], entry["lambda_per_day"], median_txt, cells, mark)
+        )
+
+    if withheld:
+        need_days = stats["thresholds"]["min_exposure_seconds"] / 86400
+        print(
+            "\n%d of %d targets have too little history to score (needs %.0f days "
+            "of uptime and %d arrivals). lam/day is still shown - treat it as "
+            "arithmetic, not a rate."
+            % (withheld, shown, need_days, stats["thresholds"]["min_arrivals"])
         )
 
     return 0

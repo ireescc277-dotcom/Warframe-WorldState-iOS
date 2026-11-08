@@ -34,6 +34,13 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 
+# A rate needs two things before it means anything: enough wall-clock time that
+# the denominator is real, and enough arrivals that the numerator is not one
+# coincidence. Two days and three arrivals is the floor below which the numbers
+# are withheld rather than shown with a confidence interval nobody reads.
+MIN_EXPOSURE_SECONDS = 2 * 86400
+MIN_ARRIVALS = 3
+
 SCHEMA = """
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
@@ -388,6 +395,12 @@ def target_stats(conn, prefix=None):
     `p_model` is 1 - e^(-lam*t); `p_empirical` is the share of observed gaps
     that were <= t, which needs no assumption about memorylessness and is the
     better read while the sample is small.
+
+    Both are withheld until the sample can carry them. One arrival in a
+    20-minute window is a mathematically valid rate of ~72/day and a claimed
+    49% chance within 15 minutes; it is also pure noise. `confidence` is
+    "insufficient" below MIN_EXPOSURE_SECONDS or MIN_ARRIVALS, and in that
+    case the p maps come back empty rather than plausible-looking.
     """
     first_ok, last_ok = conn.execute(
         "SELECT MIN(ts), MAX(ts) FROM poll WHERE ok = 1"
@@ -432,6 +445,12 @@ def target_stats(conn, prefix=None):
         gaps.sort()
 
         lam = (n / exposure) if exposure else 0.0
+        if exposure < MIN_EXPOSURE_SECONDS or n < MIN_ARRIVALS:
+            confidence = "insufficient"
+        elif exposure < MIN_EXPOSURE_SECONDS * 3.5 or n < MIN_ARRIVALS * 3:
+            confidence = "low"
+        else:
+            confidence = "ok"
         entry = {
             "target": target,
             "kind": kind,
@@ -440,18 +459,20 @@ def target_stats(conn, prefix=None):
             "first_at": first_at,
             "last_at": last_at,
             "busy_seconds": busy or 0,
+            "confidence": confidence,
             "lambda_per_day": round(lam * 86400, 3),
             "mean_gap_seconds": int(sum(gaps) / len(gaps)) if gaps else None,
             "median_gap_seconds": gaps[len(gaps) // 2] if gaps else None,
             "p_model": {},
             "p_empirical": {},
         }
-        for h in horizons:
-            entry["p_model"][h] = round(1 - math.exp(-lam * h), 4) if lam else 0.0
-            if gaps:
-                entry["p_empirical"][h] = round(
-                    sum(1 for g in gaps if g <= h) / len(gaps), 4
-                )
+        if confidence != "insufficient":
+            for h in horizons:
+                entry["p_model"][h] = round(1 - math.exp(-lam * h), 4) if lam else 0.0
+                if gaps:
+                    entry["p_empirical"][h] = round(
+                        sum(1 for g in gaps if g <= h) / len(gaps), 4
+                    )
         out.append(entry)
 
     return {
@@ -459,5 +480,9 @@ def target_stats(conn, prefix=None):
         "exposure_days": round(exposure / 86400, 3),
         "polls": conn.execute("SELECT COUNT(*) FROM poll").fetchone()[0],
         "occurrences": conn.execute("SELECT COUNT(*) FROM occurrence").fetchone()[0],
+        "thresholds": {
+            "min_exposure_seconds": MIN_EXPOSURE_SECONDS,
+            "min_arrivals": MIN_ARRIVALS,
+        },
         "targets": out,
     }
