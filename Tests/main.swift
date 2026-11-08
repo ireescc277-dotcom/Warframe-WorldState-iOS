@@ -220,6 +220,27 @@ precondition(!schedule.covers(Date(timeIntervalSince1970: 1794157200)),
 print("✅ ArbitrationSchedule: \(schedule.isEmpty ? "empty" : "3 slots"), "
       + "current=\(schedule.current(at: insideFirst)?.node ?? "-")")
 
+// 树上的仲裁行也要查得到下一次；分组节点取子树里最近的一次。
+if let arbRoot = tree.roots.first(where: { $0.id == "arb" }),
+   let modeBranch = arbRoot.children.first(where: { !$0.children.isEmpty }),
+   let planetBranch = modeBranch.children.first(where: { !$0.children.isEmpty }),
+   let arbLeaf = planetBranch.children.first,
+   let leafNodeID = arbLeaf.id.split(separator: "|").last.map(String.init) {
+    let fixture = """
+    {"builtAt":0,"slot":3600,"slots":[{"t":1794146400,"n":"\(leafNodeID)"}]}
+    """.data(using: .utf8)!
+    let oneSlot = try JSONDecoder().decode(ArbitrationSchedule.self, from: fixture)
+
+    // 正在跑的那一场不算「下一次」
+    precondition(tree.nextArbitrationDate(for: arbLeaf.id, schedule: oneSlot, now: insideFirst) == nil)
+    // 但在它开始之前看，叶子与父级都该指向同一个时刻
+    let beforeSlot = Date(timeIntervalSince1970: 1794140000)
+    let expected = Date(timeIntervalSince1970: 1794146400)
+    precondition(tree.nextArbitrationDate(for: arbLeaf.id, schedule: oneSlot, now: beforeSlot) == expected)
+    precondition(tree.nextArbitrationDate(for: modeBranch.id, schedule: oneSlot, now: beforeSlot) == expected)
+    print("✅ arbitration rows carry a next date: \(arbLeaf.title) @ \(expected)")
+}
+
 // ---- 资产快照：真实那份在 .gitignore 里（含账号余额），仓库里只有裁剪过的
 //      样例。CI 上没有真文件，就用样例验证解码路径；本地两种都该过。
 let realPath = "\(currentDir)/WarframeWatch/Resources/InventoryData.json"
