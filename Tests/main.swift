@@ -108,11 +108,23 @@ semaphore.wait()
 
 // 4. Test Exhaustive Watch Tree against the bundled snapshot (runs offline too)
 print("\n--- Testing Exhaustive Watch Tree ---")
+
+func leaves(of node: WatchNode) -> [WatchNode] {
+    node.isLeaf ? [node] : node.children.flatMap { leaves(of: $0) }
+}
+
+func nodeCount(in node: WatchNode) -> Int {
+    1 + node.children.reduce(0) { $0 + nodeCount(in: $1) }
+}
+
 let dictURL = URL(fileURLWithPath: dictPath)
 let dictionary = DictionaryService(dictionaryURL: dictURL)
 let tree = WatchTreeIndex(dictionary: dictionary)
 print("Tree roots: \(tree.roots.map { $0.title }.joined(separator: " / "))")
 print("Tree node count: \(tree.nodeCount)")
+for root in tree.roots {
+    print("  \(root.title): \(nodeCount(in: root)) nodes, \(leaves(of: root).count) leaves")
+}
 precondition(tree.nodeCount > 2000, "watch tree is suspiciously small")
 
 let probe = "fis|VoidT1|nm|MT_CAPTURE|SolNode1"
@@ -144,10 +156,6 @@ if let treeState = treeState {
 
 // 5. Structural guards on the tree itself
 print("\n--- Testing Watch Tree Shape ---")
-
-func leaves(of node: WatchNode) -> [WatchNode] {
-    node.isLeaf ? [node] : node.children.flatMap { leaves(of: $0) }
-}
 
 let allLeaves = tree.roots.flatMap { leaves(of: $0) }
 precondition(
