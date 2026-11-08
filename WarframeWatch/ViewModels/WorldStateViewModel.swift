@@ -89,6 +89,16 @@ public final class WorldStateViewModel: ObservableObject {
         public var id: String { rawValue }
     }
     
+    /// `-watchPreset arb` seeds a selection so the screenshot gate can photograph
+    /// the watch screen with targets filled in. The reminder row only appears
+    /// once something is selected, so without this the gate never sees it.
+    private static var seededWatchPaths: [String]? {
+        let args = CommandLine.arguments
+        guard let flag = args.firstIndex(of: "-watchPreset"),
+              args.index(after: flag) < args.endIndex else { return nil }
+        return args[args.index(after: flag)].split(separator: ",").map(String.init)
+    }
+
     public init() {
         let tree = WatchTreeIndex(dictionary: DictionaryService.shared)
         self.watchTree = tree
@@ -98,6 +108,15 @@ public final class WorldStateViewModel: ObservableObject {
         self.watchItems = storage.loadWatchItems()
         self.schedule = ArbitrationScheduleStore.localized()
         self.notificationsEnabled = storage.loadNotificationsEnabled()
+        if let seeded = Self.seededWatchPaths {
+            // 只进内存，不写 UserDefaults：这是给 CI 截图用的取景参数，
+            // 不该改掉用户自己的选择。
+            var updated = self.watchSelection
+            for path in seeded where tree.node(path) != nil {
+                updated.select(path)
+            }
+            self.watchSelection = updated
+        }
         setupTimer()
         checkNotificationStatus()
         loadInitialData()

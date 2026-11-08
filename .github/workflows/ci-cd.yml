@@ -157,6 +157,8 @@ jobs:
           }
           capture dashboard_preview -startTab 0
           capture screen_watch -startTab 1
+          # 勾了目标才会出现「开打提醒」那一行，空选择时它不渲染
+          capture screen_watch_targets -startTab 1 -watchPreset arb
           capture screen_assets -startTab 2
           capture screen_assets_relics -startTab 2 -assetTab relics
           capture screen_assets_aya -startTab 2 -assetTab aya
@@ -167,8 +169,8 @@ jobs:
       - name: Run Automated Visual Quality Gate
         run: |
           python scripts/verify_screenshots.py \
-            dashboard_preview.png screen_watch.png screen_assets.png \
-            screen_assets_relics.png screen_assets_aya.png \
+            dashboard_preview.png screen_watch.png screen_watch_targets.png \
+            screen_assets.png screen_assets_relics.png screen_assets_aya.png \
             screen_assets_detail.png screen_cycle.png screen_more.png
 
       - name: Upload Screenshot Artifact
@@ -178,6 +180,7 @@ jobs:
           path: |
             dashboard_preview.png
             screen_watch.png
+            screen_watch_targets.png
             screen_assets.png
             screen_assets_relics.png
             screen_assets_aya.png
