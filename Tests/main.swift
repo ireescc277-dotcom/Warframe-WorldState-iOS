@@ -251,7 +251,8 @@ var wholeArb = WatchSelection()
 wholeArb.select("arb")
 print("· 通知计划：收集仲裁叶子")
 let allArbLeaves = tree.coveredLeaves(wholeArb)
-precondition(allArbLeaves.count > 100, "仲裁叶子应上百，实际 \(allArbLeaves.count)")
+// 词典里有 mt 且带行星的节点里，12 种无尽任务合计 99 个
+precondition(allArbLeaves.count >= 90, "仲裁叶子应在 90 以上，实际 \(allArbLeaves.count)")
 precondition(allArbLeaves.allSatisfy { $0.isLeaf && $0.id.hasPrefix("arb|") },
              "选中仲裁根只该返回仲裁叶子")
 
