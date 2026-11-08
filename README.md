@@ -12,8 +12,8 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 目前已编译打包未签名 IPA，不需要开 Xcode 即可直接安装：
 
 1. **直接下载（手机浏览器打开即可）**：
-   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.2.0.ipa`
-2. **GitHub Releases**：[v1.2.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.2.0)
+   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.3.0.ipa`
+2. **GitHub Releases**：[v1.3.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.3.0)
 3. **安装方式**：
    - **TrollStore (巨魔)**：直接分享到 TrollStore 点击 Install，永不过期。
    - **自签 / 证书**：导入爱思助手、SideStore、AltStore 或使用自备个人证书签名安装。
