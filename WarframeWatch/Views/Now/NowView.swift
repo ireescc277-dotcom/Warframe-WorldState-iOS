@@ -339,17 +339,27 @@ public struct NowView: View {
         kind == .all ? items.count : items.filter { $0.category == kind }.count
     }
 
-    /// Everything on the board, soonest first. Events without a deadline
+    /// Everything still live, soonest first. Events without a deadline
     /// (invasions) sort last, which is also where people look for them.
+    ///
+    /// Expired rows are dropped rather than sorted to the bottom: the feed can
+    /// keep serving an entry for a minute past its expiry, and sorting by date
+    /// put that entry first, so the hero read "已结束" in 46pt.
     private var items: [NowItem] {
+        let now = vm.currentTime
         var all: [NowItem] = []
         all.append(contentsOf: fissureItems)
         all.append(contentsOf: invasionItems)
         all.append(contentsOf: alertItems)
         all.append(contentsOf: stormItems)
-        return all.sorted { lhs, rhs in
-            (lhs.expiry ?? .distantFuture) < (rhs.expiry ?? .distantFuture)
-        }
+        return all
+            .filter { item in
+                guard let expiry = item.expiry else { return true }
+                return expiry > now
+            }
+            .sorted { lhs, rhs in
+                (lhs.expiry ?? .distantFuture) < (rhs.expiry ?? .distantFuture)
+            }
     }
 
     private var fissureItems: [NowItem] {
