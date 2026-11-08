@@ -39,17 +39,57 @@ public final class StorageService {
         }
     }
     
-    // MARK: - Catalog Subscriptions
-    private let catalogSubscriptionsKey = "wf_ws_catalog_subscriptions"
+    // MARK: - Watch Tree Selection
+    private let watchPathsKey = "wf_watch_paths_v1"
     
-    public func loadCatalogSubscriptions() -> Set<String> {
-        guard let list = UserDefaults.standard.stringArray(forKey: catalogSubscriptionsKey) else {
-            return ["catalyst", "reactor", "forma", "fissure_t1_speed", "cetus_night"]
+    public func loadWatchPaths() -> Set<String> {
+        guard let list = UserDefaults.standard.stringArray(forKey: watchPathsKey) else {
+            return []
         }
         return Set(list)
     }
     
-    public func saveCatalogSubscriptions(_ set: Set<String>) {
-        UserDefaults.standard.set(Array(set), forKey: catalogSubscriptionsKey)
+    public func saveWatchPaths(_ paths: Set<String>) {
+        UserDefaults.standard.set(Array(paths), forKey: watchPathsKey)
+    }
+    
+    // MARK: - Event History Records
+    private let eventHistoryKey = "wf_ws_event_history_v1"
+    
+    public func loadEventHistory() -> [String: EventHistoryStats] {
+        guard let data = UserDefaults.standard.data(forKey: eventHistoryKey),
+              let map = try? JSONDecoder().decode([String: EventHistoryStats].self, from: data) else {
+            return [:]
+        }
+        return map
+    }
+    
+    public func saveEventHistory(_ history: [String: EventHistoryStats]) {
+        if let data = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(data, forKey: eventHistoryKey)
+        }
+    }
+    
+    public func recordAppearance(for targetId: String, at date: Date = Date()) {
+        var map = loadEventHistory()
+        var stat = map[targetId] ?? EventHistoryStats(targetId: targetId)
+        
+        if let last = stat.lastSeenDate {
+            let interval = date.timeIntervalSince(last)
+            // If at least 30 minutes have elapsed, record as a new interval between appearances
+            if interval > 1800 {
+                stat.intervals.append(interval)
+                if stat.intervals.count > 50 {
+                    stat.intervals.removeFirst(stat.intervals.count - 50)
+                }
+            }
+        } else {
+            stat.firstSeenDate = date
+        }
+        
+        stat.lastSeenDate = date
+        stat.totalSeenCount += 1
+        map[targetId] = stat
+        saveEventHistory(map)
     }
 }

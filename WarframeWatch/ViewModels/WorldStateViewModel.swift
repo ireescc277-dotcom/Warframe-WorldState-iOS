@@ -35,8 +35,13 @@ public final class WorldStateViewModel: ObservableObject {
     
     // Watchlist & Notifications
     @Published public var watchItems: [String: WatchItem] = [:]
-    @Published public var subscribedCatalogIds: Set<String> = []
     @Published public var isNotificationAuthorized: Bool = false
+
+    // Exhaustive watch tree
+    public let watchTree: WatchTreeIndex
+    @Published public var watchSelection: WatchSelection
+    @Published public var expandedWatchIDs: Set<String> = []
+    @Published public var liveWatchHits: [WatchHit] = []
     
     // Diffs
     @Published public var currentDiffs: [DiffGroup] = []
@@ -48,6 +53,9 @@ public final class WorldStateViewModel: ObservableObject {
     private let storage = StorageService.shared
     private let service = WorldStateService.shared
     private let notificationService = NotificationService.shared
+    /// Last known arbitration. Kept across refreshes so a single failed poll of
+    /// the community mirror does not make an active arbitration disappear.
+    private var arbitrationInfo: ArbitrationInfo?
     
     public enum MissionCategory: String, CaseIterable, Identifiable {
         case fissures = "虚空裂隙"
@@ -67,8 +75,12 @@ public final class WorldStateViewModel: ObservableObject {
     }
     
     public init() {
+        let tree = WatchTreeIndex(dictionary: DictionaryService.shared)
+        self.watchTree = tree
+        self.watchSelection = WatchSelection(paths: StorageService.shared.loadWatchPaths())
+        self.expandedWatchIDs = Set(tree.roots.map { $0.id })
+
         self.watchItems = storage.loadWatchItems()
-        self.subscribedCatalogIds = storage.loadCatalogSubscriptions()
         setupTimer()
         checkNotificationStatus()
         loadInitialData()
@@ -101,6 +113,7 @@ public final class WorldStateViewModel: ObservableObject {
             self.worldState = initial
             self.isLive = false
             computeDiff(newWorldState: initial)
+            refreshLiveWatchHits()
         }
         
         Task {
@@ -113,11 +126,16 @@ public final class WorldStateViewModel: ObservableObject {
         errorMessage = nil
         
         do {
+            async let arbitration = WorldStateService.fetchArbitration()
             let (state, live) = try await service.fetchWorldState()
             self.worldState = state
             self.isLive = live
             self.lastUpdated = Date()
             computeDiff(newWorldState: state)
+            if let fresh = await arbitration {
+                arbitrationInfo = fresh
+            }
+            refreshLiveWatchHits()
         } catch {
             let details = service.lastErrorDetails ?? error.localizedDescription
             self.errorMessage = "刷新失败: \(details)"
@@ -126,6 +144,7 @@ public final class WorldStateViewModel: ObservableObject {
                     self.worldState = fallback
                     self.isLive = false
                     computeDiff(newWorldState: fallback)
+                    refreshLiveWatchHits()
                 }
             }
         }
@@ -158,6 +177,7 @@ public final class WorldStateViewModel: ObservableObject {
             self.isLive = false
             self.errorMessage = nil
             computeDiff(newWorldState: initial)
+            refreshLiveWatchHits()
         }
     }
     
@@ -205,41 +225,56 @@ public final class WorldStateViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Exhaustive Catalog Entries
-    public func isCatalogSubscribed(_ id: String) -> Bool {
-        subscribedCatalogIds.contains(id)
+    // MARK: - Exhaustive Watch Tree
+    public func watchSelectionState(_ id: String) -> WatchSelectionState {
+        watchSelection.state(of: id)
     }
     
-    public func toggleCatalogSubscription(_ id: String) {
-        if subscribedCatalogIds.contains(id) {
-            subscribedCatalogIds.remove(id)
+    public func toggleWatchSelection(_ id: String) {
+        var updated = watchSelection
+        updated.toggle(id, tree: watchTree)
+        watchSelection = updated
+        storage.saveWatchPaths(updated.paths)
+    }
+    
+    public func isWatchExpanded(_ id: String) -> Bool {
+        expandedWatchIDs.contains(id)
+    }
+    
+    public func toggleWatchExpansion(_ id: String) {
+        if expandedWatchIDs.contains(id) {
+            expandedWatchIDs.remove(id)
         } else {
-            subscribedCatalogIds.insert(id)
+            expandedWatchIDs.insert(id)
         }
-        storage.saveCatalogSubscriptions(subscribedCatalogIds)
     }
     
-    public var evaluatedCatalogEntries: [EvaluatedWatchEntry] {
-        guard let ws = worldState else { return [] }
-        let entries = ExhaustiveCatalogRepository.shared.allEntries.map { entry -> EvaluatedWatchEntry in
-            let status = entry.evaluate(ws)
-            return EvaluatedWatchEntry(entry: entry, status: status, isSubscribed: subscribedCatalogIds.contains(entry.id))
+    public func liveHitCount(for id: String) -> Int {
+        let prefix = id + "|"
+        return liveWatchHits.reduce(0) { partial, hit in
+            partial + ((hit.path == id || hit.path.hasPrefix(prefix)) ? 1 : 0)
         }
-        
-        return entries.sorted { a, b in
-            if a.status.sortOrder != b.status.sortOrder {
-                return a.status.sortOrder < b.status.sortOrder
-            }
-            if case let .active(_, _, _, remA) = a.status, case let .active(_, _, _, remB) = b.status {
-                if remA > 0 && remB > 0 { return remA < remB }
-                if remA > 0 { return true }
-                return false
-            }
-            if case let .deterministic(_, remA, _) = a.status, case let .deterministic(_, remB, _) = b.status {
-                return remA < remB
-            }
-            return false
+    }
+    
+    public var matchedLiveHits: [WatchHit] {
+        liveWatchHits.filter { watchSelection.isCovered($0.path) }
+    }
+    
+    public func nextOccurrence(for id: String) -> Date? {
+        guard let state = worldState else { return nil }
+        return watchTree.nextOccurrence(for: id, in: state)
+    }
+    
+    private func refreshLiveWatchHits() {
+        guard let state = worldState else {
+            liveWatchHits = []
+            return
         }
+        var hits = watchTree.liveHits(in: state)
+        if let arbitration = watchTree.arbitrationHit(arbitrationInfo) {
+            hits.append(arbitration)
+        }
+        liveWatchHits = hits
     }
     
     // MARK: - Fingerprint & Snapshot Diff

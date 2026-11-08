@@ -5,6 +5,8 @@ public final class DictionaryService {
     
     // In-memory dictionaries
     private var nodes: [String: [String: String]] = [:]
+    private var nodeMissionTypes: [String: String] = [:]
+    private var nodePlanets: [String: String] = [:]
     private var missionTypes: [String: String] = [:]
     private var factions: [String: String] = [:]
     private var syndicates: [String: String] = [:]
@@ -18,8 +20,21 @@ public final class DictionaryService {
     private var lang: [String: String] = [:]
     private var upgrades: [String: String] = [:]
     
-    public init() {
-        loadDictionary()
+    public init(dictionaryURL: URL? = nil) {
+        if let url = dictionaryURL {
+            loadDictionary(from: url)
+        } else {
+            loadDictionary()
+        }
+    }
+    
+    private func loadDictionary(from url: URL) {
+        guard let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            setupFallbackDict()
+            return
+        }
+        parseDict(json)
     }
     
     private func loadDictionary() {
@@ -45,7 +60,17 @@ public final class DictionaryService {
     }
     
     private func parseDict(_ json: [String: Any]) {
-        if let n = json["nodes"] as? [String: [String: String]] { self.nodes = n }
+        if let n = json["nodes"] as? [String: [String: String]] {
+            self.nodes = n
+            var types: [String: String] = [:]
+            var planets: [String: String] = [:]
+            for (nodeID, info) in n {
+                if let missionType = info["mt"] { types[nodeID] = missionType }
+                if let planet = info["planet"] { planets[nodeID] = planet }
+            }
+            self.nodeMissionTypes = types
+            self.nodePlanets = planets
+        }
         if let mt = json["missionTypes"] as? [String: String] { self.missionTypes = mt }
         if let f = json["factions"] as? [String: String] { self.factions = f }
         if let s = json["syndicates"] as? [String: Any] {
@@ -99,6 +124,22 @@ public final class DictionaryService {
             return hub
         }
         return id
+    }
+    
+    public func nodeMissionType(_ id: String?) -> String? {
+        guard let id = id else { return nil }
+        return nodeMissionTypes[id]
+    }
+    
+    public func nodePlanet(_ id: String?) -> String? {
+        guard let id = id else { return nil }
+        return nodePlanets[id]
+    }
+    
+    public func nodeIDs(ofMissionType type: String) -> [String] {
+        nodeMissionTypes.compactMap { pair in
+            pair.value == type ? pair.key : nil
+        }
     }
     
     public func missionType(_ type: String?) -> String {

@@ -98,23 +98,6 @@ let task = URLSession.shared.dataTask(with: request) { data, response, error in
     do {
         let liveState = try decoder.decode(WorldState.self, from: data)
         print("✅ Live decode SUCCESSFUL! Version: \(liveState.Version ?? -1), Sorties: \(liveState.Sorties?.count ?? 0), Alerts: \(liveState.Alerts?.count ?? 0), Invasions: \(liveState.Invasions?.count ?? 0)")
-        
-        // 4. Test Exhaustive Catalog Repository against Live State
-        print("\n--- Testing Exhaustive Catalog Repository ---")
-        let entries = ExhaustiveCatalogRepository.shared.allEntries
-        print("Exhaustive entries count: \(entries.count)")
-        for entry in entries {
-            let status = entry.evaluate(liveState)
-            switch status {
-            case .active(let summary, let loc, let exp, let rem):
-                print("  [🟢 LIVE] \(entry.title) -> \(summary) @ \(loc), rem: \(Int(rem))s, exp: \(exp?.description ?? "nil")")
-            case .deterministic(let date, let rem, let note):
-                print("  [🔵 DET] \(entry.title) -> \(note), in \(Int(rem/60))m (target: \(date.description))")
-            case .idle(let hint):
-                break
-            }
-        }
-        print("✅ Exhaustive Catalog evaluated all \(entries.count) items with zero crashes!")
     } catch {
         print("❌ Live decode FAILED:")
         print(error)
@@ -122,5 +105,87 @@ let task = URLSession.shared.dataTask(with: request) { data, response, error in
 }
 task.resume()
 semaphore.wait()
+
+// 4. Test Exhaustive Watch Tree against the bundled snapshot (runs offline too)
+print("\n--- Testing Exhaustive Watch Tree ---")
+let dictURL = URL(fileURLWithPath: dictPath)
+let dictionary = DictionaryService(dictionaryURL: dictURL)
+let tree = WatchTreeIndex(dictionary: dictionary)
+print("Tree roots: \(tree.roots.map { $0.title }.joined(separator: " / "))")
+print("Tree node count: \(tree.nodeCount)")
+precondition(tree.nodeCount > 2000, "watch tree is suspiciously small")
+
+let probe = "fis|VoidT1|nm|MT_CAPTURE|SolNode1"
+precondition(tree.node(probe) != nil, "probe leaf must exist in the tree")
+var selection = WatchSelection()
+selection.select("fis|VoidT1")
+precondition(selection.isCovered(probe), "era selection must cover leaf")
+
+selection.toggle("fis|VoidT1|nm|MT_CAPTURE", tree: tree)
+precondition(!selection.isCovered(probe), "unchecking a mode must release that leaf")
+precondition(selection.isCovered("fis|VoidT1|sp|MT_CAPTURE|SolNode1"), "sibling branch must stay selected")
+
+selection.toggle("fis", tree: tree)
+precondition(selection.isCovered(probe), "root selection must cover everything")
+
+selection.toggle("fis", tree: tree)
+precondition(!selection.isCovered(probe), "root unselect must clear")
+
+for root in tree.roots {
+    selection.select(root.id)
+}
+let treeState = try? decoder.decode(WorldState.self, from: snapshotData)
+if let treeState = treeState {
+    let watchHits = tree.liveHits(in: treeState)
+    precondition(watchHits.allSatisfy { selection.isCovered($0.path) }, "selecting every root must cover every live hit")
+    print("Live watch hits (snapshot): \(watchHits.count)")
+    print("✅ Watch tree built \(tree.nodeCount) nodes and matched \(watchHits.count) live hits")
+}
+
+// 5. Structural guards on the tree itself
+print("\n--- Testing Watch Tree Shape ---")
+
+func leaves(of node: WatchNode) -> [WatchNode] {
+    node.isLeaf ? [node] : node.children.flatMap { leaves(of: $0) }
+}
+
+let allLeaves = tree.roots.flatMap { leaves(of: $0) }
+precondition(
+    !allLeaves.contains { $0.id.contains("|CrewBattleNode") },
+    "Railjack nodes never host fissures or arbitrations and must not become leaves"
+)
+
+let fissureRoot = tree.roots.first { $0.id == "fis" }
+let fissureModes = (fissureRoot?.children ?? []).flatMap { $0.children }.flatMap { $0.children }
+precondition(fissureModes.count == 6 * 2 * 19, "expected 19 fissure modes across 6 eras x 2 difficulties")
+let emptyFissureMode = fissureModes.first { $0.children.isEmpty }
+precondition(emptyFissureMode == nil, "fissure branch '\(emptyFissureMode?.title ?? "?")' has no nodes")
+
+let arbRoot = tree.roots.first { $0.id == "arb" }
+precondition(arbRoot?.children.count == 12, "arbitration must list all 12 endless mission types")
+precondition(
+    arbRoot?.children.allSatisfy { !$0.children.isEmpty } ?? false,
+    "every arbitration mission type needs at least one node to be watchable"
+)
+
+// A live arbitration has to resolve to the exact leaf its selection path uses.
+if let modeBranch = arbRoot?.children.first(where: { !$0.children.isEmpty }),
+   let planetBranch = modeBranch.children.first(where: { !$0.children.isEmpty }),
+   let arbLeaf = planetBranch.children.first,
+   let arbNodeID = arbLeaf.id.split(separator: "|").last.map(String.init) {
+    let live = ArbitrationInfo(nodeKey: arbNodeID, type: "Defense", expired: false)
+    guard let hit = tree.arbitrationHit(live) else {
+        fatalError("live arbitration on \(arbNodeID) must produce a hit")
+    }
+    precondition(hit.path == arbLeaf.id, "arbitration hit must point at its own leaf, got \(hit.path)")
+
+    var arbSelection = WatchSelection()
+    arbSelection.select("arb")
+    precondition(arbSelection.isCovered(hit.path), "selecting the arbitration root must cover the hit")
+
+    let stub = ArbitrationInfo(nodeKey: "SolNode000", type: "Unknown", expired: true)
+    precondition(tree.arbitrationHit(stub) == nil, "the feed's placeholder arbitration must not produce a hit")
+    print("✅ Arbitration hit resolves to \(hit.path)")
+}
 
 print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")

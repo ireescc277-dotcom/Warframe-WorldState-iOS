@@ -8,447 +8,608 @@
     "SolNode1": {
       "n": "Galatea （海王星）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "海王星"
     },
     "SolNode2": {
       "n": "Aphrodite （金星）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "金星"
     },
     "SolNode3": {
       "n": "Cordelia （天王星）",
       "e": "Sentient",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode4": {
       "n": "Acheron （冥王星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "冥王星"
     },
     "SolNode5": {
       "n": "Perdita （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode6": {
       "n": "Despina （海王星）",
       "e": "Corpus",
-      "t": "挖掘"
+      "t": "挖掘",
+      "mt": "MT_EXCAVATE",
+      "planet": "海王星"
     },
     "SolNode7": {
       "n": "Epimetheus （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode8": {
       "n": "Nix （冥王星）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "冥王星"
     },
     "SolNode9": {
       "n": "Rosalind （天王星）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "天王星"
     },
     "SolNode10": {
       "n": "Thebe （木星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "木星"
     },
     "SolNode11": {
       "n": "Tharsis （火星）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "火星"
     },
     "SolNode12": {
       "n": "Elion （水星）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "水星"
     },
     "SolNode13": {
       "n": "Bianca （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode14": {
       "n": "Ultor （火星）",
       "e": "双方交战",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "火星"
     },
     "SolNode15": {
       "n": "Pacific （地球）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "地球"
     },
     "SolNode16": {
       "n": "Augustus （火星）",
       "e": "Grineer",
-      "t": "挖掘"
+      "t": "挖掘",
+      "mt": "MT_EXCAVATE",
+      "planet": "火星"
     },
     "SolNode17": {
       "n": "Proteus （海王星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "海王星"
     },
     "SolNode18": {
       "n": "Rhea （土星）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "土星"
     },
     "SolNode19": {
       "n": "Enceladus （土星）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "土星"
     },
     "SolNode20": {
       "n": "Telesto （土星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "土星"
     },
     "SolNode21": {
       "n": "Narcissus （冥王星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "冥王星"
     },
     "SolNode22": {
       "n": "Tessera （金星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "金星"
     },
     "SolNode23": {
       "n": "Cytherean （金星）",
       "e": "Corpus",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "金星"
     },
     "SolNode24": {
       "n": "Oro （地球）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "地球"
     },
     "SolNode25": {
       "n": "Callisto （木星）",
       "e": "Corpus",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "木星"
     },
     "SolNode26": {
       "n": "Lith （地球）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "地球"
     },
     "SolNode27": {
       "n": "E Prime （地球）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "地球"
     },
     "SolNode28": {
       "n": "Terminus （水星）",
       "e": "双方交战",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "水星"
     },
     "SolNode29": {
       "n": "Oberon （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode30": {
       "n": "Olympus （火星）",
       "e": "Grineer",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "火星"
     },
     "SolNode31": {
       "n": "Anthe （土星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "土星"
     },
     "SolNode32": {
       "n": "Tethys （土星）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "土星"
     },
     "SolNode33": {
       "n": "Ariel （天王星）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "天王星"
     },
     "SolNode34": {
       "n": "Sycorax （天王星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "天王星"
     },
     "SolNode35": {
       "n": "Arcadia （火星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火星"
     },
     "SolNode36": {
       "n": "Martialis （火星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "火星"
     },
     "SolNode37": {
       "n": "Pallene （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode38": {
       "n": "Minthe （冥王星）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "冥王星"
     },
     "SolNode39": {
       "n": "Everest （地球）",
       "e": "Grineer",
-      "t": "挖掘"
+      "t": "挖掘",
+      "mt": "MT_EXCAVATE",
+      "planet": "地球"
     },
     "SolNode40": {
       "n": "Prospero （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode41": {
       "n": "Arval （火星）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "火星"
     },
     "SolNode42": {
       "n": "Helene （土星）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "土星"
     },
     "SolNode43": {
       "n": "Cerberus （冥王星）",
       "e": "Corpus",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "冥王星"
     },
     "SolNode44": {
       "n": "Mimas （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode45": {
       "n": "Ara （火星）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "火星"
     },
     "SolNode46": {
       "n": "Spear （火星）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "火星"
     },
     "SolNode47": {
       "n": "Janus （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode48": {
       "n": "Regna （冥王星）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "冥王星"
     },
     "SolNode49": {
       "n": "Larissa （海王星）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "海王星"
     },
     "SolNode50": {
       "n": "Numa （土星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "土星"
     },
     "SolNode51": {
       "n": "Hades （冥王星）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "冥王星"
     },
     "SolNode52": {
       "n": "Portia （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode53": {
       "n": "Themisto （木星）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "木星"
     },
     "SolNode54": {
       "n": "Silvanus （火星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火星"
     },
     "SolNode55": {
       "n": "Methone （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode56": {
       "n": "Cypress （冥王星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "冥王星"
     },
     "SolNode57": {
       "n": "Sao （海王星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "海王星"
     },
     "SolNode58": {
       "n": "Hellas （火星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "火星"
     },
     "SolNode59": {
       "n": "Eurasia （地球）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "地球"
     },
     "SolNode60": {
       "n": "Caliban （天王星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "天王星"
     },
     "SolNode61": {
       "n": "Ishtar （金星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "金星"
     },
     "SolNode62": {
       "n": "Neso （海王星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "海王星"
     },
     "SolNode63": {
       "n": "Mantle （地球）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "地球"
     },
     "SolNode64": {
       "n": "Umbriel （天王星）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "天王星"
     },
     "SolNode65": {
       "n": "Gradivus （火星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "火星"
     },
     "SolNode66": {
       "n": "Unda （金星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "金星"
     },
     "SolNode67": {
       "n": "Dione （土星）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "土星"
     },
     "SolNode68": {
       "n": "Vallis （火星）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "火星"
     },
     "SolNode69": {
       "n": "Ophelia （天王星）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "天王星"
     },
     "SolNode70": {
       "n": "Cassini （土星）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "土星"
     },
     "SolNode71": {
       "n": "Vesper （金星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "金星"
     },
     "SolNode72": {
       "n": "Outer Terminus （冥王星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "冥王星"
     },
     "SolNode73": {
       "n": "Ananke （木星）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "木星"
     },
     "SolNode74": {
       "n": "Carme （木星）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "木星"
     },
     "SolNode75": {
       "n": "Cervantes （地球）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "地球"
     },
     "SolNode76": {
       "n": "Hydra （冥王星）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "冥王星"
     },
     "SolNode77": {
       "n": "Cupid （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode78": {
       "n": "Triton （海王星）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "海王星"
     },
     "SolNode79": {
       "n": "Cambria （地球）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "地球"
     },
     "SolNode80": {
       "n": "Phoebe （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode81": {
       "n": "Palus （冥王星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "冥王星"
     },
     "SolNode82": {
       "n": "Calypso （土星）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "土星"
     },
     "SolNode83": {
       "n": "Cressida （天王星）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "天王星"
     },
     "SolNode84": {
       "n": "Nereid （海王星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "海王星"
     },
     "SolNode85": {
       "n": "Gaia （地球）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "地球"
     },
     "SolNode86": {
       "n": "Aegaeon （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode87": {
       "n": "Ganymede （木星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "木星"
     },
     "SolNode88": {
       "n": "Adrastea （木星）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "木星"
     },
     "SolNode89": {
       "n": "Mariana （地球）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "地球"
     },
     "SolNode90": {
       "n": "Miranda",
@@ -458,962 +619,1283 @@
     "SolNode91": {
       "n": "Iapetus （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode92": {
       "n": "Charon （冥王星）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "冥王星"
     },
     "SolNode93": {
       "n": "Keeler （土星）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "土星"
     },
     "SolNode94": {
       "n": "Apollodorus （水星）",
       "e": "Infested",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "水星"
     },
     "SolNode95": {
       "n": "Thalassa （海王星）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "海王星"
     },
     "SolNode96": {
       "n": "Titan （土星）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "土星"
     },
     "SolNode97": {
       "n": "Amalthea （木星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "木星"
     },
     "SolNode98": {
       "n": "Desdemona （天王星）",
       "e": "Grineer",
-      "t": "破坏 (Archwing)"
+      "t": "破坏 (Archwing)",
+      "planet": "天王星"
     },
     "SolNode99": {
       "n": "War （火星）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "火星"
     },
     "SolNode100": {
       "n": "Elara （木星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "木星"
     },
     "SolNode101": {
       "n": "Kiliken （金星）",
       "e": "Corpus",
-      "t": "挖掘"
+      "t": "挖掘",
+      "mt": "MT_EXCAVATE",
+      "planet": "金星"
     },
     "SolNode102": {
       "n": "Oceanum （冥王星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "冥王星"
     },
     "SolNode103": {
       "n": "M Prime （水星）",
       "e": "双方交战",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "水星"
     },
     "SolNode104": {
       "n": "Fossa （金星）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "金星"
     },
     "SolNode105": {
       "n": "Titania （天王星）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "天王星"
     },
     "SolNode106": {
       "n": "Alator （火星）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "火星"
     },
     "SolNode107": {
       "n": "Venera （金星）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "金星"
     },
     "SolNode108": {
       "n": "Tolstoj （水星）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "水星"
     },
     "SolNode109": {
       "n": "Linea （金星）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "金星"
     },
     "SolNode110": {
       "n": "Hyperion （土星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "土星"
     },
     "SolNode111": {
       "n": "Juliet （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode112": {
       "n": "Setebos （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode113": {
       "n": "Ares （火星）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "火星"
     },
     "SolNode114": {
       "n": "Puck （天王星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "天王星"
     },
     "SolNode115": {
       "n": "Quirinus （火星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火星"
     },
     "SolNode116": {
       "n": "Mab （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode117": {
       "n": "Naiad （海王星）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "海王星"
     },
     "SolNode118": {
       "n": "Laomedeia （海王星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "海王星"
     },
     "SolNode119": {
       "n": "Caloris （水星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "水星"
     },
     "SolNode120": {
       "n": "Halimede （海王星）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "海王星"
     },
     "SolNode121": {
       "n": "Carpo （木星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "木星"
     },
     "SolNode122": {
       "n": "Stephano （天王星）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "天王星"
     },
     "SolNode123": {
       "n": "V Prime （金星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "金星"
     },
     "SolNode124": {
       "n": "Trinculo （天王星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "天王星"
     },
     "SolNode125": {
       "n": "Io （木星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "木星"
     },
     "SolNode126": {
       "n": "Metis （木星）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "木星"
     },
     "SolNode127": {
       "n": "Psamathe （海王星）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "海王星"
     },
     "SolNode128": {
       "n": "E Gate （金星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "金星"
     },
     "SolNode129": {
       "n": "奥布山谷 （金星）",
       "e": "Corpus",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "金星"
     },
     "SolNode130": {
       "n": "Lares （水星）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "水星"
     },
     "SolNode131": {
       "n": "Pallas （谷神星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "谷神星"
     },
     "SolNode132": {
       "n": "Bode （谷神星）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "谷神星"
     },
     "SolNode133": {
       "n": "Vedic （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode134": {
       "n": "Varro （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode135": {
       "n": "Thon （谷神星）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "谷神星"
     },
     "SolNode136": {
       "n": "Olla （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode137": {
       "n": "Nuovo （谷神星）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "谷神星"
     },
     "SolNode138": {
       "n": "Ludi （谷神星）",
       "e": "Grineer",
-      "t": "劫持"
+      "t": "劫持",
+      "planet": "谷神星",
+      "mt": "MT_RETRIEVAL"
     },
     "SolNode139": {
       "n": "Lex （谷神星）",
       "e": "Grineer",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "谷神星"
     },
     "SolNode140": {
       "n": "Kiste （谷神星）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "谷神星"
     },
     "SolNode141": {
       "n": "Ker （谷神星）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "谷神星"
     },
     "SolNode142": {
       "n": "Hapke （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode143": {
       "n": "Gefion （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode144": {
       "n": "Exta （谷神星）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "谷神星"
     },
     "SolNode145": {
       "n": "Egeria （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode146": {
       "n": "Draco （谷神星）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "谷神星"
     },
     "SolNode147": {
       "n": "Cinxia （谷神星）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "谷神星"
     },
     "SolNode148": {
       "n": "Cerium （谷神星）",
       "e": "",
-      "t": ""
+      "t": "",
+      "planet": "谷神星"
     },
     "SolNode149": {
       "n": "Casta （谷神星）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "谷神星"
     },
     "SolNode150": {
       "n": "Albedo （谷神星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "谷神星"
     },
     "SolNode151": {
       "n": "Acanth （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode152": {
       "n": "Ascar （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode153": {
       "n": "Brugia （阋神星）",
       "e": "Infested",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "阋神星"
     },
     "SolNode154": {
       "n": "Candiru （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode155": {
       "n": "Cosis （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode156": {
       "n": "Cyath （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode157": {
       "n": "Giardia （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode158": {
       "n": "Gnathos （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode159": {
       "n": "Lepis （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode160": {
       "n": "Histo （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode161": {
       "n": "Hymeno （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode162": {
       "n": "Isos （阋神星）",
       "e": "Infested",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "阋神星"
     },
     "SolNode163": {
       "n": "Ixodes （阋神星）",
       "e": "",
-      "t": ""
+      "t": "",
+      "planet": "阋神星"
     },
     "SolNode164": {
       "n": "Kala-azar （阋神星）",
       "e": "Infested",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "阋神星"
     },
     "SolNode165": {
       "n": "Sporid （阋神星）",
       "e": "Infested",
-      "t": "清巢"
+      "t": "清巢",
+      "planet": "阋神星",
+      "mt": "MT_HIVE"
     },
     "SolNode166": {
       "n": "Nimus （阋神星）",
       "e": "Infested",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "阋神星"
     },
     "SolNode167": {
       "n": "Oestrus （阋神星）",
       "e": "Infested",
-      "t": "Infested资源回收"
+      "t": "Infested资源回收",
+      "planet": "阋神星",
+      "mt": "MT_PURIFY"
     },
     "SolNode168": {
       "n": "Phalan （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode169": {
       "n": "Psoro （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode170": {
       "n": "Ranova （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode171": {
       "n": "Saxis （阋神星）",
       "e": "Infested",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "阋神星"
     },
     "SolNode172": {
       "n": "Xini （阋神星）",
       "e": "Infested",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "阋神星"
     },
     "SolNode173": {
       "n": "Solium （阋神星）",
       "e": "Infested",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "阋神星"
     },
     "SolNode174": {
       "n": "Sparga （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode175": {
       "n": "Naeglar （阋神星）",
       "e": "Infested",
-      "t": "清巢"
+      "t": "清巢",
+      "planet": "阋神星",
+      "mt": "MT_HIVE"
     },
     "SolNode176": {
       "n": "Viver （阋神星）",
       "e": "Infested",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "阋神星"
     },
     "SolNode177": {
       "n": "Kappa （赛德娜）",
       "e": "Grineer",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "赛德娜"
     },
     "SolNode178": {
       "n": "Hyosube （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode179": {
       "n": "Jengu （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode180": {
       "n": "Undine （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode181": {
       "n": "Adaro （赛德娜）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "赛德娜"
     },
     "SolNode182": {
       "n": "Camenae （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode183": {
       "n": "Vodyanoi （赛德娜）",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA",
+      "planet": "赛德娜"
     },
     "SolNode184": {
       "n": "Rusalka （赛德娜）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "赛德娜"
     },
     "SolNode185": {
       "n": "Berehynia （赛德娜）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "赛德娜"
     },
     "SolNode186": {
       "n": "Phithale （赛德娜）",
       "e": "Grineer",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "赛德娜"
     },
     "SolNode187": {
       "n": "Selkie （赛德娜）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "赛德娜"
     },
     "SolNode188": {
       "n": "Kelpie （赛德娜）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "赛德娜"
     },
     "SolNode189": {
       "n": "Naga （赛德娜）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "赛德娜"
     },
     "SolNode190": {
       "n": "Nakki （赛德娜）",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA",
+      "planet": "赛德娜"
     },
     "SolNode191": {
       "n": "Marid （赛德娜）",
       "e": "Grineer",
-      "t": "劫持"
+      "t": "劫持",
+      "planet": "赛德娜",
+      "mt": "MT_RETRIEVAL"
     },
     "SolNode192": {
       "n": "Tikoloshe （赛德娜）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "赛德娜"
     },
     "SolNode193": {
       "n": "Merrow （赛德娜）",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "赛德娜"
     },
     "SolNode194": {
       "n": "Ponaturi （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode195": {
       "n": "Hydron （赛德娜）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "赛德娜"
     },
     "SolNode196": {
       "n": "Charybdis （赛德娜）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "赛德娜"
     },
     "SolNode197": {
       "n": "Graeae （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode198": {
       "n": "Scylla （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode199": {
       "n": "Yam （赛德娜）",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA",
+      "planet": "赛德娜"
     },
     "SolNode200": {
       "n": "Veles （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode201": {
       "n": "Tiamat （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode202": {
       "n": "Yemaja （赛德娜）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "赛德娜"
     },
     "SolNode203": {
       "n": "Abaddon （欧罗巴）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "欧罗巴"
     },
     "SolNode204": {
       "n": "Armaros （欧罗巴）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "欧罗巴"
     },
     "SolNode205": {
       "n": "Baal （欧罗巴）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "欧罗巴"
     },
     "SolNode206": {
       "n": "Eligor （欧罗巴）",
       "e": "",
-      "t": ""
+      "t": "",
+      "planet": "欧罗巴"
     },
     "SolNode207": {
       "n": "Gamygyn （欧罗巴）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "欧罗巴"
     },
     "SolNode208": {
       "n": "Lillith （欧罗巴）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "欧罗巴"
     },
     "SolNode209": {
       "n": "Morax （欧罗巴）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "欧罗巴"
     },
     "SolNode210": {
       "n": "Naamah （欧罗巴）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "欧罗巴"
     },
     "SolNode211": {
       "n": "Ose （欧罗巴）",
       "e": "Corpus",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "欧罗巴"
     },
     "SolNode212": {
       "n": "Paimon （欧罗巴）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "欧罗巴"
     },
     "SolNode213": {
       "n": "Shax （欧罗巴）",
       "e": "",
-      "t": ""
+      "t": "",
+      "planet": "欧罗巴"
     },
     "SolNode214": {
       "n": "Sorath （欧罗巴）",
       "e": "Corpus",
-      "t": "劫持"
+      "t": "劫持",
+      "planet": "欧罗巴",
+      "mt": "MT_RETRIEVAL"
     },
     "SolNode215": {
       "n": "Valac （欧罗巴）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "欧罗巴"
     },
     "SolNode216": {
       "n": "Valefor （欧罗巴）",
       "e": "Corpus",
-      "t": "挖掘"
+      "t": "挖掘",
+      "mt": "MT_EXCAVATE",
+      "planet": "欧罗巴"
     },
     "SolNode217": {
       "n": "Orias （欧罗巴）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "欧罗巴"
     },
     "SolNode218": {
       "n": "Zagan （欧罗巴）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "欧罗巴"
     },
     "SolNode219": {
       "n": "Beleth （欧罗巴）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "欧罗巴"
     },
     "SolNode220": {
       "n": "Kokabiel （欧罗巴）",
       "e": "Corpus",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "欧罗巴"
     },
     "SolNode221": {
       "n": "Neruda （水星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "水星"
     },
     "SolNode222": {
       "n": "Eminescu （水星）",
       "e": "Grineer",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "水星"
     },
     "SolNode223": {
       "n": "Boethius （水星）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "水星"
     },
     "SolNode224": {
       "n": "Odin （水星）",
       "e": "Grineer",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "水星"
     },
     "SolNode225": {
       "n": "Suisei （水星）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "水星"
     },
     "SolNode226": {
       "n": "Pantheon （水星）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "水星"
     },
     "SolNode227": {
       "n": "Verdi （水星）",
       "e": "",
-      "t": ""
+      "t": "",
+      "planet": "水星"
     },
     "SolNode228": {
       "n": "夜灵平野（地球）",
       "e": "Grineer",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "地球"
     },
     "SolNode229": {
       "n": "魔胎之境 （火卫二）",
       "e": "Infested",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "火卫二"
     },
     "SolNode230": {
       "n": "永视弧域（扎里曼）",
       "e": "双方交战",
-      "t": "虚空洪流"
+      "t": "虚空洪流",
+      "planet": "扎里曼",
+      "mt": "MT_CORRUPTION"
     },
     "SolNode231": {
       "n": "哈拉科防线（扎里曼）",
       "e": "双方交战",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "扎里曼"
     },
     "SolNode232": {
       "n": "涂沃主厅（扎里曼）",
       "e": "双方交战",
-      "t": "虚空覆涌"
+      "t": "虚空覆涌",
+      "planet": "扎里曼",
+      "mt": "MT_VOID_CASCADE"
     },
     "SolNode233": {
       "n": "奥金工场（扎里曼）",
       "e": "双方交战",
-      "t": "Void Armageddon"
+      "t": "虚空决战",
+      "planet": "扎里曼",
+      "mt": "MT_VOID_ARMAGEDDON"
     },
     "SolNode234": {
       "n": "居住舱（扎里曼）",
       "e": "Tenno",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "扎里曼"
     },
     "SolNode235": {
       "n": "翠径（扎里曼）",
       "e": "双方交战",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "扎里曼"
     },
     "SolNode236": {
-      "n": "双衍历程（双衍王境）",
+      "n": "双衍历程（杜维里）",
       "e": "双衍王境",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "杜维里"
     },
     "SolNode237": {
-      "n": "孤独纪事（双衍王境）",
+      "n": "孤独纪事（杜维里）",
       "e": "双衍王境",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "杜维里"
     },
     "SolNode238": {
-      "n": "无尽回廊（双衍王境）",
+      "n": "无尽回廊（杜维里）",
       "e": "双衍王境",
-      "t": "自由探索"
+      "t": "自由探索",
+      "mt": "MT_LANDSCAPE",
+      "planet": "杜维里"
     },
     "SolNode239": {
       "n": "Vesper 中继站 （金星）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "金星"
     },
     "ZarimanHub": {
       "n": "羽化之穹（扎里曼）",
       "e": "Tenno",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "扎里曼"
     },
     "SolNode400": {
       "n": "Teshub （虚空）",
       "e": "奥罗金",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "虚空"
     },
     "SolNode401": {
       "n": "Hepit （虚空）",
       "e": "奥罗金",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "虚空"
     },
     "SolNode402": {
       "n": "Taranis （虚空）",
       "e": "奥罗金",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "虚空"
     },
     "SolNode403": {
       "n": "Tiwaz （虚空）",
       "e": "奥罗金",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "虚空"
     },
     "SolNode404": {
       "n": "Stribog （虚空）",
       "e": "奥罗金",
-      "t": "Orokin 破坏"
+      "t": "Orokin 破坏",
+      "planet": "虚空",
+      "mt": "MT_SABOTAGE"
     },
     "SolNode405": {
       "n": "Ani （虚空）",
       "e": "奥罗金",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "虚空"
     },
     "SolNode406": {
       "n": "Ukko （虚空）",
       "e": "奥罗金",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "虚空"
     },
     "SolNode407": {
       "n": "Oxomoco （虚空）",
       "e": "奥罗金",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "虚空"
     },
     "SolNode408": {
       "n": "Belenus （虚空）",
       "e": "奥罗金",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "虚空"
     },
     "SolNode409": {
       "n": "Mot （虚空）",
       "e": "奥罗金",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "虚空"
     },
     "SolNode410": {
       "n": "Aten （虚空）",
       "e": "奥罗金",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "虚空"
     },
     "SolNode411": {
       "n": "Marduk （虚空）",
       "e": "奥罗金",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "虚空"
     },
     "SolNode412": {
       "n": "Mithra （虚空）",
       "e": "奥罗金",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY",
+      "planet": "虚空"
     },
     "SolNode413": {
-      "n": "虚空",
+      "n": "虚空（虚空）",
       "e": "堕落",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "虚空"
     },
     "SolNode450": {
       "n": "Tyana Pass （火星）",
       "e": "双方交战",
-      "t": "镜像防御"
+      "t": "镜像防御",
+      "planet": "火星",
+      "mt": "MT_MIRROR_DEFENSE"
     },
     "DeimosHub": {
-      "n": "Necralisk （Deimos）",
+      "n": "Necralisk（火卫二）",
       "e": "Tenno",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "火卫二"
     },
     "SolNode706": {
       "n": "Horend （火卫二）",
       "e": "Infested",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "火卫二"
     },
     "SolNode707": {
       "n": "Hyf （火卫二）",
       "e": "Infested",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "火卫二"
     },
     "SolNode708": {
       "n": "Phlegyas （火卫二）",
       "e": "Infested",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "火卫二"
     },
     "SolNode709": {
       "n": "Dirus （火卫二）",
       "e": "Infested",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "火卫二"
     },
     "SolNode710": {
       "n": "Formido （火卫二）",
       "e": "Infested",
-      "t": "破坏"
+      "t": "破坏",
+      "mt": "MT_SABOTAGE",
+      "planet": "火卫二"
     },
     "SolNode711": {
       "n": "Terrorem （火卫二）",
       "e": "Infested",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "火卫二"
     },
     "SolNode712": {
       "n": "Magnacidium （火卫二）",
       "e": "Infested",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "火卫二"
     },
     "SolNode713": {
       "n": "Exequias （火卫二）",
       "e": "Infested",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "火卫二"
     },
     "SolNode714": {
       "n": "解剖圣所（火卫二）",
       "e": "Tenno",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "火卫二"
     },
     "SolNode715": {
       "n": "恶涌（火卫二）",
       "e": "低语者",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "火卫二"
     },
     "SolNode716": {
       "n": "孽杀（火卫二）",
       "e": "低语者",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "火卫二"
     },
     "SolNode717": {
       "n": "不灭之地（火卫二）",
       "e": "低语者",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "火卫二"
     },
     "SolNode718": {
       "n": "异化区（火卫二）",
       "e": "低语者",
-      "t": "元素转换"
+      "t": "元素转换",
+      "planet": "火卫二",
+      "mt": "MT_ALCHEMY"
     },
     "SolNode719": {
       "n": "墓垒（火卫二）",
       "e": "低语者",
-      "t": "镜像防御"
+      "t": "镜像防御",
+      "planet": "火卫二",
+      "mt": "MT_MIRROR_DEFENSE"
     },
     "SolNode720": {
       "n": "孤冢（火卫二）",
       "e": "低语者",
-      "t": "衰退室"
+      "t": "衰退室",
+      "planet": "火卫二"
     },
     "SolNode721": {
       "n": "Armatus （火卫二）",
       "e": "低语者",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "火卫二"
     },
     "SolNode251": {
-      "n": "Dark Refactory （Deimos）",
+      "n": "Dark Refactory（火卫二）",
       "e": "Anarch",
-      "t": "The Perita Rebellion"
+      "t": "The Perita Rebellion",
+      "planet": "火卫二"
     },
     "SolNode740": {
       "n": "蝠力使 （木星）",
       "e": "Sentient",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "木星"
     },
     "SolNode741": {
-      "n": "Koro （Kuva 要塞）",
+      "n": "Koro（赤毒要塞）",
       "e": "Grineer",
-      "t": "强袭"
+      "t": "强袭",
+      "planet": "赤毒要塞",
+      "mt": "MT_ASSAULT"
     },
     "SolNode742": {
-      "n": "Nabuk （Kuva 要塞）",
+      "n": "Nabuk（赤毒要塞）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "赤毒要塞"
     },
     "SolNode743": {
-      "n": "Rotuma （Kuva 要塞）",
+      "n": "Rotuma（赤毒要塞）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "赤毒要塞"
     },
     "SolNode744": {
-      "n": "Taveuni （Kuva 要塞）",
+      "n": "Taveuni（赤毒要塞）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "赤毒要塞"
     },
     "SolNode745": {
-      "n": "Tamu （Kuva 要塞）",
+      "n": "Tamu（赤毒要塞）",
       "e": "Grineer",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "赤毒要塞"
     },
     "SolNode746": {
-      "n": "Dakata （Kuva 要塞）",
+      "n": "Dakata（赤毒要塞）",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "赤毒要塞"
     },
     "SolNode747": {
-      "n": "Pago （Kuva 要塞）",
+      "n": "Pago（赤毒要塞）",
       "e": "Grineer",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "赤毒要塞"
     },
     "SolNode748": {
-      "n": "Garus （Kuva 要塞）",
+      "n": "Garus（赤毒要塞）",
       "e": "Grineer",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "赤毒要塞"
     },
     "SolNode901": {
       "n": "Caduceus",
@@ -1423,227 +1905,290 @@
     "SolNode902": {
       "n": "Montes （金星）",
       "e": "Corpus",
-      "t": "歼灭 (Archwing)"
+      "t": "歼灭 (Archwing)",
+      "planet": "金星"
     },
     "SolNode903": {
       "n": "Erpo （地球）",
       "e": "Grineer",
-      "t": "移动防御 (Archwing)"
+      "t": "移动防御 (Archwing)",
+      "planet": "地球"
     },
     "SolNode904": {
       "n": "Syrtis （火星）",
       "e": "Grineer",
-      "t": "歼灭 (Archwing)"
+      "t": "歼灭 (Archwing)",
+      "planet": "火星"
     },
     "SolNode905": {
       "n": "Galilea （木星）",
       "e": "Corpus",
-      "t": "破坏 (Archwing)"
+      "t": "破坏 (Archwing)",
+      "planet": "木星"
     },
     "SolNode906": {
       "n": "Pandora （土星）",
       "e": "Grineer",
-      "t": "追击 (Archwing)"
+      "t": "追击 (Archwing)",
+      "planet": "土星"
     },
     "SolNode907": {
       "n": "Caelus （天王星）",
       "e": "Grineer",
-      "t": "拦截 (Archwing)"
+      "t": "拦截 (Archwing)",
+      "planet": "天王星"
     },
     "SolNode908": {
       "n": "Salacia （海王星）",
       "e": "Corpus",
-      "t": "移动防御 (Archwing)"
+      "t": "移动防御 (Archwing)",
+      "planet": "海王星"
     },
     "SolNode300": {
       "n": "Plato （月球）",
       "e": "双方交战",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "月球"
     },
     "SolNode301": {
       "n": "Grimaldi （月球）",
       "e": "Grineer",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "月球"
     },
     "SolNode302": {
       "n": "Tycho （月球）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "月球"
     },
     "SolNode304": {
       "n": "Copernicus （月球）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "月球"
     },
     "SolNode305": {
       "n": "Stöfler （月球）",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "月球"
     },
     "SolNode306": {
       "n": "Pavlov （月球）",
       "e": "双方交战",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "月球"
     },
     "SolNode307": {
       "n": "Zeipel （月球）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "月球"
     },
     "SolNode308": {
       "n": "Apollo （月球）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "月球"
     },
     "SolNode309": {
       "n": "Yuvarium （月球）",
       "e": "奥罗金",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "月球"
     },
     "SolNode310": {
       "n": "Circulus （月球）",
       "e": "Grineer",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "月球"
     },
     "SettlementNode1": {
       "n": "Roche （火卫一）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "火卫一"
     },
     "SettlementNode2": {
       "n": "Skyresh （火卫一）",
       "e": "Corpus",
-      "t": "捕获"
+      "t": "捕获",
+      "mt": "MT_CAPTURE",
+      "planet": "火卫一"
     },
     "SettlementNode3": {
       "n": "Stickney （火卫一）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "火卫一"
     },
     "SettlementNode4": {
       "n": "Drunlo （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode5": {
       "n": "Grildrig （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode6": {
       "n": "Limtoc （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode7": {
       "n": "Hall （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode8": {
       "n": "Reldresal （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode9": {
       "n": "Clustril （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode10": {
       "n": "Kepler （火卫一）",
       "e": "Corpus",
-      "t": "追击 (Archwing)"
+      "t": "追击 (Archwing)",
+      "planet": "火卫一"
     },
     "SettlementNode11": {
       "n": "Gulliver （火卫一）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "火卫一"
     },
     "SettlementNode12": {
       "n": "Monolith （火卫一）",
       "e": "Corpus",
-      "t": "救援"
+      "t": "救援",
+      "mt": "MT_RESCUE",
+      "planet": "火卫一"
     },
     "SettlementNode13": {
       "n": "D'Arrest （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode14": {
       "n": "Shklovsky （火卫一）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "火卫一"
     },
     "SettlementNode15": {
       "n": "Sharpless （火卫一）",
       "e": "Corpus",
-      "t": "移动防御"
+      "t": "移动防御",
+      "mt": "MT_MOBILE_DEFENSE",
+      "planet": "火卫一"
     },
     "SettlementNode16": {
       "n": "Wendell （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode17": {
       "n": "Flimnap （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode18": {
       "n": "Opik （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode19": {
       "n": "Todd （火卫一）",
       "e": "Corpus",
-      "t": "远古惩戒"
+      "t": "远古惩戒",
+      "planet": "火卫一"
     },
     "SettlementNode20": {
       "n": "Iliad （火卫一）",
       "e": "Corpus",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION",
+      "planet": "火卫一"
     },
     "MercuryHUB": {
       "n": "Larunda 中继站 （水星）",
       "e": "Grineer",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "水星"
     },
     "VenusHUB": {
       "n": "Vesper 中继站 （金星）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "金星"
     },
     "EarthHUB": {
       "n": "Strata 中继站 （地球）",
       "e": "Grineer",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "地球"
     },
     "SaturnHUB": {
       "n": "Kronia 中继站 （土星）",
       "e": "Grineer",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "土星"
     },
     "ErisHUB": {
       "n": "Kuiper 中继站 （阋神星）",
       "e": "Infested",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "阋神星"
     },
     "EuropaHUB": {
       "n": "Leonov 中继站 （欧罗巴）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "欧罗巴"
     },
     "PlutoHUB": {
       "n": "Orcus 中继站 （冥王星）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "冥王星"
     },
     "TradeHUB1": {
       "n": "Marro 的集市 （火星）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "火星"
     },
     "EventNode0": {
       "n": "Balor",
@@ -1668,7 +2213,8 @@
     "EventNode4": {
       "n": "机械叛乱",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL"
     },
     "EventNode5": {
       "n": "Birog",
@@ -1683,7 +2229,8 @@
     "EventNode7": {
       "n": "机械叛乱",
       "e": "Corpus",
-      "t": "拦截"
+      "t": "拦截",
+      "mt": "MT_TERRITORY"
     },
     "EventNode8": {
       "n": "Corb",
@@ -1733,17 +2280,20 @@
     "EventNode17": {
       "n": "机械叛乱",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE"
     },
     "EventNode18": {
       "n": "机械叛乱",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE"
     },
     "EventNode19": {
       "n": "火星",
       "e": "Grineer",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE"
     },
     "EventNode20": {
       "n": "Tyl Regor 深海研究所",
@@ -1758,77 +2308,96 @@
     "EventNode24": {
       "n": "地球",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode25": {
       "n": "地球",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode26": {
       "n": "地球",
       "e": "Grineer",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION"
     },
     "EventNode27": {
       "n": "虚空",
       "e": "堕落者",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL"
     },
     "EventNode28": {
       "n": "土星",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION"
     },
     "EventNode29": {
       "n": "土星",
       "e": "Grineer",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION"
     },
     "EventNode30": {
       "n": "Ganymede （木星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "木星"
     },
     "EventNode31": {
       "n": "Ganymede （木星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "木星"
     },
     "EventNode32": {
       "n": "Ganymede （木星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "木星"
     },
     "EventNode33": {
       "n": "Ganymede （木星）",
       "e": "Corpus",
-      "t": "中断"
+      "t": "中断",
+      "mt": "MT_ARTIFACT",
+      "planet": "木星"
     },
     "EventNode34": {
       "n": "地球",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode35": {
       "n": "地球",
       "e": "Grineer",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode761": {
       "n": "指数之场",
       "e": "Corpus",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode762": {
       "n": "指数之场 Pt 2",
       "e": "Corpus",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "EventNode763": {
       "n": "指数之场：耐久",
       "e": "Corpus",
-      "t": "竞技场"
+      "t": "竞技场",
+      "mt": "MT_ARENA"
     },
     "PvpNode0": {
       "n": "武形密仪 夺取中枢",
@@ -1908,357 +2477,489 @@
     "ClanNode0": {
       "n": "Romula （金星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "金星"
     },
     "ClanNode1": {
       "n": "Malva （金星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "金星"
     },
     "ClanNode2": {
       "n": "Coba （地球）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "地球"
     },
     "ClanNode3": {
       "n": "Tikal （地球）",
       "e": "Infested",
-      "t": "黑暗地带挖掘"
+      "t": "黑暗地带挖掘",
+      "planet": "地球",
+      "mt": "MT_EXCAVATE"
     },
     "ClanNode4": {
       "n": "Sinai （木星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "木星"
     },
     "ClanNode5": {
       "n": "Cameria （木星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "木星"
     },
     "ClanNode6": {
       "n": "Larzac （欧罗巴）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "欧罗巴"
     },
     "ClanNode7": {
       "n": "Cholistan （欧罗巴）",
       "e": "Infested",
-      "t": "黑暗地带挖掘"
+      "t": "黑暗地带挖掘",
+      "planet": "欧罗巴",
+      "mt": "MT_EXCAVATE"
     },
     "ClanNode8": {
       "n": "Kadesh （火星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "火星"
     },
     "ClanNode9": {
       "n": "Wahiba （火星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "火星"
     },
     "ClanNode10": {
       "n": "Memphis （火卫一）",
       "e": "Infested",
-      "t": "黑暗地带叛逃"
+      "t": "黑暗地带叛逃",
+      "planet": "火卫一",
+      "mt": "MT_EVACUATION"
     },
     "ClanNode11": {
       "n": "Zeugma （火卫一）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "火卫一"
     },
     "ClanNode12": {
       "n": "Caracol （土星）",
       "e": "Infested",
-      "t": "黑暗地带叛逃"
+      "t": "黑暗地带叛逃",
+      "planet": "土星",
+      "mt": "MT_EVACUATION"
     },
     "ClanNode13": {
       "n": "Piscinas （土星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "土星"
     },
     "ClanNode14": {
       "n": "Amarna （赛德娜）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "赛德娜"
     },
     "ClanNode15": {
       "n": "Sangeru （赛德娜）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "赛德娜"
     },
     "ClanNode16": {
       "n": "Ur （天王星）",
       "e": "Infested",
-      "t": "黑暗地带中断"
+      "t": "黑暗地带中断",
+      "planet": "天王星",
+      "mt": "MT_ARTIFACT"
     },
     "ClanNode17": {
       "n": "Assur （天王星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "天王星"
     },
     "ClanNode18": {
       "n": "Akkad （阋神星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "阋神星"
     },
     "ClanNode19": {
       "n": "Zabala （阋神星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "阋神星"
     },
     "ClanNode20": {
       "n": "Yursa （海王星）",
       "e": "Infested",
-      "t": "黑暗地带叛逃"
+      "t": "黑暗地带叛逃",
+      "planet": "海王星",
+      "mt": "MT_EVACUATION"
     },
     "ClanNode21": {
       "n": "Kelashin （海王星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "海王星"
     },
     "ClanNode22": {
       "n": "Seimeni （谷神星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "谷神星"
     },
     "ClanNode23": {
       "n": "Gabii （谷神星）",
       "e": "Infested",
-      "t": "黑暗地带生存"
+      "t": "黑暗地带生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "谷神星"
     },
     "ClanNode24": {
       "n": "Sechura （冥王星）",
       "e": "Infested",
-      "t": "黑暗地带防御"
+      "t": "黑暗地带防御",
+      "mt": "MT_DEFENSE",
+      "planet": "冥王星"
     },
     "ClanNode25": {
       "n": "Hieracon （冥王星）",
       "e": "Infested",
-      "t": "黑暗地带挖掘"
+      "t": "黑暗地带挖掘",
+      "planet": "冥王星",
+      "mt": "MT_EXCAVATE"
     },
     "/Lotus/Types/Keys/SortieBossKeyPhorid": {
       "n": "突击 Boss: Phorid",
       "e": "Infested",
-      "t": "刺杀"
+      "t": "刺杀",
+      "mt": "MT_ASSASSINATION"
     },
     "CrewBattleNode501": {
-      "n": "魔多星团 （土星比邻星域）",
+      "n": "魔多星团（土星）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "土星"
     },
     "CrewBattleNode502": {
-      "n": "深眠峡道 （地球比邻星域）",
+      "n": "深眠峡道（地球）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "地球"
     },
     "CrewBattleNode503": {
-      "n": "虹桥回声 （金星比邻星域）",
+      "n": "虹桥回声（金星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "金星"
     },
     "CrewBattleNode504": {
-      "n": "时空坐标 （海王星比邻星域）",
+      "n": "时空坐标（海王星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "海王星"
     },
     "CrewBattleNode505": {
-      "n": "Ruse 战场 （面纱）",
+      "n": "Ruse 战场（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode509": {
-      "n": "虚无神殿 （地球比邻星域）",
+      "n": "虚无神殿（地球）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "地球"
     },
     "CrewBattleNode510": {
-      "n": "Gian 点 （面纱）",
+      "n": "Gian 点（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode511": {
-      "n": "卫标星环 （金星比邻星域）",
+      "n": "卫标星环（金星）",
       "e": "Corpus",
-      "t": "爆发"
+      "t": "爆发",
+      "planet": "金星"
     },
     "CrewBattleNode512": {
-      "n": "欧文－哈克 （金星比邻星域）",
+      "n": "欧文－哈克（金星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "金星"
     },
     "CrewBattleNode513": {
-      "n": "维斯珀峡道 （金星比邻星域）",
+      "n": "维斯珀峡道（金星）",
       "e": "Corpus",
-      "t": "奥菲斯"
+      "t": "奥菲斯",
+      "planet": "金星"
     },
     "CrewBattleNode514": {
-      "n": "落没之耀 （金星比邻星域）",
+      "n": "落没之耀（金星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "金星"
     },
     "CrewBattleNode515": {
-      "n": "无垠华盖 （金星比邻星域）",
+      "n": "无垠华盖（金星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "金星"
     },
     "CrewBattleNode516": {
-      "n": "女娲之矿 （海王星比邻星域）",
+      "n": "女娲之矿（海王星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "海王星"
     },
     "CrewBattleNode518": {
-      "n": "奥加尔星团 （地球比邻星域）",
+      "n": "奥加尔星团（地球）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "地球"
     },
     "CrewBattleNode519": {
-      "n": "克姆地带 （地球比邻星域）",
+      "n": "克姆地带（地球）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "地球"
     },
     "CrewBattleNode521": {
-      "n": "初裔冰渍区 （海王星比邻星域）",
+      "n": "初裔冰渍区（海王星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "海王星"
     },
     "CrewBattleNode522": {
-      "n": "本达尔星团 （地球比邻星域）",
+      "n": "本达尔星团（地球）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "地球"
     },
     "CrewBattleNode523": {
-      "n": "诱惑之景 （海王星比邻星域）",
+      "n": "诱惑之景（海王星）",
       "e": "Corpus",
-      "t": "奥菲斯"
+      "t": "奥菲斯",
+      "planet": "海王星"
     },
     "CrewBattleNode524": {
-      "n": "星主之握 （海王星比邻星域）",
+      "n": "星主之握（海王星）",
       "e": "Corpus",
-      "t": "爆发"
+      "t": "爆发",
+      "planet": "海王星"
     },
     "CrewBattleNode525": {
-      "n": "薄暮星团 （海王星比邻星域）",
+      "n": "薄暮星团（海王星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "海王星"
     },
     "CrewBattleNode526": {
-      "n": "胡夫之遣 （冥王星比邻星域）",
+      "n": "胡夫之遣（冥王星）",
       "e": "Corpus",
-      "t": "奥菲斯"
+      "t": "奥菲斯",
+      "planet": "冥王星"
     },
     "CrewBattleNode527": {
-      "n": "七魅之息 （冥王星比邻星域）",
+      "n": "七魅之息（冥王星）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "冥王星"
     },
     "CrewBattleNode528": {
-      "n": "冥渡 （冥王星比邻星域）",
+      "n": "冥渡（冥王星）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "冥王星"
     },
     "CrewBattleNode529": {
-      "n": "利益外缘 （冥王星比邻星域）",
+      "n": "利益外缘（冥王星）",
       "e": "Corpus",
-      "t": "爆发"
+      "t": "爆发",
+      "planet": "冥王星"
     },
     "CrewBattleNode530": {
-      "n": "卡希欧安息处 （土星比邻星域）",
+      "n": "卡希欧安息处（土星）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "土星"
     },
     "CrewBattleNode531": {
-      "n": "芬顿之地 （冥王星比邻星域）",
+      "n": "芬顿之地（冥王星）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "冥王星"
     },
     "CrewBattleNode533": {
-      "n": "诺朵星峡 （土星比邻星域）",
+      "n": "诺朵星峡（土星）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "土星"
     },
     "CrewBattleNode534": {
-      "n": "卢帕星道 （土星比邻星域）",
+      "n": "卢帕星道（土星）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "土星"
     },
     "CrewBattleNode535": {
-      "n": "水域星团 （土星比邻星域）",
+      "n": "水域星团（土星）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "土星"
     },
     "CrewBattleNode536": {
-      "n": "外域星轴 （冥王星比邻星域）",
+      "n": "外域星轴（冥王星）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "冥王星"
     },
     "CrewBattleNode538": {
-      "n": "蒲芦 （面纱）",
+      "n": "蒲芦（面纱比邻星域）",
       "e": "Corpus",
-      "t": "歼灭"
+      "t": "歼灭",
+      "mt": "MT_EXTERMINATION",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode539": {
-      "n": "努秘 （面纱）",
+      "n": "努秘（面纱比邻星域）",
       "e": "Corpus",
-      "t": "爆发"
+      "t": "爆发",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode540": {
-      "n": "曲银之地 （面纱）",
+      "n": "曲银之地（面纱比邻星域）",
       "e": "Corpus",
-      "t": "防御"
+      "t": "防御",
+      "mt": "MT_DEFENSE",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode541": {
-      "n": "深情之域 （面纱）",
+      "n": "深情之域（面纱比邻星域）",
       "e": "Corpus",
-      "t": "奥菲斯"
+      "t": "奥菲斯",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode542": {
-      "n": "鹿岩 （面纱）",
+      "n": "鹿岩（面纱比邻星域）",
       "e": "Corpus",
-      "t": "生存"
+      "t": "生存",
+      "mt": "MT_SURVIVAL",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode543": {
-      "n": "萨米尔星云 （面纱）",
+      "n": "萨米尔星云（面纱比邻星域）",
       "e": "Corpus",
-      "t": "间谍"
+      "t": "间谍",
+      "mt": "MT_INTEL",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode550": {
-      "n": "恩斯尤区格 （面纱）",
+      "n": "恩斯尤区格（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode551": {
-      "n": "Ganalen 之墓 （面纱）",
+      "n": "Ganalen 之墓（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode552": {
-      "n": "Rya （面纱）",
+      "n": "Rya（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode553": {
-      "n": "弗雷沙 （面纱）",
+      "n": "弗雷沙（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode554": {
-      "n": "H-2 星云 （面纱）",
+      "n": "H-2 星云（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "CrewBattleNode555": {
-      "n": "R-9 星云 （面纱）",
+      "n": "R-9 星云（面纱比邻星域）",
       "e": "Grineer",
-      "t": "前哨战"
+      "t": "前哨战",
+      "mt": "MT_SKIRMISH",
+      "planet": "面纱比邻星域"
     },
     "SolNode723": {
-      "n": "Brutus （Uranus）",
+      "n": "Brutus（天王星）",
       "e": "Corpus",
-      "t": "Ascension"
+      "t": "升腾",
+      "planet": "天王星",
+      "mt": "MT_ASCENSION"
     },
     "SolarisUnitedHub1": {
-      "n": "Fortuna （Venus）",
+      "n": "Fortuna（金星）",
       "e": "Corpus",
-      "t": "中继站"
+      "t": "中继站",
+      "planet": "金星"
     }
   },
   "missionTypes": {
@@ -2289,7 +2990,10 @@
     "MT_VOID_CASCADE": "虚空覆涌",
     "MT_ASCENSION": "升腾",
     "MT_ALCHEMY": "元素转换",
-    "MT_ENDLESS_CAPTURE": "无尽捕获"
+    "MT_ENDLESS_CAPTURE": "无尽捕获",
+    "MT_VOID_ARMAGEDDON": "虚空决战",
+    "MT_MIRROR_DEFENSE": "镜像防御",
+    "MT_SKIRMISH": "前哨战"
   },
   "factions": {
     "FC_CORPUS": "Corpus",

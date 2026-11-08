@@ -30,14 +30,16 @@ jobs:
         run: |
           echo "=== Compiling test_runner executable ==="
           swiftc -O \
+            WarframeWatch/Models/ArbitrationInfo.swift \
             WarframeWatch/Models/CommunityModels.swift \
             WarframeWatch/Models/FocusModels.swift \
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
             WarframeWatch/Models/SnapshotDiff.swift \
-            WarframeWatch/Models/WatchCatalogModel.swift \
             WarframeWatch/Models/WatchItem.swift \
+            WarframeWatch/Models/WatchTree.swift \
             WarframeWatch/Models/WorldState.swift \
+            WarframeWatch/Services/DictionaryService.swift \
             Tests/main.swift \
             -o test_runner
           

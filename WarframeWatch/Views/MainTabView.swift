@@ -26,7 +26,7 @@ public struct MainTabView: View {
                 .tabItem {
                     Label("关注", systemImage: "star.fill")
                 }
-                .badge(vm.watchItems.isEmpty ? 0 : vm.watchItems.count)
+                .badge(vm.matchedLiveHits.count)
             
             ReferenceView()
                 .tabItem {
