@@ -43,13 +43,19 @@ public struct SetDetailView: View {
     }
 
     private var title: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.zh)
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundColor(WFTheme.textPrimary)
-            Text(statusLine)
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
+        HStack(alignment: .center, spacing: 12) {
+            ItemIcon(item.i, remote: item.u, size: 74)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.zh)
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundColor(WFTheme.textPrimary)
+                Text(statusLine)
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
         }
         .padding(.trailing, 44)
     }

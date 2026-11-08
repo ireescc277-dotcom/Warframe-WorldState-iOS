@@ -74,7 +74,9 @@ jobs:
           xcodegen --version
 
       - name: Generate Xcode Project
-        run: xcodegen generate
+        run: |
+          cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          xcodegen generate
 
       - name: Boot Simulator & Build App
         run: |
@@ -209,7 +211,9 @@ jobs:
           fi
 
       - name: Generate Xcode Project
-        run: xcodegen generate
+        run: |
+          cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          xcodegen generate
 
       - name: Build & Archive (Unsigned)
         run: |
@@ -232,7 +236,17 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchStoryboardName string LaunchScreen" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
+
+          # 账号快照在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          if [ -n "$INVENTORY_URL" ]; then
+            /usr/libexec/PlistBuddy -c "Add :InventoryURL string $INVENTORY_URL" "$APP/Info.plist"
+            echo "✅ InventoryURL 已注入"
+          else
+            echo "⚠️ 没有 INVENTORY_URL secret，App 只能用内置样例快照"
+          fi
           plutil -p "$APP/Info.plist"
+        env:
+          INVENTORY_URL: ${{ secrets.INVENTORY_URL }}
 
           echo "=== Checking Version Keys ==="
           # These were absent for a while: the plist is generated, so the
@@ -285,7 +299,8 @@ jobs:
             - **Swift Runtime Decoder**: 100% verified against live Warframe API & local snapshot.
             - **Simulator Fullscreen Gate**: Verified on iPhone simulator (No letterboxing, full native aspect ratio).
             - **LaunchScreen Storyboard**: Compiled & injected into Info.plist (`UILaunchStoryboardName: LaunchScreen`).
-            - **Bundled Resources**: `DefaultSnapshot.json` & `DefaultDict.json` & `InventoryData.json` included in app bundle.
+            - **Bundled Resources**: `DefaultSnapshot.json` & `DefaultDict.json`；精灵图与图标打进 Asset Catalog。
+            - **账号快照**: 不在包里。App 启动后从 VPS 取，失败则用本机缓存。
             
             ### 📦 Sideload Installation:
             Download `WarframeWatch-unsigned.ipa` and install using **TrollStore**, **AltStore**, or **SideStore**.

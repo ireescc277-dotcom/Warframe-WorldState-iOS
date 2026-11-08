@@ -10,7 +10,7 @@ import SwiftUI
 /// 价格全部是**在线卖家的最低价**，也就是此刻真能成交的价。挂单最低价里
 /// 有 1p 钓鱼单，不可信（详见 `scripts/wf_market.py` 的注释）。
 public struct AssetsView: View {
-    private let data = InventoryStore.shared
+    @ObservedObject private var feed = InventoryFeed.shared
 
     @State private var segment: AssetSegment = AssetsView.seededSegment
     @State private var sort: SetSortKey = .loose
@@ -44,7 +44,7 @@ public struct AssetsView: View {
             ZStack {
                 WFTheme.bgPrimary.ignoresSafeArea()
 
-                if let data = data {
+                if let data = feed.data {
                     ScrollView {
                         VStack(alignment: .leading, spacing: WFUI.s4) {
                             header(data)
@@ -56,14 +56,16 @@ public struct AssetsView: View {
                         .padding(.top, 10)
                         .padding(.bottom, 100)
                     }
+                    .refreshable { await feed.refresh() }
                 } else {
                     empty
                 }
             }
+            .task { await feed.refresh() }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 guard let name = AssetsView.seededSet, detail == nil,
-                      let hit = data?.sets.first(where: { $0.zh.hasPrefix(name) })
+                      let hit = feed.data?.sets.first(where: { $0.zh.hasPrefix(name) })
                 else { return }
                 detail = hit
             }
@@ -85,9 +87,19 @@ public struct AssetsView: View {
                 Text("资产")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
+                HStack(spacing: 5) {
+                    Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
+                    if feed.fetching {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else if feed.failed {
+                        // 拉不到就还是本地那份，不假装是最新的
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 9))
+                    }
+                }
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
             }
 
             Spacer(minLength: WFUI.s2)
@@ -197,7 +209,7 @@ public struct AssetsView: View {
     }
 
     private func count(_ segment: AssetSegment) -> Int {
-        guard let data = data else { return 0 }
+        guard let data = feed.data else { return 0 }
         switch segment {
         case .sets: return data.sets.count
         case .relics: return data.relics.count
@@ -316,7 +328,9 @@ public struct AssetsView: View {
             HStack(spacing: WFUI.s3) {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(accent(entry))
-                    .frame(width: 3, height: 32)
+                    .frame(width: 2.5, height: 38)
+
+                ItemIcon(entry.i, remote: entry.u, size: 38)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(entry.zh)
@@ -380,6 +394,8 @@ public struct AssetsView: View {
     private func relicRow(_ relic: RelicRow, isLast: Bool) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: WFUI.s3) {
+                ItemIcon(relic.i, remote: relic.u, size: 34)
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(relic.id)
@@ -460,7 +476,9 @@ public struct AssetsView: View {
             HStack(spacing: WFUI.s3) {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(item.owned ? WFTheme.textMuted.opacity(0.4) : WFTheme.gold)
-                    .frame(width: 3, height: 26)
+                    .frame(width: 2.5, height: 30)
+
+                ItemIcon(item.i, remote: item.u, size: 30)
 
                 Text(item.id)
                     .font(.wfTitle)

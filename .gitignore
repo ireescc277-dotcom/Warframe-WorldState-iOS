@@ -21,8 +21,12 @@ __pycache__/
 *.pyc
 
 # 个人数据：背包原始快照、采集库、行情缓存都由脚本生成，不进仓库。
-# 打包用的 WarframeWatch/Resources/InventoryData.json 是唯一例外，它是 App 资源。
 data/
+
+# 真实背包快照含白金/星币余额和每件 Prime 部件的持有数，等同账号信息。
+# 仓库公开，所以只提交脱敏过的 InventoryData.sample.json，CI 打包时把样例
+# 复制成这个名字；真数据在手机上由 App 从 VPS 拉。
+WarframeWatch/Resources/InventoryData.json
 
 # 工作区记忆与临时文件
 .workbuddy/

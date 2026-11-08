@@ -26,6 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIEW = os.path.join(ROOT, "data", "inventory", "view.json")
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
+ICONS = os.path.join(ROOT, "data", "market", "icons.json")
 OUT = os.path.join(ROOT, "WarframeWatch", "Resources", "InventoryData.json")
 CACHE = os.path.join(ROOT, "data", "inventory", "aya_cache.json")
 
@@ -111,6 +112,9 @@ def build() -> dict:
     view = load_json(VIEW)
     items = {x["ref"]: x for x in load_json(MARKET_ITEMS)["items"] if x.get("ref")}
     prices = load_json(MARKET_PRICES)["items"]
+    icons = load_json(ICONS) if os.path.exists(ICONS) else {"slugs": {}, "eras": {}}
+    icons_by_slug = icons.get("slugs") or {}
+    icons_by_era = icons.get("eras") or {}
 
     ducats = {}
     comp_path = os.path.join(ALECA, "Components.json")
@@ -125,6 +129,13 @@ def build() -> dict:
         if not entry:
             return {}
         return prices.get(entry["slug"]) or {}
+
+    def icon(ref: str) -> dict:
+        """`i` 是打包进 App 的图，`u` 是 CDN 相对路径（本地缺图时兜底）。"""
+        entry = items.get(ref) or items.get(alias_ref(ref) or "")
+        if not entry:
+            return {}
+        return icons_by_slug.get(entry["slug"]) or {}
 
     def pl(p: dict) -> int:
         """主口径：在线卖家的最低价。挂单里有人标 1p 钓鱼，sellMin 不可信。"""
@@ -159,10 +170,13 @@ def build() -> dict:
             })
         total_loose += loose
         total_ducats += loose_ducats
+        pic = icon(s["id"])
         sets.append({
             "id": s["id"],
             "zh": s["zh"],
             "cat": s["cat"],
+            "i": pic.get("a"),
+            "u": pic.get("u"),
             "status": s["status"],
             "have": s["haveCount"],
             "total": s["total"],
@@ -184,10 +198,13 @@ def build() -> dict:
               "E": int(stocks.get("Exceptional") or 0),
               "F": int(stocks.get("Flawless") or 0),
               "R": int(stocks.get("Radiant") or 0)}
+        relics_pic = icon(relic_ref_base(r.get("ref") or "")) if r.get("ref") else {}
         relics.append({
             "id": f'{r["eraZh"]} {r["code"]}',
             "era": r["eraZh"],
             "code": r["code"],
+            "i": relics_pic.get("a"),
+            "u": relics_pic.get("u"),
             "st": st,
             "n": r["total"],
             "p": pl(quote(relic_ref_base(r.get("ref") or ""))) if r.get("ref") else 0,
@@ -201,14 +218,23 @@ def build() -> dict:
     by_relic_ref = {r["ref"]: r["id"] for r in view["relics"] if r.get("ref")}
     owned_ids = {r["id"] for r in view["relics"]}
     price_by_id = {r["id"]: r["p"] for r in relics}
+    icon_by_id = {r["id"]: {"a": r["i"], "u": r["u"]} for r in relics}
     relic_names = load_relic_names()
     aya = []
     for row in aya_doc.get("relics") or []:
         rid = by_relic_ref.get(row["ref"]) or guess_relic_id(row["ref"], relic_names)
         # 这些遗物用户多半没有，价格得单独查（wf_market 会读 aya_cache.json 把它们加进目标）
         ref = relic_ref_base(row["ref"].replace("/StoreItems/", "/"))
+        pic = icon(ref) or icon_by_id.get(rid) or {}
+        if not pic.get("a") and rid:
+            # Aya 卖的遗物不在背包里，按纪元退回同一张图
+            era_key = {"古纪": "lith", "前纪": "meso", "中纪": "neo",
+                       "后纪": "axi", "安魂": "requiem"}.get(rid[:2])
+            pic = {"a": icons_by_era.get(era_key)} if era_key else {}
         aya.append({
             "id": rid or row["item"],
+            "i": pic.get("a"),
+            "u": pic.get("u"),
             "p": pl(quote(ref)),
             "owned": (rid in owned_ids) if rid else False,
         })

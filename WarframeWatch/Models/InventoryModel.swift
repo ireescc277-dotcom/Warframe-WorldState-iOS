@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// 背包资产的离线快照。
@@ -41,6 +42,8 @@ public struct PrimeSet: Decodable, Identifiable {
     public let id: String
     public let zh: String
     public let cat: String
+    public let i: String?           // Asset Catalog 里的缩略图名
+    public let u: String?           // CDN 相对路径，本地没有图时兜底
     public let status: String        // owned / ready / missing
     public let have: Int
     public let total: Int
@@ -71,6 +74,8 @@ public struct RelicRow: Decodable, Identifiable {
     public let id: String            // 古纪 C10
     public let era: String
     public let code: String
+    public let i: String?            // 同一纪元的遗物共用一张图
+    public let u: String?
     public let st: [String: Int]     // I/E/F/R 四档持有
     public let n: Int                // 合计持有
     public let p: Int                // 市场价（按代号，不含精炼档）
@@ -91,6 +96,8 @@ public struct AyaShop: Decodable {
 
     public struct Item: Decodable, Identifiable {
         public let id: String
+        public let i: String?
+        public let u: String?
         public let p: Int
         public let owned: Bool
     }
@@ -99,27 +106,109 @@ public struct AyaShop: Decodable {
 // MARK: - 加载
 
 public enum InventoryStore {
-    /// 只在首次访问时解码。文件 100 KB 上下，一次性读完留在内存里，
-    /// 免得每次切 tab 都去碰磁盘。
-    public static let shared: InventoryData? = load()
+    /// 远端快照的位置。账号数据在 VPS 上，App 只负责取和缓存。
+    ///
+    /// 地址不写在源码里：CI 打包后用 PlistBuddy 写进 Info.plist，
+    /// 值来自仓库 secret。仓库公开也读不到这个链接。
+    public static var remote: URL? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: InventoryRemote.key) as? String,
+              !raw.isEmpty else { return nil }
+        return URL(string: raw)
+    }
 
-    private static func load() -> InventoryData? {
-        let candidates: [URL?] = [
+    /// 首次启动会先摆出缓存或内置的一份，再去问 VPS 有没有新的。
+    static func localized() -> InventoryData? {
+        let candidates = [cached(), bundled()].compactMap { $0 }
+        return candidates.max { $0.builtAt < $1.builtAt }
+    }
+
+    static func bundled() -> InventoryData? {
+        let urls: [URL?] = [
             Bundle.main.url(forResource: "InventoryData", withExtension: "json"),
             Bundle.main.url(forResource: "InventoryData", withExtension: "json",
                             subdirectory: "Resources"),
             Bundle.main.bundleURL.appendingPathComponent("InventoryData.json"),
         ]
-        for case let url? in candidates {
-            guard let data = try? Data(contentsOf: url) else { continue }
-            do {
-                return try JSONDecoder().decode(InventoryData.self, from: data)
-            } catch {
-                print("InventoryData 解码失败：\(error)")
+        for case let url? in urls {
+            if let data = try? Data(contentsOf: url), let doc = decode(data) {
+                return doc
             }
         }
         return nil
     }
+
+    static var cacheURL: URL {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("InventoryData.json")
+    }
+
+    static func cached() -> InventoryData? {
+        guard let data = try? Data(contentsOf: cacheURL) else { return nil }
+        return decode(data)
+    }
+
+    static func decode(_ data: Data) -> InventoryData? {
+        do {
+            return try JSONDecoder().decode(InventoryData.self, from: data)
+        } catch {
+            print("InventoryData 解码失败：\(error)")
+            return nil
+        }
+    }
+}
+
+/// 拿到新数据后，界面要跟着换，所以套一层可观察对象。
+///
+/// 类本身不是 `@MainActor`：`shared` 要在 View 的属性初始化器里访问，
+/// 那里是同步的非隔离上下文。只有写 `@Published` 的 `refresh` 标了主线程。
+public final class InventoryFeed: ObservableObject {
+    public static let shared = InventoryFeed()
+
+    @Published public private(set) var data: InventoryData?
+    @Published public private(set) var fetching = false
+    @Published public private(set) var failed = false
+
+    private init() {
+        data = InventoryStore.localized()
+    }
+
+    /// 拉 VPS 上的那一份。失败就继续用手里的，不清空。
+    @MainActor
+    public func refresh() async {
+        guard let remote = InventoryStore.remote else { return }
+        guard !fetching else { return }
+        fetching = true
+        defer { fetching = false }
+
+        var request = URLRequest(url: remote)
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadRevalidatingCacheData
+
+        do {
+            let (raw, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                failed = true
+                return
+            }
+            guard let doc = InventoryStore.decode(raw) else {
+                failed = true
+                return
+            }
+            // 旧的响应比手里的还老（VPS 还没更新）就别降级
+            if let current = data, current.builtAt > doc.builtAt { return }
+            try? raw.write(to: InventoryStore.cacheURL, options: .atomic)
+            data = doc
+            failed = false
+        } catch {
+            failed = true
+        }
+    }
+}
+
+/// 部署时改这里。空的就只用内置快照。
+public enum InventoryRemote {
+    /// 这个地址由 CI 写进 Info.plist，源码里不出现。
+    public static let key = "InventoryURL"
 }
 
 // MARK: - 格式化
