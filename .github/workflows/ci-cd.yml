@@ -148,7 +148,9 @@ jobs:
             name=$1; shift
             xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
             xcrun simctl launch $SIM_UDID com.warframe.watch "$@" >/dev/null
-            sleep 4
+            # 冷启动现在多一条排程请求，4 秒偶尔拍到还没画完的黑屏，门禁会判成
+            # letterbox。给到 7 秒，八张图多花 24 秒，换掉这种假失败。
+            sleep 7
             xcrun simctl io $SIM_UDID screenshot "$name.png"
             ls -lh "$name.png"
           }
