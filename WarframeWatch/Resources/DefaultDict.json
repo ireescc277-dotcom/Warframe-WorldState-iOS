@@ -2277,7 +2277,7 @@
     "MT_INTEL": "间谍",
     "MT_LANDSCAPE": "自由探索",
     "MT_MOBILE_DEFENSE": "移动防御",
-    "MT_PURIFY": "疫变体资源回收",
+    "MT_PURIFY": "资源回收",
     "MT_PVP": "武形秘仪",
     "MT_RESCUE": "救援",
     "MT_RETRIEVAL": "劫持",
@@ -2287,24 +2287,24 @@
     "MT_TERRITORY": "拦截",
     "MT_DEFAULT": "未知",
     "MT_VOID_CASCADE": "虚空覆涌",
-    "MT_ASCENSION": "升腾（Ascension）",
+    "MT_ASCENSION": "升腾",
     "MT_ALCHEMY": "元素转换",
-    "MT_ENDLESS_CAPTURE": "Legacyte 收割（无尽捕获）"
+    "MT_ENDLESS_CAPTURE": "无尽捕获"
   },
   "factions": {
-    "FC_CORPUS": "Corpus 科普斯",
+    "FC_CORPUS": "Corpus",
+    "FC_GRINEER": "Grineer",
+    "FC_INFESTATION": "Infested",
     "FC_CORRUPTED": "堕落者",
-    "FC_GRINEER": "Grineer 克隆尼",
-    "FC_INFESTATION": "Infested 疫变体",
     "FC_OROKIN": "奥罗金",
-    "FC_SENTIENT": "Sentient 心智者",
-    "FC_MITW": "墙中人",
-    "FC_NARMER": "Narmer 纳尔默",
+    "FC_SENTIENT": "Sentient",
+    "FC_MITW": "低语者",
+    "FC_NARMER": "合一众",
     "FC_SCALDRA": "Scaldra",
     "FC_TECHROT": "Techrot",
-    "FC_TENNO": "Tenno 天诺",
+    "FC_TENNO": "Tenno",
     "FC_NEUTRAL": "中立",
-    "FC_UMBRA": "Umbra 暗影"
+    "FC_UMBRA": "Umbra"
   },
   "syndicates": {
     "ArbitersSyndicate": "均衡仲裁者",

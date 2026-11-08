@@ -4,7 +4,7 @@ public struct WatchlistView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
     @State private var onlySubscribed: Bool = false
     @State private var searchQuery: String = ""
-    @State private var selectedCategory: WatchCategory = .all
+    @State private var selectedSection: CatalogSection = .all
     
     public init() {}
     
@@ -17,21 +17,21 @@ public struct WatchlistView: View {
                     // Single Compact Filter Bar (Search + Star Toggle)
                     topSearchBar
                     
-                    // Simple Category Strip
-                    categoryStrip
+                    // Simple Section Strip
+                    sectionStrip
                     
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            let items = filteredItems
+                            let entries = filteredEntries
                             
-                            if items.isEmpty {
+                            if entries.isEmpty {
                                 emptyState
                             } else {
-                                // 1. Active Section
-                                let activeItems = items.filter { $0.state.isActive }
-                                if !activeItems.isEmpty {
-                                    sectionHeader("正在发生 (\(activeItems.count))", color: WFTheme.green)
-                                    ForEach(activeItems) { evaluated in
+                                // 1. Active Section (Live Hits)
+                                let activeEntries = entries.filter { $0.status.isActive }
+                                if !activeEntries.isEmpty {
+                                    groupHeader("正在发生 (\(activeEntries.count))", color: WFTheme.green)
+                                    ForEach(activeEntries) { evaluated in
                                         WatchCatalogRowView(evaluated: evaluated) {
                                             toggleSubscription(evaluated)
                                         }
@@ -39,27 +39,27 @@ public struct WatchlistView: View {
                                 }
                                 
                                 // 2. Deterministic Cycles Section
-                                let deterministicItems = items.filter {
-                                    if case .deterministic = $0.state { return true }
+                                let deterministicEntries = entries.filter {
+                                    if case .deterministic = $0.status { return true }
                                     return false
                                 }
-                                if !deterministicItems.isEmpty {
-                                    sectionHeader("确定性周期与重置 (\(deterministicItems.count))", color: WFTheme.cyan)
-                                    ForEach(deterministicItems) { evaluated in
+                                if !deterministicEntries.isEmpty {
+                                    groupHeader("确定性周期与重置 (\(deterministicEntries.count))", color: WFTheme.cyan)
+                                    ForEach(deterministicEntries) { evaluated in
                                         WatchCatalogRowView(evaluated: evaluated) {
                                             toggleSubscription(evaluated)
                                         }
                                     }
                                 }
                                 
-                                // 3. Probabilistic & Upcoming Section
-                                let probabilisticItems = items.filter {
-                                    if case .probabilistic = $0.state { return true }
+                                // 3. All Remaining Library Entries
+                                let idleEntries = entries.filter {
+                                    if case .idle = $0.status { return true }
                                     return false
                                 }
-                                if !probabilisticItems.isEmpty {
-                                    sectionHeader("监控库与预测 (\(probabilisticItems.count))", color: WFTheme.gold)
-                                    ForEach(probabilisticItems) { evaluated in
+                                if !idleEntries.isEmpty {
+                                    groupHeader("全量监控库 (\(idleEntries.count))", color: WFTheme.textSecondary)
+                                    ForEach(idleEntries) { evaluated in
                                         WatchCatalogRowView(evaluated: evaluated) {
                                             toggleSubscription(evaluated)
                                         }
@@ -140,20 +140,20 @@ public struct WatchlistView: View {
         .padding(.top, 4)
     }
     
-    // MARK: - Category Strip
-    private var categoryStrip: some View {
+    // MARK: - Section Strip
+    private var sectionStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(WatchCategory.allCases) { cat in
-                    let isSelected = selectedCategory == cat
+                ForEach(CatalogSection.allCases) { sec in
+                    let isSelected = selectedSection == sec
                     Button {
-                        selectedCategory = cat
+                        selectedSection = sec
                         HapticService.selection()
                     } label: {
                         HStack(spacing: 3) {
-                            Image(systemName: cat.icon)
+                            Image(systemName: sec.icon)
                                 .font(.system(size: 10))
-                            Text(cat.rawValue)
+                            Text(sec.rawValue)
                                 .font(.system(size: 11, weight: isSelected ? .bold : .medium))
                         }
                         .padding(.horizontal, 9)
@@ -174,9 +174,9 @@ public struct WatchlistView: View {
         }
     }
     
-    // MARK: - Section Header
+    // MARK: - Group Header
     @ViewBuilder
-    private func sectionHeader(_ title: String, color: Color) -> some View {
+    private func groupHeader(_ title: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(color)
@@ -192,35 +192,34 @@ public struct WatchlistView: View {
         .padding(.horizontal, 2)
     }
     
-    // MARK: - Filtered Items Logic
-    private var filteredItems: [EvaluatedWatchItem] {
-        vm.evaluatedCatalogItems.filter { item in
+    // MARK: - Filtered Logic
+    private var filteredEntries: [EvaluatedWatchEntry] {
+        vm.evaluatedCatalogEntries.filter { item in
             if onlySubscribed && !item.isSubscribed {
                 return false
             }
-            if selectedCategory != .all && item.item.category != selectedCategory {
+            if selectedSection != .all && item.entry.section != selectedSection {
                 return false
             }
             if searchQuery.isEmpty {
                 return true
             }
-            return item.item.title.localizedCaseInsensitiveContains(searchQuery) ||
-                   item.item.subtitle.localizedCaseInsensitiveContains(searchQuery)
+            return item.entry.title.localizedCaseInsensitiveContains(searchQuery) ||
+                   item.entry.subtitle.localizedCaseInsensitiveContains(searchQuery)
         }
     }
     
-    private func toggleSubscription(_ item: EvaluatedWatchItem) {
-        vm.toggleCatalogSubscription(item.item.id)
+    private func toggleSubscription(_ item: EvaluatedWatchEntry) {
+        vm.toggleCatalogSubscription(item.entry.id)
         HapticService.impact(.medium)
         
         // Native local notification scheduling for deterministic items
-        if case let .deterministic(nextDate, _, note) = item.state {
+        if case let .deterministic(nextDate, _, note) = item.status {
             if !item.isSubscribed {
-                // Scheduled
-                let watch = WatchItem(key: item.item.id, label: item.item.title, section: note, expiry: nextDate)
+                let watch = WatchItem(key: item.entry.id, label: item.entry.title, section: note, expiry: nextDate)
                 NotificationService.shared.scheduleReminder(for: watch)
             } else {
-                NotificationService.shared.cancelReminder(for: item.item.id)
+                NotificationService.shared.cancelReminder(for: item.entry.id)
             }
         }
     }

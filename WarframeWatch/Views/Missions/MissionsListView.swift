@@ -87,7 +87,7 @@ public struct MissionsListView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "shield.slash.fill")
                         .font(.system(size: 10))
-                    Text("钢韧")
+                    Text("钢铁之路")
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .foregroundColor(vm.isSteelPathOnly ? WFTheme.red : WFTheme.textMuted)

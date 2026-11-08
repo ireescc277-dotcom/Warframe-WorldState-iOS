@@ -205,7 +205,7 @@ public final class WorldStateViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Watch Target Catalog
+    // MARK: - Exhaustive Catalog Entries
     public func isCatalogSubscribed(_ id: String) -> Bool {
         subscribedCatalogIds.contains(id)
     }
@@ -219,27 +219,24 @@ public final class WorldStateViewModel: ObservableObject {
         storage.saveCatalogSubscriptions(subscribedCatalogIds)
     }
     
-    public var evaluatedCatalogItems: [EvaluatedWatchItem] {
+    public var evaluatedCatalogEntries: [EvaluatedWatchEntry] {
         guard let ws = worldState else { return [] }
-        let items = WatchCatalogDatabase.shared.items.map { item -> EvaluatedWatchItem in
-            let state = item.evaluate(ws)
-            return EvaluatedWatchItem(item: item, state: state, isSubscribed: subscribedCatalogIds.contains(item.id))
+        let entries = ExhaustiveCatalogRepository.shared.allEntries.map { entry -> EvaluatedWatchEntry in
+            let status = entry.evaluate(ws)
+            return EvaluatedWatchEntry(entry: entry, status: status, isSubscribed: subscribedCatalogIds.contains(entry.id))
         }
         
-        return items.sorted { a, b in
-            if a.state.sortOrder != b.state.sortOrder {
-                return a.state.sortOrder < b.state.sortOrder
+        return entries.sorted { a, b in
+            if a.status.sortOrder != b.status.sortOrder {
+                return a.status.sortOrder < b.status.sortOrder
             }
-            if case let .active(_, _, remA) = a.state, case let .active(_, _, remB) = b.state {
+            if case let .active(_, _, _, remA) = a.status, case let .active(_, _, _, remB) = b.status {
                 if remA > 0 && remB > 0 { return remA < remB }
                 if remA > 0 { return true }
                 return false
             }
-            if case let .deterministic(_, remA, _) = a.state, case let .deterministic(_, remB, _) = b.state {
+            if case let .deterministic(_, remA, _) = a.status, case let .deterministic(_, remB, _) = b.status {
                 return remA < remB
-            }
-            if case let .probabilistic(_, _, pctA, _) = a.state, case let .probabilistic(_, _, pctB, _) = b.state {
-                return pctA > pctB
             }
             return false
         }
