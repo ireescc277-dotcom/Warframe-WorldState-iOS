@@ -30,3 +30,6 @@ WarframeWatch/Resources/InventoryData.json
 
 # 工作区记忆与临时文件
 .workbuddy/
+
+# 本机凭据（VPS 密码、发布 token），只在跑监听脚本的那台机器上
+.env.local

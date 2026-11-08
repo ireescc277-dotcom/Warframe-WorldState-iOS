@@ -49,15 +49,38 @@ API = "https://api.warframe.market/v2"
 UA = "WarframeWatch/1.0 (+local inventory tool)"
 TIMEOUT = 25
 
+# 站点没公布配额，但社区里 429 一直存在。这里做两层保守：
+#   1. 全局限速，任意两次请求之间至少间隔 MIN_GAP 秒（加抖动，免得整齐得像脚本）
+#   2. 并发数压到 2，835 件大约 8 分钟；这是后台跑的活，不差这点时间
+# 遇到 429 时优先读 Retry-After，没有就按 5s 起步退避。
+MIN_GAP = 0.45
+GAP_JITTER = 0.20
+
 # 这几种状态代表卖家此刻在游戏里，报价可信；offline 的挂单可能一周没人理
 LIVE = {"ingame", "online"}
 
 
 # ---------------------------------------------------------------- HTTP
 
+_slot_lock = threading.Lock()
+_next_slot = 0.0
+
+
+def _throttle() -> None:
+    """全局串成一条线：不管开几个 worker，实际发出的请求都是匀速的。"""
+    global _next_slot
+    with _slot_lock:
+        now = time.monotonic()
+        wait = _next_slot - now
+        _next_slot = max(now, _next_slot) + MIN_GAP + random.uniform(0, GAP_JITTER)
+    if wait > 0:
+        time.sleep(wait)
+
+
 def _get(url: str, retries: int = 3) -> dict:
     last = None
     for attempt in range(retries):
+        _throttle()
         req = urllib.request.Request(url, headers={
             "Accept": "application/json",
             "User-Agent": UA,
@@ -73,7 +96,18 @@ def _get(url: str, retries: int = 3) -> dict:
             if exc.code == 404:
                 return {}
             last = exc
-            if exc.code in (429, 500, 502, 503, 504):
+            if exc.code == 429:
+                # 站点说了算：有 Retry-After 就照做，没有就退得比普通 5xx 更狠
+                wait = 0.0
+                header = exc.headers.get("Retry-After") if exc.headers else None
+                if header:
+                    try:
+                        wait = float(header)
+                    except ValueError:
+                        wait = 0.0
+                time.sleep(wait or (5.0 * (attempt + 1) + random.uniform(0, 2)))
+                continue
+            if exc.code in (500, 502, 503, 504):
                 time.sleep(1.5 * (attempt + 1) + random.random())
                 continue
             raise
@@ -359,7 +393,7 @@ def main() -> int:
 
     s = sub.add_parser("sync", help="抓价格")
     s.add_argument("--limit", type=int, default=0, help="只抓前 N 件，用于试跑")
-    s.add_argument("--workers", type=int, default=4, help="并发数，默认 4")
+    s.add_argument("--workers", type=int, default=2, help="并发数，默认 2（配合全局限速）")
     s.add_argument("--missing", action="store_true", help="只抓还没有价格的")
     s.set_defaults(func=cmd_sync)
 
