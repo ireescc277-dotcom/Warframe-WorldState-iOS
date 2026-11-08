@@ -13,9 +13,9 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 
 1. **局域网直接下载（同一 WiFi 下手机浏览器打开）**：
    - 链接：`http://192.168.0.112:8080/WarframeWatch-unsigned.ipa`
-   - 或者桌面文件：`C:\Users\LocalAdmin\Desktop\WarframeWatch-v1.0.9.ipa`
+   - 或者本地文件：`C:\WarframeWorldState\WarframeWatch-v1.1.0.ipa`
 2. **GitHub Releases**：
-   - [v1.0.9 页面下载](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.0.9)
+   - [v1.1.0 页面下载](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.1.0)
 3. **安装方式**：
    - **TrollStore (巨魔)**：直接分享到 TrollStore 点击 Install，永不过期。
    - **自签 / 证书**：导入爱思助手、SideStore、AltStore 或使用自备个人证书签名安装。
@@ -38,6 +38,36 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 - 模式：`钢铁之路`（不使用任何误译名称）。
 - 阵营：`Corpus`、`Grineer`、`Infested`、`堕落者`、`Sentient`、`低语者`、`合一众`、`Tenno`。
 - 任务：`升腾`、`无尽捕获`、`资源回收` 等。
+
+### 3. 资产（背包与行情）
+把库存当资产看，而不是待办清单。三个分段：
+
+- **套装**：162 个 Prime 装备按「完整制作包」聚合（战甲 4 件：蓝图 / 机体 / 头部神经光元 / 系统；武器 3–5 件）。标出已成套、可制造、缺几件，以及每套的余件可变现价值。点开看四个部件的持有数、市场价、Ducats，以及「整卖还是拆卖」的差额。
+- **遗物**：76 个代号 × 四档精炼的持有量、market 价、能补几个还没凑齐的套装。
+- **Aya**：当期 Varzia 用 Aya 换的遗物，带市场价和「是否已有」。
+
+**数据从哪来**（全部离线，零网络请求、不碰游戏进程）：
+
+| 项 | 来源 |
+| :--- | :--- |
+| 背包 | `%LocalAppData%\AlecaFrame\lastData.dat`，AES-128-CBC，key 由 Sainan/alecaframe-inventory-parser 公开，本地解密 |
+| 价格 | `api.warframe.market/v2`，按 `gameRef` 与背包的 `/Lotus/...` uniqueName 精确匹配 |
+| Ducats | AlecaFrame 字典里的 `Components.json`（`primeSellingPrice`） |
+| Aya | `api.warframestat.us/pc` 的 `vaultTrader.inventory`（`credits=1` 的条目） |
+
+价格只取**在线卖家的最低价**。market 的卖单最低价里有 1p 钓鱼单，用它会把 Lavos Prime 整套算成 1p。
+
+**刷新数据**（在电脑上跑，产物是 App 资源）：
+
+```bash
+python scripts/wf_inventory.py read      # 解密 lastData.dat → data/inventory/
+python scripts/build_inventory_view.py   # 生成 view.json 与网页版 view.html
+python scripts/wf_market.py items        # 拉 market 商品目录
+python scripts/wf_market.py sync         # 抓价格（首次约 2.5 分钟）
+python scripts/build_app_inventory.py    # 合并 → WarframeWatch/Resources/InventoryData.json
+```
+
+`wf_market.py sync --missing` 只补没抓过的，日常刷新用它。价格是快照，App 顶部会显示快照时间。
 
 ---
 
@@ -65,7 +95,7 @@ C:\WarframeWorldState\
 
 ## 编译与打包
 
-- **云端自动打包**：每次推送到 GitHub 或打 Git Tag（如 `v1.0.9`），GitHub Actions 会自动运行 Swift 测试、通过真机/模拟器构建并发布 Release，产出未签名 `.ipa`。
+- **云端自动打包**：每次推送到 GitHub 或打 Git Tag（如 `v1.1.0`），GitHub Actions 会自动运行 Swift 测试、通过真机/模拟器构建并发布 Release，产出未签名 `.ipa`。
 - **本地打开调试**：
   - Windows 环境已生成完整工程结构，可通过 VS Code 或 Git 维护。
   - macOS 环境下执行 `xcodegen generate` 即可生成 `WarframeWatch.xcodeproj` 直接真机调试。

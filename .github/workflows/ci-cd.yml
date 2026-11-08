@@ -285,7 +285,7 @@ jobs:
             - **Swift Runtime Decoder**: 100% verified against live Warframe API & local snapshot.
             - **Simulator Fullscreen Gate**: Verified on iPhone simulator (No letterboxing, full native aspect ratio).
             - **LaunchScreen Storyboard**: Compiled & injected into Info.plist (`UILaunchStoryboardName: LaunchScreen`).
-            - **Bundled Resources**: `DefaultSnapshot.json` & `DefaultDict.json` included in app bundle.
+            - **Bundled Resources**: `DefaultSnapshot.json` & `DefaultDict.json` & `InventoryData.json` included in app bundle.
             
             ### 📦 Sideload Installation:
             Download `WarframeWatch-unsigned.ipa` and install using **TrollStore**, **AltStore**, or **SideStore**.

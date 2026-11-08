@@ -99,6 +99,14 @@ def fetch_aya() -> dict:
         return {"relics": [], "fetchedAt": None}
 
 
+def relic_id_zh(raw: str) -> str:
+    """'Axi A18' → '后纪 A18'。页面上其余地方都用中文纪元，这里不能混。"""
+    parts = raw.split()
+    if len(parts) >= 2 and parts[0] in ERA_ZH:
+        return f"{ERA_ZH[parts[0]]} {parts[1]}"
+    return raw
+
+
 def build() -> dict:
     view = load_json(VIEW)
     items = {x["ref"]: x for x in load_json(MARKET_ITEMS)["items"] if x.get("ref")}
@@ -162,7 +170,7 @@ def build() -> dict:
             "setPrice": pl(quote(s["id"])),
             "partsValue": parts_value,
             "loose": loose,
-            "relics": s.get("relics") or [],
+            "relics": [relic_id_zh(x) for x in (s.get("relics") or [])],
         })
     sets.sort(key=lambda x: (-x["loose"], x["zh"]))
 
