@@ -238,6 +238,7 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
 
           # 账号快照在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          INVENTORY_URL="${{ secrets.INVENTORY_URL }}"
           if [ -n "$INVENTORY_URL" ]; then
             /usr/libexec/PlistBuddy -c "Add :InventoryURL string $INVENTORY_URL" "$APP/Info.plist"
             echo "✅ InventoryURL 已注入"
@@ -245,8 +246,6 @@ jobs:
             echo "⚠️ 没有 INVENTORY_URL secret，App 只能用内置样例快照"
           fi
           plutil -p "$APP/Info.plist"
-        env:
-          INVENTORY_URL: ${{ secrets.INVENTORY_URL }}
 
           echo "=== Checking Version Keys ==="
           # These were absent for a while: the plist is generated, so the
