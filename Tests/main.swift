@@ -198,17 +198,21 @@ if let modeBranch = arbRoot?.children.first(where: { !$0.children.isEmpty }),
 
 print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")
 
-// ---- 资产快照：这份 JSON 是打进 App 的离线资源。解码失败的话「资产」页
-//      会静默显示空态，而 CI 的截图门禁看不出「空」和「没数据」的区别，
-//      所以在这里硬断言。
-let invPath = "\(currentDir)/WarframeWatch/Resources/InventoryData.json"
+// ---- 资产快照：真实那份在 .gitignore 里（含账号余额），仓库里只有裁剪过的
+//      样例。CI 上没有真文件，就用样例验证解码路径；本地两种都该过。
+let realPath = "\(currentDir)/WarframeWatch/Resources/InventoryData.json"
+let samplePath = "\(currentDir)/WarframeWatch/Resources/InventoryData.sample.json"
+let isSample = !FileManager.default.fileExists(atPath: realPath)
+let invPath = isSample ? samplePath : realPath
 guard FileManager.default.fileExists(atPath: invPath) else {
-    fatalError("❌ InventoryData.json not found at \(invPath)")
+    fatalError("❌ 既没有 InventoryData.json 也没有 sample，两个路径都不存在")
 }
 let invRaw = try Data(contentsOf: URL(fileURLWithPath: invPath))
 let inventory = try JSONDecoder().decode(InventoryData.self, from: invRaw)
 
-precondition(inventory.sets.count > 100, "expected the full prime set catalog, got \(inventory.sets.count)")
+// 样例裁到 15 套，真快照 162 套
+precondition(inventory.sets.count > (isSample ? 8 : 100),
+             "expected the prime set catalog, got \(inventory.sets.count)")
 precondition(inventory.sets.allSatisfy { !$0.parts.isEmpty }, "every set must list its parts")
 precondition(inventory.sets.contains { $0.isOwned }, "snapshot should contain at least one completed set")
 precondition(inventory.relics.contains { $0.n > 0 }, "snapshot should contain owned relics")

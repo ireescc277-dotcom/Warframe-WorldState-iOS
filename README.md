@@ -57,17 +57,21 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 
 价格只取**在线卖家的最低价**。market 的卖单最低价里有 1p 钓鱼单，用它会把 Lavos Prime 整套算成 1p。
 
-**刷新数据**（在电脑上跑，产物是 App 资源）：
+**刷新数据**（在电脑上跑，产物推到 VPS，不进仓库）：
 
 ```bash
 python scripts/wf_inventory.py read      # 解密 lastData.dat → data/inventory/
 python scripts/build_inventory_view.py   # 生成 view.json 与网页版 view.html
 python scripts/wf_market.py items        # 拉 market 商品目录
 python scripts/wf_market.py sync         # 抓价格（首次约 2.5 分钟）
+python scripts/fetch_icons.py            # 套装/遗物缩略图 → Asset Catalog
 python scripts/build_app_inventory.py    # 合并 → WarframeWatch/Resources/InventoryData.json
+python scripts/wf_publish.py             # 推到 VPS，App 启动时从这里拉
 ```
 
 `wf_market.py sync --missing` 只补没抓过的，日常刷新用它。价格是快照，App 顶部会显示快照时间。
+
+**账号数据不随 App 发布**：`InventoryData.json` 里有白金、星币和每件部件的持有数，等同账号信息，所以文件在 `.gitignore` 里。仓库只提交 `InventoryData.sample.json`（裁到 14 套 / 12 个遗物、余额归零），CI 打包时复制成正式名。真数据推到 VPS 后，App 用 CI 从 secret `INVENTORY_URL` 注入的地址去拉，缓存在本机；拉不到就用手里那份。
 
 ---
 
