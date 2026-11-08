@@ -198,7 +198,24 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
           plutil -p "$APP/Info.plist"
-          
+
+          echo "=== Checking Version Keys ==="
+          # These were absent for a while: the plist is generated, so the
+          # values in project.yml's info block never reached the bundle.
+          SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist" 2>/dev/null) || exit 1
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist" 2>/dev/null) || exit 1
+          echo "✅ version $SHORT ($BUILD)"
+
+          echo "=== Checking App Icon ==="
+          if [ -f "$APP/Assets.car" ]; then
+            echo "✅ Assets.car present"
+          elif compgen -G "$APP/AppIcon*.png" > /dev/null; then
+            echo "✅ AppIcon pngs present"
+          else
+            echo "❌ no app icon in bundle"
+            exit 1
+          fi
+
           echo "=== Checking Critical App Bundle Resources ==="
           test -d "$APP/LaunchScreen.storyboardc" && echo "✅ LaunchScreen.storyboardc present" || exit 1
           test -f "$APP/DefaultSnapshot.json" && echo "✅ DefaultSnapshot.json present" || exit 1

@@ -49,4 +49,12 @@ targets:
         CODE_SIGN_IDENTITY: ""
         DEVELOPMENT_TEAM: ""
         ENABLE_BITCODE: NO
+        # The plist is generated from INFOPLIST_KEY_* settings, which means the
+        # values in `info.properties` above are ignored unless they also exist
+        # as build settings. Without these two the shipped bundle had no
+        # CFBundleShortVersionString and no CFBundleVersion at all, and most
+        # sideload tools refuse a bundle like that.
         GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "1.0.9"
+        CURRENT_PROJECT_VERSION: "9"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
