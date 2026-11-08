@@ -36,8 +36,22 @@ REMOTE_ROOT = os.environ.get("WF_PUBLISH_ROOT", "/var/www/wf")
 NGINX = """location /wf/ {{
     alias {root}/;
     autoindex off;
-    add_header Cache-Control "no-store" always;
     default_type application/json;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options nosniff;
+    limit_except GET HEAD {{ deny all; }}
+}}
+
+# 安装包必须是二进制流：默认类型是 application/json，浏览器会把 .ipa
+# 当文本渲染，点了没反应也存不下来。
+location /wf/app/ {{
+    alias {root}/app/;
+    autoindex off;
+    default_type application/octet-stream;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options nosniff;
+    add_header Content-Disposition "attachment";
+    limit_except GET HEAD {{ deny all; }}
 }}"""
 
 
