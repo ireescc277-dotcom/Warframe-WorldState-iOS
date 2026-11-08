@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>背包 · ireesPrime</title>
+<style>
+:root{
+  --bg:#0A0E17; --surface:#121A26; --surface2:#18222F; --line:#223041;
+  --text:#E6EDF7; --dim:#7E92A9; --dim2:#5A6B80;
+  --gold:#D6B65C; --blue:#58A6E0; --green:#56C08D; --orange:#E0913F; --purple:#A07AD6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;
+  padding-bottom:80px;
+}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#243244;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- header ---------- */
+.top{
+  display:flex;align-items:center;gap:28px;flex-wrap:wrap;
+  padding:22px 32px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0E1420,#0A0E17);
+  position:sticky;top:0;z-index:20;
+}
+.who{display:flex;align-items:center;gap:14px;min-width:200px}
+.avatar{
+  width:42px;height:42px;border-radius:11px;flex:none;
+  background:linear-gradient(145deg,#2A3446,#151C28);
+  border:1px solid #2E3B4E;
+  display:grid;place-items:center;
+  color:var(--gold);font-weight:600;font-size:17px;letter-spacing:.5px;
+}
+.who h1{font-size:16px;font-weight:600;letter-spacing:.2px}
+.who p{font-size:11.5px;color:var(--dim2);margin-top:2px}
+
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.kpi{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:9px 14px;min-width:92px;
+}
+.kpi span{display:block;font-size:10.5px;color:var(--dim2);letter-spacing:.4px}
+.kpi b{display:block;font-size:17px;font-weight:600;margin-top:1px}
+.kpi.gold b{color:var(--gold)}
+.kpi.blue b{color:var(--blue)}
+
+/* ---------- tabs ---------- */
+.tabs{
+  display:flex;gap:4px;padding:0 32px;border-bottom:1px solid var(--line);
+  background:var(--bg);position:sticky;top:87px;z-index:19;overflow-x:auto;
+}
+.tab{
+  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  color:var(--dim);font:inherit;font-size:13.5px;padding:13px 15px;cursor:pointer;
+  white-space:nowrap;transition:color .15s,border-color .15s;
+}
+.tab:hover{color:var(--text)}
+.tab.is-on{color:var(--gold);border-bottom-color:var(--gold)}
+
+main{padding:26px 32px 0;max-width:1560px;margin:0 auto}
+.pane{display:none}
+.pane.is-on{display:block}
+
+/* ---------- shared ---------- */
+.bar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;
+}
+.search{
+  flex:1;min-width:200px;max-width:340px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  color:var(--text);font:inherit;font-size:13px;padding:9px 13px;outline:none;
+}
+.search:focus{border-color:#33465C}
+.search::placeholder{color:var(--dim2)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  appearance:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  color:var(--dim);font:inherit;font-size:12.5px;padding:7px 12px;cursor:pointer;
+  transition:all .15s;
+}
+.chip:hover{color:var(--text);border-color:#2E3F53}
+.chip.is-on{background:#1F2B3C;color:var(--text);border-color:#3A4E66}
+.chip i{font-style:normal;color:var(--dim2);margin-left:5px;font-size:11px}
+.chip.is-on i{color:var(--dim)}
+
+h2.sec{
+  font-size:12px;font-weight:600;color:var(--dim);letter-spacing:.8px;
+  text-transform:uppercase;margin:30px 0 13px;
+}
+h2.sec:first-child{margin-top:0}
+
+/* ---------- overview ---------- */
+.grid-4{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.big{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;
+}
+.big span{font-size:11.5px;color:var(--dim2);letter-spacing:.4px}
+.big b{display:block;font-size:29px;font-weight:600;margin-top:5px;letter-spacing:-.5px}
+.big small{display:block;font-size:11.5px;color:var(--dim);margin-top:3px}
+
+.dist{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.dist .row{display:grid;grid-template-columns:112px 1fr 74px;gap:12px;align-items:center;padding:5px 0}
+.dist .label{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist .track{height:7px;background:#1B2534;border-radius:4px;overflow:hidden}
+.dist .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#C9A94F,#E3C877)}
+.dist .fill.blue{background:linear-gradient(90deg,#3E7DB5,#63B0EA)}
+.dist .fill.green{background:linear-gradient(90deg,#3A8C68,#5ECB95)}
+.dist .val{font-size:12.5px;color:var(--dim);text-align:right}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+
+/* ---------- relics ---------- */
+.era-head{
+  display:flex;align-items:baseline;gap:10px;margin:26px 0 12px;
+}
+.era-head h3{font-size:15px;font-weight:600}
+.era-head span{font-size:11.5px;color:var(--dim2)}
+.relic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(274px,1fr));gap:12px;align-items:start}
+
+/* ---------- 套装 ---------- */
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(322px,1fr));gap:12px;align-items:start}
+.set{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:14px 15px;transition:border-color .15s;
+}
+.set.ready{border-color:#2E6B4E;background:linear-gradient(180deg,#12241C,#121A26 62%)}
+.set.owned{background:#101822;border-color:#1D2836}
+.set.owned .set-name{color:var(--dim)}
+.set.owned .part.ok{background:#141F1B;border-color:#22392F}
+.set-h{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.set-name{font-size:14.5px;font-weight:600;letter-spacing:.2px;line-height:1.3}
+.set-cat{font-size:10.5px;color:var(--dim2);margin-top:2px}
+.set-tag{
+  flex:none;font-size:10px;padding:2px 7px;border-radius:6px;
+  border:1px solid var(--line);color:var(--dim);white-space:nowrap;
+}
+.set-tag.ok{color:var(--green);background:#12251C;border-color:#2A4B3A}
+.set-tag.rd{color:#59C9A0;background:#0F2A20;border-color:#2C6B51}
+.set-tag.ms{color:var(--orange);background:#241A10;border-color:#4A3218}
+
+.parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.part{
+  display:flex;align-items:center;gap:5px;
+  font-size:11.5px;padding:4px 8px;border-radius:7px;
+  border:1px dashed #2A3543;background:#131C27;color:var(--dim2);
+}
+.part.ok{color:var(--text);background:#16251F;border:1px solid #28483A}
+.part i{font-style:normal;font-size:10.5px;color:var(--dim2)}
+.part.ok i{color:var(--green)}
+
+.set-relics{
+  margin-top:11px;padding-top:9px;border-top:1px solid #1B2634;
+  font-size:10.5px;color:var(--dim2);line-height:1.6;
+}
+.set-relics b{color:var(--dim);font-weight:500;margin-right:2px}
+.set-relics span{
+  display:inline-block;margin:2px 4px 0 0;padding:1px 5px;border-radius:4px;
+  background:#172230;color:var(--blue);font-size:10px;
+}
+.set-relics .more{background:none;color:var(--dim2);padding-left:1px}
+.set-empty{font-size:10.5px;color:var(--dim2);margin-top:10px}
+
+.setline{display:flex;gap:9px;margin-top:9px;font-size:10.5px;color:var(--dim2)}
+.setline b{font-weight:500;color:var(--orange)}
+
+details.fold{margin-top:6px}
+details.fold > summary{
+  list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;
+  padding:24px 0 12px;
+}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary h3{font-size:15px;font-weight:600}
+details.fold > summary span{font-size:11.5px;color:var(--dim2)}
+details.fold > summary::after{
+  content:"›";margin-left:2px;color:var(--dim2);font-size:15px;
+  transition:transform .15s;
+}
+details.fold[open] > summary::after{transform:rotate(90deg)}
+
+details.relic{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;transition:border-color .15s;
+}
+details.relic[open]{border-color:#33465C}
+details.relic > summary{
+  list-style:none;cursor:pointer;padding:14px 15px;
+}
+details.relic > summary::-webkit-details-marker{display:none}
+.rl-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rl-code{font-size:15px;font-weight:600;letter-spacing:.2px}
+.rl-en{font-size:11px;color:var(--dim2);margin-top:1px}
+.rl-total{
+  font-size:19px;font-weight:600;color:var(--gold);line-height:1;
+}
+.rl-total.em{color:var(--dim2)}
+.rl-total small{font-size:10.5px;color:var(--dim2);font-weight:400;margin-right:3px}
+.vault{
+  font-size:9.5px;color:#8A6A2E;background:#2A2416;border:1px solid #3E351F;
+  border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:2px;
+}
+.refines{display:flex;gap:7px;margin-top:11px}
+.refines div{
+  flex:1;background:#0E1621;border:1px solid #1B2534;border-radius:7px;
+  padding:5px 0;text-align:center;
+}
+.refines em{display:block;font-size:9.5px;color:var(--dim2);font-style:normal}
+.refines b{display:block;font-size:13px;font-weight:600;color:var(--dim)}
+.refines div.has b{color:var(--text)}
+.refines div.zero{opacity:.35}
+
+.drops{border-top:1px solid var(--line);padding:11px 15px 13px;background:#0E1621}
+.drops .h{font-size:10px;color:var(--dim2);letter-spacing:.6px;margin-bottom:8px}
+.drop{display:flex;align-items:flex-start;gap:9px;padding:4px 0;font-size:11.5px;line-height:1.35}
+.drop .p{width:44px;flex:none;color:var(--dim2);font-size:11px;text-align:right;padding-top:1px}
+.drop .nm{flex:1;overflow-wrap:anywhere}
+.drop .ok{flex:none;font-size:12px;width:12px;text-align:center;padding-top:1px}
+/* 拥有状态用整行透明度和勾选表达，颜色留给稀有度，两者不再互相覆盖 */
+.drop.have .nm{opacity:.5}
+.drop.have .ok{color:var(--green)}
+.drop.miss .ok{color:#2C3A4C}
+.r-com{color:#93A6BC}
+.r-unc{color:var(--blue)}
+.r-rar{color:var(--gold)}
+.r-leg{color:var(--orange)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse}
+thead th{
+  font-size:10.5px;font-weight:500;color:var(--dim2);letter-spacing:.5px;
+  text-align:left;padding:0 12px 9px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+tbody td{padding:9px 12px;border-bottom:1px solid #172130;font-size:12.5px}
+tbody tr:hover{background:#101924}
+td.num{text-align:right;color:var(--dim)}
+td.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+td .en{color:var(--dim2);font-size:11px;margin-left:7px}
+.wrap-table{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;padding-top:14px;
+}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.d-com{background:#5A6B80}.d-unc{background:var(--blue)}.d-rar{background:var(--gold)}
+.d-leg{background:var(--orange)}.d-oth{background:#3A4A5E}
+.meter{height:6px;background:#1B2534;border-radius:3px;overflow:hidden;min-width:70px}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,#3E7DB5,#63B0EA);border-radius:3px}
+
+/* ---------- gear ---------- */
+.gear-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px}
+.gear{
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px 14px;
+}
+.gear .n{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gear .e{font-size:10.5px;color:var(--dim2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gear .xp{display:flex;align-items:center;gap:8px;margin-top:10px}
+.gear .xp .meter{flex:1}
+.gear .xp b{font-size:10.5px;color:var(--dim2);font-weight:400;white-space:nowrap}
+
+/* ---------- nodes ---------- */
+.node-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:9px}
+.node{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  display:flex;align-items:center;gap:10px;
+}
+.node .tick{color:var(--green);font-size:12px;flex:none}
+.node .n{font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .c{font-size:10.5px;color:var(--dim2);flex:none}
+
+.empty{color:var(--dim2);font-size:13px;padding:40px 0;text-align:center}
+.count-note{font-size:11.5px;color:var(--dim2);margin-left:auto}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="who">
+    <div class="avatar">W</div>
+    <div>
+      <h1>ireesPrime</h1>
+      <p id="synced">—</p>
+    </div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab is-on" data-tab="overview">概览</button>
+  <button class="tab" data-tab="sets">套装</button>
+  <button class="tab" data-tab="relics">遗物</button>
+  <button class="tab" data-tab="gear">装备</button>
+  <button class="tab" data-tab="mods">Mod</button>
+  <button class="tab" data-tab="resources">资源</button>
+  <button class="tab" data-tab="nodes">星图</button>
+</nav>
+
+<main>
+  <section class="pane is-on" id="pane-overview"></section>
+  <section class="pane" id="pane-sets"></section>
+  <section class="pane" id="pane-relics"></section>
+  <section class="pane" id="pane-gear"></section>
+  <section class="pane" id="pane-mods"></section>
+  <section class="pane" id="pane-resources"></section>
+  <section class="pane" id="pane-nodes"></section>
+</main>
+
+<script>
+const DATA = /*__DATA__*/;
+
+/* ---------- helpers ---------- */
+const $ = (sel, root = document) => root.querySelector(sel);
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html !== undefined) n.innerHTML = html;
+  return n;
+};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => {
+  if (n === null || n === undefined) return "—";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e4) return (n / 1e3).toFixed(1) + "K";
+  return n.toLocaleString("en-US");
+};
+const num = n => (n ?? 0).toLocaleString("en-US");
+const dateOf = ms => {
+  if (!ms) return "—";
+  const d = new Date(ms);
+  const p = x => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+/* ---------- header ---------- */
+(function header() {
+  const s = DATA.state;
+  $("#synced").textContent = `背包同步 ${dateOf(s.synced)} · 账号创建 ${dateOf(s.created)}`;
+  const kpis = [
+    ["精通等级", s.mastery_rank, ""],
+    ["白金", num(s.platinum), "gold"],
+    ["星币", fmt(s.credits), ""],
+    ["内融核心", fmt(s.endo), ""],
+    ["遗物", num(DATA.counts.relics), "blue"],
+    ["已完成节点", num(DATA.counts.missions), ""],
+  ];
+  $("#kpis").innerHTML = kpis.map(([k, v, c]) =>
+    `<div class="kpi ${c}"><span>${k}</span><b>${v}</b></div>`).join("");
+})();
+
+/* ---------- overview ---------- */
+function renderOverview() {
+  const pane = $("#pane-overview");
+
+  const cards = [
+    ["Prime 套装", `${DATA.counts.setsOwned}/${DATA.counts.primeSets}`,
+     `已成套 · 散件 ${num(DATA.counts.setPartsOwned)}/${num(DATA.counts.setPartsTotal)}`],
+    ["装备总数", num(DATA.counts.gear), `${DATA.cats.length} 个类别`],
+    ["Mod 库存", num(DATA.counts.modStacks), `${DATA.counts.mods} 种`],
+    ["遗物", num(DATA.counts.relics), `${DATA.counts.relicKinds} 个代号`],
+  ];
+  const wrap = el("div");
+  wrap.appendChild(el("h2", "sec", "存量"));
+  const grid = el("div", "grid-4");
+  grid.innerHTML = cards.map(([k, v, s]) =>
+    `<div class="big"><span>${k}</span><b>${v}</b><small>${s}</small></div>`).join("");
+  wrap.appendChild(grid);
+
+  /* Prime 套装 —— "还缺什么"的主入口，所以排在遗物前面 */
+  wrap.appendChild(el("h2", "sec", `Prime 套装 · ${DATA.counts.primeSets} 个`));
+  const setStat = [
+    ["已成套", DATA.sets.filter(s => s.status === "owned").length],
+    ["可制造", DATA.sets.filter(s => s.status === "ready").length],
+    ["缺 1–2 件", DATA.sets.filter(s => s.status === "missing" && s.missing <= 2).length],
+    ["缺 3 件以上", DATA.sets.filter(s => s.status === "missing" && s.missing > 2).length],
+  ];
+  wrap.appendChild(distBlock(
+    setStat.map(([k, v]) => [k, v, `${v} 个`]),
+    false,
+    {
+      "已成套": "linear-gradient(90deg,#3A8C68,#5ECB95)",
+      "可制造": "linear-gradient(90deg,#2E8B6E,#7ADBB4)",
+      "缺 1–2 件": "linear-gradient(90deg,#C4783A,#EDA65F)",
+      "缺 3 件以上": "linear-gradient(90deg,#3A4658,#54657C)",
+    }
+  ));
+
+  /* 遗物按纪元 —— 固定纪元顺序，不按数量，否则每次打开顺序都在变 */
+  wrap.appendChild(el("h2", "sec", "遗物 · 按纪元"));
+  const ERA_SEQ = ["古纪", "前纪", "中纪", "后纪", "安魂", "虚空"];
+  const eras = {};
+  DATA.relics.forEach(r => {
+    const b = eras[r.eraZh] || (eras[r.eraZh] = { kinds: 0, units: 0 });
+    b.kinds++; b.units += r.total;
+  });
+  const eraRow = Object.entries(eras).sort((a, b) => {
+    const ia = ERA_SEQ.indexOf(a[0]), ib = ERA_SEQ.indexOf(b[0]);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  wrap.appendChild(distBlock(eraRow.map(([k, v]) => [k, v.units, `${v.kinds} 种`])));
+
+  /* Mod 稀有度 —— 颜色跟稀有度走，和 Mod 页的点一致 */
+  wrap.appendChild(el("h2", "sec", "Mod · 稀有度"));
+  const RCOLOR = {
+    Common: "linear-gradient(90deg,#4A5A6E,#6B7D93)",
+    Uncommon: "linear-gradient(90deg,#3E7DB5,#63B0EA)",
+    Rare: "linear-gradient(90deg,#C9A94F,#E3C877)",
+    Legendary: "linear-gradient(90deg,#C4783A,#EDA65F)",
+    Unknown: "linear-gradient(90deg,#3A4658,#54657C)",
+  };
+  const rar = {};
+  DATA.mods.forEach(m => {
+    const key = m.rarity || "Unknown";
+    const b = rar[key] || (rar[key] = { kinds: 0, units: 0 });
+    b.kinds++; b.units += m.count;
+  });
+  const rarRow = Object.entries(rar).sort((a, b) => b[1].kinds - a[1].kinds);
+  wrap.appendChild(distBlock(
+    rarRow.map(([k, v]) => [k, v.kinds, `${num(v.units)} 张`]),
+    false, RCOLOR));
+
+  /* 资源 top —— 对数刻度再减基线，否则 23M 和 1.8K 在一条轴上全是满格 */
+  wrap.appendChild(el("h2", "sec", "资源 · 持有量前 12"));
+  const top = DATA.resources.slice(0, 12);
+  const logs = top.map(r => Math.log10(r.count + 1));
+  const lo = Math.min(...logs), hi = Math.max(...logs);
+  wrap.appendChild(distBlock(top.map(r => {
+    const t = hi === lo ? 1 : (Math.log10(r.count + 1) - lo) / (hi - lo);
+    return [r.zh, r.count, num(r.count), 8 + t * 92];
+  }), true));
+
+  pane.innerHTML = "";
+  pane.appendChild(wrap);
+}
+
+function distBlock(rows, precomputed, colors) {
+  const box = el("div", "dist");
+  const max = precomputed
+    ? 100
+    : Math.max(...rows.map(r => r[1]), 1);
+  box.innerHTML = rows.map(([label, value, note, forced]) => {
+    const w = forced ?? Math.max(1.5, (value / max) * 100);
+    const paint = colors && colors[label] ? `background:${colors[label]}` : "";
+    return `<div class="row">
+      <div class="label">${esc(label)}</div>
+      <div class="track"><div class="fill" style="width:${w}%;${paint}"></div></div>
+      <div class="val">${precomputed ? note : num(value)}</div>
+    </div>`;
+  }).join("");
+  return box;
+}
+
+/* ---------- relics ---------- */
+const relicState = { q: "", era: "all", mode: "card" };
+
+/* ---------- sets ---------- */
+// 一件"套装"由 2–5 个部件组成，判定用的是"成品在不在"而不是"零件齐不齐"：
+// 做出来的装备会把零件吃掉，只看零件会把 76 个已完成的套装全判成缺件。
+const setState = { q: "", filter: "all", cat: null };
+
+function renderSets() {
+  const c = DATA.counts;
+  const close = DATA.sets.filter(s => s.status === "missing" && s.missing <= 2).length;
+  const farm = DATA.sets.filter(s => s.farmable).length;
+  const cats = [...new Set(DATA.sets.map(s => s.cat))];
+
+  const filters = [
+    ["all", "全部", c.primeSets],
+    ["ready", "可制造", c.setsReady],
+    ["close", "缺 1–2 件", close],
+    ["farm", "有遗物可刷", farm],
+    ["missing", "缺件", DATA.sets.filter(s => s.status === "missing").length],
+    ["owned", "已成套", c.setsOwned],
+  ];
+
+  $("#pane-sets").innerHTML = `
+    <div class="bar">
+      <input class="search" id="sq" placeholder="搜索套装或部件名…" value="${esc(setState.q)}">
+      <div class="chips" id="sfilter">
+        ${filters.map(([k, label, n]) =>
+          `<button class="chip ${setState.filter === k ? "is-on" : ""}" data-f="${k}">${label}<i>${n}</i></button>`).join("")}
+      </div>
+      <div class="chips" id="scat">
+        ${cats.map(k => {
+          const n = DATA.sets.filter(s => s.cat === k).length;
+          return `<button class="chip ${setState.cat === k ? "is-on" : ""}" data-c="${esc(k)}">${esc(k)}<i>${n}</i></button>`;
+        }).join("")}
+      </div>
+    </div>
+    <div id="sbody"></div>`;
+
+  $("#sq").oninput = e => { setState.q = e.target.value; paintSets(); };
+  $("#sfilter").onclick = e => {
+    const b = e.target.closest("[data-f]");
+    if (!b) return;
+    setState.filter = b.dataset.f;
+    renderSets();
+  };
+  $("#scat").onclick = e => {
+    const b = e.target.closest("[data-c]");
+    if (!b) return;
+    setState.cat = setState.cat === b.dataset.c ? null : b.dataset.c;
+    renderSets();
+  };
+  paintSets();
+}
+
+function filteredSets() {
+  const q = setState.q.trim().toLowerCase();
+  return DATA.sets.filter(s => {
+    if (setState.cat && s.cat !== setState.cat) return false;
+    const f = setState.filter;
+    if (f === "ready" && s.status !== "ready") return false;
+    if (f === "owned" && s.status !== "owned") return false;
+    if (f === "missing" && s.status !== "missing") return false;
+    if (f === "close" && !(s.status === "missing" && s.missing <= 2)) return false;
+    if (f === "farm" && !s.farmable) return false;
+    if (!q) return true;
+    if (`${s.zh} ${s.name}`.toLowerCase().includes(q)) return true;
+    return s.parts.some(p => `${p.label} ${p.en}`.toLowerCase().includes(q));
+  });
+}
+
+function setCard(s) {
+  const tag = s.status === "owned"
+    ? `<span class="set-tag ok">已成套</span>`
+    : s.status === "ready"
+      ? `<span class="set-tag rd">可制造</span>`
+      : `<span class="set-tag ms">缺 ${s.missing}</span>`;
+
+  // 已制成的套装零件会被消耗，但重复刷到的散件还留在背包里，这就是可直接交易的余量
+  const extra = s.parts.reduce((n, p) => n + (p.count || 0), 0);
+  const sub = s.status === "owned"
+    ? `${esc(s.cat)} · 已制成${extra ? ` · 余 ${extra} 件` : ""}`
+    : `${esc(s.cat)} · ${s.haveCount}/${s.total} 件`;
+
+  const parts = s.parts.map(p =>
+    `<div class="part ${p.count ? "ok" : ""}" title="${esc(p.en)}">${esc(p.label)}${
+      p.count ? `<i>×${p.count}</i>` : ""}</div>`).join("");
+
+  // 已拥有的套装不再提示去哪刷，避免把"已有"和"该刷"混在一起
+  let relics = "";
+  if (s.status !== "owned") {
+    if (s.relics.length) {
+      const shown = s.relics.slice(0, 4);
+      const rest = s.relics.length - shown.length;
+      relics = `<div class="set-relics"><b>持有遗物</b>${
+        shown.map(r => `<span>${esc(r)}</span>`).join("")}${
+        rest ? `<span class="more">+${rest}</span>` : ""}</div>`;
+    } else {
+      relics = `<div class="set-empty">持有的遗物里没有它的部件</div>`;
+    }
+  }
+
+  return `<div class="set ${s.status}">
+    <div class="set-h">
+      <div>
+        <div class="set-name">${esc(s.zh)}</div>
+        <div class="set-cat">${sub}${s.zh !== s.name ? ` · ${esc(s.name)}` : ""}</div>
+      </div>
+      ${tag}
+    </div>
+    <div class="parts">${parts}</div>
+    ${relics}
+  </div>`;
+}
+
+function paintSets() {
+  const body = $("#sbody");
+  const rows = filteredSets();
+  if (!rows.length) { body.innerHTML = `<div class="empty">没有匹配的套装</div>`; return; }
+
+  const blocks = [
+    ["ready", "可制造", rows.filter(r => r.status === "ready")],
+    ["missing", "缺件", rows.filter(r => r.status === "missing")],
+    ["owned", "已成套", rows.filter(r => r.status === "owned")],
+  ].filter(b => b[2].length);
+
+  body.innerHTML = blocks.map(([key, label, list]) => {
+    const grid = `<div class="set-grid">${list.map(setCard).join("")}</div>`;
+    // 76 个已成套的会淹掉真正要看的缺口，默认收起；但用户主动筛"已成套"时
+    // 再折叠一次就成了空白页，所以那个状态下直接展开
+    if (key !== "owned" || setState.filter === "owned") {
+      return `<div class="era-head"><h3>${label}</h3><span>${list.length} 个</span></div>${grid}`;
+    }
+    return `<details class="fold">
+      <summary><h3>${label}</h3><span>${list.length} 个 · 点击展开</span></summary>
+      ${grid}
+    </details>`;
+  }).join("");
+}
+
+/* ---------- relics ---------- */
+function renderRelics() {
+  const pane = $("#pane-relics");
+  const eras = ["all", ...new Set(DATA.relics.map(r => r.era))];
+
+  pane.innerHTML = `
+    <div class="bar">
+      <input class="search" id="rq" placeholder="搜索遗物代号或掉落部件…" value="${esc(relicState.q)}">
+      <div class="chips" id="rera">
+        ${eras.map(e => {
+          const label = e === "all" ? "全部" : (DATA.relics.find(r => r.era === e)?.eraZh || e);
+          const n = e === "all" ? DATA.relics.length : DATA.relics.filter(r => r.era === e).length;
+          return `<button class="chip ${relicState.era === e ? "is-on" : ""}" data-era="${e}">${label}<i>${n}</i></button>`;
+        }).join("")}
+      </div>
+      <div class="chips">
+        <button class="chip ${relicState.mode === "card" ? "is-on" : ""}" data-mode="card">卡片</button>
+        <button class="chip ${relicState.mode === "table" ? "is-on" : ""}" data-mode="table">表格</button>
+      </div>
+    </div>
+    <div id="rbody"></div>`;
+
+  $("#rq", pane).oninput = e => { relicState.q = e.target.value; paintRelics(); };
+  $("#rera", pane).onclick = e => {
+    const b = e.target.closest("[data-era]");
+    if (!b) return;
+    relicState.era = b.dataset.era;
+    renderRelics();
+  };
+  pane.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+    relicState.mode = b.dataset.mode;
+    renderRelics();
+  });
+  paintRelics();
+}
+
+function filteredRelics() {
+  const q = relicState.q.trim().toLowerCase();
+  return DATA.relics.filter(r => {
+    if (relicState.era !== "all" && r.era !== relicState.era) return false;
+    if (!q) return true;
+    if (r.id.toLowerCase().includes(q) || r.zh.toLowerCase().includes(q)) return true;
+    return r.rewards.some(x => (x.zh || "").toLowerCase().includes(q) || (x.en || "").toLowerCase().includes(q));
+  });
+}
+
+function paintRelics() {
+  const body = $("#rbody");
+  const rows = filteredRelics();
+  if (!rows.length) { body.innerHTML = `<div class="empty">没有匹配的遗物</div>`; return; }
+
+  if (relicState.mode === "table") {
+    body.innerHTML = `<div class="wrap-table"><table>
+      <thead><tr>
+        <th>遗物</th><th style="text-align:right">完整</th><th style="text-align:right">优良</th>
+        <th style="text-align:right">无瑕</th><th style="text-align:right">光辉</th>
+        <th style="text-align:right">合计</th><th style="text-align:right">掉落缺口</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const miss = r.rewards.filter(x => !x.have).length;
+        return `<tr>
+          <td class="name">${esc(r.zh)}<span class="en">${esc(r.id)}</span></td>
+          ${["Intact", "Exceptional", "Flawless", "Radiant"].map(k =>
+            `<td class="num">${r.stocks[k] || "·"}</td>`).join("")}
+          <td class="num" style="color:var(--gold)">${r.total}</td>
+          <td class="num">${miss ? `<span style="color:var(--orange)">${miss}</span>` : `<span style="color:var(--green)">齐</span>`}</td>
+        </tr>`;
+      }).join("")}</tbody></table></div>`;
+    return;
+  }
+
+  const order = ["Lith", "Meso", "Neo", "Axi", "Requiem", "Void"];
+  const groups = {};
+  rows.forEach(r => (groups[r.era] || (groups[r.era] = [])).push(r));
+  const keys = Object.keys(groups).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  body.innerHTML = keys.map(era => {
+    const list = groups[era].sort((a, b) => b.total - a.total);
+    const units = list.reduce((s, r) => s + r.total, 0);
+    return `<div class="era-head">
+        <h3>${esc(list[0].eraZh)}</h3>
+        <span>${list.length} 个代号 · ${num(units)} 个</span>
+      </div>
+      <div class="relic-grid">${list.map(relicCard).join("")}</div>`;
+  }).join("");
+}
+
+function relicCard(r) {
+  const refine = [["Intact", "完整"], ["Exceptional", "优良"], ["Flawless", "无瑕"], ["Radiant", "光辉"]];
+  const drops = r.rewards.length
+    ? r.rewards.map(x => {
+        const cls = { Common: "r-com", Uncommon: "r-unc", Rare: "r-rar", Legendary: "r-leg" }[x.rarity] || "r-com";
+        return `<div class="drop ${x.have ? "have" : "miss"}">
+          <span class="p">${x.chance != null ? x.chance.toFixed(x.chance % 1 ? 2 : 0) + "%" : ""}</span>
+          <span class="nm ${cls}">${esc(x.zh || x.en)}</span>
+          <span class="ok">${x.have ? "✓" : "·"}</span>
+        </div>`;
+      }).join("")
+    : `<div class="drop"><span class="nm" style="color:var(--dim2)">无掉落数据</span></div>`;
+
+  // 一张遗物值不值得开，取决于它能出的套装里还有几套没有
+  let setline = "";
+  if (r.setsMissing) {
+    setline = `<div class="setline"><b>缺 ${r.setsMissing} 套</b>${
+      r.setsOwned ? `<span>已有 ${r.setsOwned} 套</span>` : ""}</div>`;
+  } else if (r.setsOwned) {
+    setline = `<div class="setline"><span>涉及的套装都已拥有</span></div>`;
+  }
+
+  return `<details class="relic">
+    <summary>
+      <div class="rl-top">
+        <div>
+          <div class="rl-code">${esc(r.eraZh)} ${esc(r.code)}</div>
+          <div class="rl-en">${esc(r.id)}</div>
+        </div>
+        <div class="rl-total ${r.total ? "" : "em"}"><small>×</small>${r.total}</div>
+      </div>
+      <div class="refines">${refine.map(([k, label]) => {
+        const n = r.stocks[k] || 0;
+        return `<div class="${n ? "has" : "zero"}"><em>${label}</em><b>${n || "·"}</b></div>`;
+      }).join("")}</div>
+      ${setline}
+    </summary>
+    <div class="drops"><div class="h">掉落 · ✓ 表示已有</div>${drops}</div>
+  </details>`;
+}
+
+/* ---------- gear ---------- */
+const gearState = { cat: null, q: "" };
+
+function renderGear() {
+  const pane = $("#pane-gear");
+  if (!gearState.cat) {
+    // #gear/LongGuns 直接落到主武器（hash 带前导 #，先切掉）
+    const m = location.hash.slice(1).match(/^gear\/([A-Za-z]+)/);
+    const wanted = m && DATA.cats.find(c => c.key === m[1]);
+    gearState.cat = wanted ? m[1] : DATA.cats[0]?.key;
+  }
+
+  pane.innerHTML = `
+    <div class="bar">
+      <input class="search" id="gq" placeholder="搜索装备名…" value="${esc(gearState.q)}">
+      <div class="chips" id="gcat">
+        ${DATA.cats.map(c => `<button class="chip ${gearState.cat === c.key ? "is-on" : ""}" data-cat="${c.key}">${esc(c.zh)}<i>${c.count}</i></button>`).join("")}
+      </div>
+    </div>
+    <div id="gbody"></div>
+    <div class="count-note" style="margin:14px 0 0">按累计经验排序 · 不判断装备等级（30 级与 40 级装备共用一条轴）</div>`;
+
+  $("#gq", pane).oninput = e => { gearState.q = e.target.value; paintGear(); };
+  $("#gcat", pane).onclick = e => {
+    const b = e.target.closest("[data-cat]");
+    if (!b) return;
+    gearState.cat = b.dataset.cat;
+    renderGear();
+  };
+  paintGear();
+}
+
+function paintGear() {
+  const q = gearState.q.trim().toLowerCase();
+  const rows = DATA.gear
+    .filter(g => g.cat === gearState.cat)
+    .filter(g => !q || g.zh.toLowerCase().includes(q) || g.en.toLowerCase().includes(q))
+    .sort((a, b) => b.xp - a.xp);
+
+  if (!rows.length) { $("#gbody").innerHTML = `<div class="empty">没有匹配的装备</div>`; return; }
+  // 线性刻度会把除最高者以外的全部压成看不见的一条，所以走对数再减基线。
+  // 不做满级判断：Kuva/Tenet/机甲是 40 级上限，用 30 级门槛去标会标错。
+  const logs = rows.map(r => Math.log10(r.xp + 1));
+  const lo = Math.min(...logs), hi = Math.max(...logs);
+  $("#gbody").innerHTML = `<div class="gear-grid">${rows.map(g => {
+    const t = hi === lo ? 1 : (Math.log10(g.xp + 1) - lo) / (hi - lo);
+    const w = 6 + t * 94;
+    return `<div class="gear">
+      <div class="n">${esc(g.zh)}</div>
+      <div class="e">${esc(g.en)}</div>
+      <div class="xp">
+        <div class="meter"><i style="width:${w}%"></i></div>
+        <b>${fmt(g.xp)}</b>
+      </div>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+/* ---------- mods ---------- */
+const modState = { q: "", rarity: "all", sort: "count" };
+
+function renderMods() {
+  const pane = $("#pane-mods");
+  const rarities = ["all", ...new Set(DATA.mods.map(m => m.rarity).filter(Boolean))];
+
+  pane.innerHTML = `
+    <div class="bar">
+      <input class="search" id="mq" placeholder="搜索 Mod 名…" value="${esc(modState.q)}">
+      <div class="chips" id="mrar">
+        ${rarities.map(r => {
+          const n = r === "all" ? DATA.mods.length : DATA.mods.filter(m => m.rarity === r).length;
+          return `<button class="chip ${modState.rarity === r ? "is-on" : ""}" data-rar="${r}">${r === "all" ? "全部" : r}<i>${n}</i></button>`;
+        }).join("")}
+      </div>
+      <div class="chips">
+        ${[["count", "按数量"], ["name", "按名称"], ["rarity", "按稀有度"]].map(([k, label]) =>
+          `<button class="chip ${modState.sort === k ? "is-on" : ""}" data-sort="${k}">${label}</button>`).join("")}
+      </div>
+    </div>
+    <div id="mbody"></div>`;
+
+  $("#mq", pane).oninput = e => { modState.q = e.target.value; paintMods(); };
+  $("#mrar", pane).onclick = e => {
+    const b = e.target.closest("[data-rar]");
+    if (!b) return;
+    modState.rarity = b.dataset.rar;
+    renderMods();
+  };
+  pane.querySelectorAll("[data-sort]").forEach(b => b.onclick = () => {
+    modState.sort = b.dataset.sort;
+    renderMods();
+  });
+  paintMods();
+}
+
+const RARITY_ORDER = { Common: 0, Uncommon: 1, Rare: 2, Legendary: 3, Riven: 4 };
+const RARITY_CLASS = { Common: "d-com", Uncommon: "d-unc", Rare: "d-rar", Legendary: "d-leg" };
+
+function paintMods() {
+  const q = modState.q.trim().toLowerCase();
+  let rows = DATA.mods.filter(m => {
+    if (modState.rarity !== "all" && m.rarity !== modState.rarity) return false;
+    return !q || m.zh.toLowerCase().includes(q) || m.en.toLowerCase().includes(q);
+  });
+
+  if (modState.sort === "name") rows.sort((a, b) => a.zh.localeCompare(b.zh, "zh"));
+  else if (modState.sort === "rarity") rows.sort((a, b) =>
+    (RARITY_ORDER[a.rarity] ?? 9) - (RARITY_ORDER[b.rarity] ?? 9) || b.count - a.count);
+  else rows.sort((a, b) => b.count - a.count);
+
+  if (!rows.length) { $("#mbody").innerHTML = `<div class="empty">没有匹配的 Mod</div>`; return; }
+
+  const shown = rows.slice(0, 400);
+  const maxLog = Math.log10(Math.max(...shown.map(r => r.count)) + 1);
+  $("#mbody").innerHTML = `
+    <div class="wrap-table"><table>
+      <thead><tr><th>Mod</th><th style="width:120px">稀有度</th><th style="width:130px">持有</th>
+      <th style="width:90px;text-align:right">数量</th>
+      <th style="width:74px;text-align:right">等级</th></tr></thead>
+      <tbody>${shown.map(m => `<tr>
+        <td class="name">${esc(m.zh)}<span class="en">${esc(m.en)}</span></td>
+        <td><span class="dot ${RARITY_CLASS[m.rarity] || "d-oth"}"></span>${esc(m.rarity || "—")}</td>
+        <td><div class="meter"><i style="width:${Math.max(3, (Math.log10(m.count + 1) / maxLog) * 100)}%"></i></div></td>
+        <td class="num" style="color:var(--text)">${num(m.count)}</td>
+        <td class="num">${m.topLevel != null && m.maxLevel != null ? `${m.topLevel}/${m.maxLevel}` : ""}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    ${rows.length > shown.length ? `<div class="empty">仅显示前 ${shown.length} 条，共 ${rows.length} 条</div>` : ""}`;
+}
+
+/* ---------- resources ---------- */
+const resState = { q: "" };
+
+function renderResources() {
+  const pane = $("#pane-resources");
+  pane.innerHTML = `
+    <div class="bar">
+      <input class="search" id="sq" placeholder="搜索资源名…" value="${esc(resState.q)}">
+      <div class="count-note" id="scount"></div>
+    </div>
+    <div id="sbody"></div>`;
+  $("#sq", pane).oninput = e => { resState.q = e.target.value; paintResources(); };
+  paintResources();
+}
+
+function paintResources() {
+  const q = resState.q.trim().toLowerCase();
+  const rows = DATA.resources.filter(r => !q || r.zh.toLowerCase().includes(q) || r.en.toLowerCase().includes(q));
+  $("#scount").textContent = `${rows.length} 种 · 合计 ${fmt(rows.reduce((s, r) => s + r.count, 0))}`;
+  if (!rows.length) { $("#sbody").innerHTML = `<div class="empty">没有匹配的资源</div>`; return; }
+
+  const shown = rows.slice(0, 300);
+  const maxLog = Math.log10(Math.max(...shown.map(r => r.count)) + 1);
+  $("#sbody").innerHTML = `
+    <div class="wrap-table"><table>
+      <thead><tr><th>资源</th><th style="width:220px">相对量（对数）</th><th style="text-align:right">数量</th></tr></thead>
+      <tbody>${shown.map(r => `<tr>
+        <td class="name">${esc(r.zh)}<span class="en">${esc(r.en)}</span></td>
+        <td><div class="meter"><i style="width:${Math.max(1.5, (Math.log10(r.count + 1) / maxLog) * 100)}%"></i></div></td>
+        <td class="num" style="color:var(--text)">${num(r.count)}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    ${rows.length > shown.length ? `<div class="empty">仅显示前 ${shown.length} 条，共 ${rows.length} 条</div>` : ""}`;
+}
+
+/* ---------- nodes ---------- */
+function renderNodes() {
+  const pane = $("#pane-nodes");
+  const PLANETS = ["Earth", "Venus", "Mercury", "Mars", "Phobos", "Deimos", "Ceres",
+    "Jupiter", "Europa", "Saturn", "Uranus", "Neptune", "Pluto", "Sedna", "Eris",
+    "Lua", "Kuva Fortress", "Zariman", "Höllvania", "Veil"];
+
+  // 枢纽、中继站、航道战斗这些没有地名也没有任务类型，混进来只会把真正的
+  // 任务节点淹掉，所以单独计数不展示。
+  const isNode = m => {
+    if (m.tag.startsWith("CrewBattleNode")) return false;
+    if (/To[A-Za-z]*Junction$/.test(m.tag)) return false;
+    if (!m.name || /^[A-Za-z]+\d+$/.test(m.name)) return false;
+    return true;
+  };
+  const nodes = DATA.missions.filter(isNode);
+  const skipped = DATA.missions.length - nodes.length;
+
+  const groups = {};
+  nodes.forEach(m => (groups[m.planet] || (groups[m.planet] = [])).push(m));
+  const keys = Object.keys(groups).sort((a, b) => {
+    const ia = PLANETS.indexOf(a), ib = PLANETS.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+
+  pane.innerHTML = `
+    <div class="bar">
+      <div class="count-note" style="margin:0">
+        已完成 ${DATA.missions.length} 个 · 任务节点 ${nodes.length} 个 · ${keys.length} 个星球 ·
+        其余 ${skipped} 个为枢纽 / 中继站 / 航道
+      </div>
+    </div>
+    ${keys.map(k => `
+      <div class="era-head"><h3>${esc(k)}</h3><span>${groups[k].length} 个</span></div>
+      <div class="node-grid">${groups[k].sort((a, b) => b.completes - a.completes).map(n => `
+        <div class="node">
+          <span class="tick">✓</span>
+          <span class="n">${esc(n.name)}</span>
+          <span class="c">${n.completes}×</span>
+        </div>`).join("")}</div>`).join("")}`;
+}
+
+/* ---------- router ---------- */
+const RENDER = {
+  overview: renderOverview, sets: renderSets, relics: renderRelics, gear: renderGear,
+  mods: renderMods, resources: renderResources, nodes: renderNodes,
+};
+const done = new Set();
+
+$("#tabs").onclick = e => {
+  const b = e.target.closest("[data-tab]");
+  if (!b) return;
+  activate(b.dataset.tab);
+  history.replaceState(null, "", `#${b.dataset.tab}`);
+};
+
+function activate(name) {
+  if (!RENDER[name]) return;
+  document.querySelectorAll(".tab").forEach(x =>
+    x.classList.toggle("is-on", x.dataset.tab === name));
+  document.querySelectorAll(".pane").forEach(x =>
+    x.classList.toggle("is-on", x.id === `pane-${name}`));
+  if (!done.has(name)) { RENDER[name](); done.add(name); }
+}
+
+/* 深链接：view.html#relics 落在遗物页，view.html#gear/LongGuns 落在主武器，
+   #sets/close 直接落在"缺 1–2 件"这一段 */
+const [hashTab, hashArg] = (location.hash.slice(1) || "overview").split("/");
+if (hashTab === "sets" && hashArg) setState.filter = hashArg;
+activate(RENDER[hashTab] ? hashTab : "overview");
+</script>
+</body>
+</html>

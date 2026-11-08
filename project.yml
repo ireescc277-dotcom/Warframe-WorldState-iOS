@@ -24,7 +24,7 @@ targets:
       path: WarframeWatch/Info.plist
       properties:
         CFBundleDisplayName: "Warframe 世界状态"
-        CFBundleShortVersionString: "1.0.9"
+        CFBundleShortVersionString: "1.1.0"
         CFBundleVersion: "9"
         UILaunchStoryboardName: LaunchScreen
         LSRequiresIPhoneOS: true
@@ -55,6 +55,6 @@ targets:
         # CFBundleShortVersionString and no CFBundleVersion at all, and most
         # sideload tools refuse a bundle like that.
         GENERATE_INFOPLIST_FILE: YES
-        MARKETING_VERSION: "1.0.9"
-        CURRENT_PROJECT_VERSION: "9"
+        MARKETING_VERSION: "1.1.0"
+        CURRENT_PROJECT_VERSION: "10"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

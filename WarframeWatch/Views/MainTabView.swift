@@ -12,7 +12,7 @@ public struct MainTabView: View {
     private static var seededTab: Int {
         let args = CommandLine.arguments
         guard let flag = args.firstIndex(of: "-startTab"), args.index(after: flag) < args.endIndex,
-              let value = Int(args[args.index(after: flag)]), (0...3).contains(value)
+              let value = Int(args[args.index(after: flag)]), (0...4).contains(value)
         else { return 0 }
         return value
     }
@@ -34,17 +34,23 @@ public struct MainTabView: View {
                 .badge(vm.matchedLiveHits.count)
                 .tag(1)
 
+            AssetsView()
+                .tabItem {
+                    Label("资产", systemImage: "shippingbox")
+                }
+                .tag(2)
+
             CycleView()
                 .tabItem {
                     Label("周期", systemImage: "calendar")
                 }
-                .tag(2)
+                .tag(3)
 
             MoreView()
                 .tabItem {
                     Label("更多", systemImage: "ellipsis")
                 }
-                .tag(3)
+                .tag(4)
         }
         .tint(WFTheme.gold)
     }

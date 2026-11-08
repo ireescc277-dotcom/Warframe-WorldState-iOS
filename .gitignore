@@ -19,3 +19,10 @@ Payload/
 # Python
 __pycache__/
 *.pyc
+
+# 个人数据：背包原始快照、采集库、行情缓存都由脚本生成，不进仓库。
+# 打包用的 WarframeWatch/Resources/InventoryData.json 是唯一例外，它是 App 资源。
+data/
+
+# 工作区记忆与临时文件
+.workbuddy/

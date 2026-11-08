@@ -197,3 +197,24 @@ if let modeBranch = arbRoot?.children.first(where: { !$0.children.isEmpty }),
 }
 
 print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")
+
+// ---- 资产快照：这份 JSON 是打进 App 的离线资源。解码失败的话「资产」页
+//      会静默显示空态，而 CI 的截图门禁看不出「空」和「没数据」的区别，
+//      所以在这里硬断言。
+let invPath = "\(currentDir)/WarframeWatch/Resources/InventoryData.json"
+guard FileManager.default.fileExists(atPath: invPath) else {
+    fatalError("❌ InventoryData.json not found at \(invPath)")
+}
+let invRaw = try Data(contentsOf: URL(fileURLWithPath: invPath))
+let inventory = try JSONDecoder().decode(InventoryData.self, from: invRaw)
+
+precondition(inventory.sets.count > 100, "expected the full prime set catalog, got \(inventory.sets.count)")
+precondition(inventory.sets.allSatisfy { !$0.parts.isEmpty }, "every set must list its parts")
+precondition(inventory.sets.contains { $0.isOwned }, "snapshot should contain at least one completed set")
+precondition(inventory.relics.contains { $0.n > 0 }, "snapshot should contain owned relics")
+precondition(inventory.relics.contains { $0.p > 0 }, "at least one relic should carry a market price")
+precondition(inventory.sets.contains { $0.setPrice > 0 }, "at least one set should carry a market price")
+print("✅ InventoryData: \(inventory.sets.count) sets "
+      + "(\(inventory.totals.setsOwned) owned), "
+      + "\(inventory.relics.count) relics, \(inventory.aya.items.count) aya items, "
+      + "\(inventory.totals.loosePlat) p loose")

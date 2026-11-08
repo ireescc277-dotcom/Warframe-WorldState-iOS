@@ -33,6 +33,7 @@ jobs:
             WarframeWatch/Models/ArbitrationInfo.swift \
             WarframeWatch/Models/CommunityModels.swift \
             WarframeWatch/Models/FocusModels.swift \
+            WarframeWatch/Models/InventoryModel.swift \
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
             WarframeWatch/Models/SnapshotDiff.swift \
@@ -139,13 +140,15 @@ jobs:
           }
           capture dashboard_preview 0
           capture screen_watch 1
-          capture screen_cycle 2
-          capture screen_more 3
+          capture screen_assets 2
+          capture screen_cycle 3
+          capture screen_more 4
 
       - name: Run Automated Visual Quality Gate
         run: |
           python scripts/verify_screenshots.py \
-            dashboard_preview.png screen_watch.png screen_cycle.png screen_more.png
+            dashboard_preview.png screen_watch.png screen_assets.png \
+            screen_cycle.png screen_more.png
 
       - name: Upload Screenshot Artifact
         uses: actions/upload-artifact@v4
@@ -154,6 +157,7 @@ jobs:
           path: |
             dashboard_preview.png
             screen_watch.png
+            screen_assets.png
             screen_cycle.png
             screen_more.png
           retention-days: 14
