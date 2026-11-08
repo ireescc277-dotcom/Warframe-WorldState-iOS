@@ -127,28 +127,32 @@ jobs:
 
       - name: Capture Simulator Screenshots
         run: |
-          # One screenshot per tab. The app reads -startTab from the command
-          # line, so this needs no tapping, which simctl cannot do anyway.
+          # One screenshot per state. The app reads -startTab / -assetTab /
+          # -assetSet from the command line, so this needs no tapping, which
+          # simctl cannot do anyway.
           capture() {
-            name=$1
-            tab=$2
+            name=$1; shift
             xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
-            xcrun simctl launch $SIM_UDID com.warframe.watch -startTab $tab >/dev/null
+            xcrun simctl launch $SIM_UDID com.warframe.watch "$@" >/dev/null
             sleep 4
             xcrun simctl io $SIM_UDID screenshot "$name.png"
             ls -lh "$name.png"
           }
-          capture dashboard_preview 0
-          capture screen_watch 1
-          capture screen_assets 2
-          capture screen_cycle 3
-          capture screen_more 4
+          capture dashboard_preview -startTab 0
+          capture screen_watch -startTab 1
+          capture screen_assets -startTab 2
+          capture screen_assets_relics -startTab 2 -assetTab relics
+          capture screen_assets_aya -startTab 2 -assetTab aya
+          capture screen_assets_detail -startTab 2 -assetSet "Hildryn Prime"
+          capture screen_cycle -startTab 3
+          capture screen_more -startTab 4
 
       - name: Run Automated Visual Quality Gate
         run: |
           python scripts/verify_screenshots.py \
             dashboard_preview.png screen_watch.png screen_assets.png \
-            screen_cycle.png screen_more.png
+            screen_assets_relics.png screen_assets_aya.png \
+            screen_assets_detail.png screen_cycle.png screen_more.png
 
       - name: Upload Screenshot Artifact
         uses: actions/upload-artifact@v4
@@ -158,6 +162,9 @@ jobs:
             dashboard_preview.png
             screen_watch.png
             screen_assets.png
+            screen_assets_relics.png
+            screen_assets_aya.png
+            screen_assets_detail.png
             screen_cycle.png
             screen_more.png
           retention-days: 14

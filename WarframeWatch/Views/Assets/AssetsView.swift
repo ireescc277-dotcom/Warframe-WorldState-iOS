@@ -12,10 +12,30 @@ import SwiftUI
 public struct AssetsView: View {
     private let data = InventoryStore.shared
 
-    @State private var segment: AssetSegment = .sets
+    @State private var segment: AssetSegment = AssetsView.seededSegment
     @State private var sort: SetSortKey = .loose
     @State private var query = ""
     @State private var detail: PrimeSet?
+
+    /// `simctl` 点不了屏幕，所以靠启动参数把某个分段/详情直接摆出来，
+    /// CI 才能拍到遗物页和套装详情，而不是只有默认的套装列表。
+    private static var seededSegment: AssetSegment {
+        let args = CommandLine.arguments
+        guard let flag = args.firstIndex(of: "-assetTab"),
+              args.index(after: flag) < args.endIndex else { return .sets }
+        switch args[args.index(after: flag)] {
+        case "relics": return .relics
+        case "aya": return .aya
+        default: return .sets
+        }
+    }
+
+    private static var seededSet: String? {
+        let args = CommandLine.arguments
+        guard let flag = args.firstIndex(of: "-assetSet"),
+              args.index(after: flag) < args.endIndex else { return nil }
+        return args[args.index(after: flag)]
+    }
 
     public init() {}
 
@@ -41,6 +61,12 @@ public struct AssetsView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                guard let name = AssetsView.seededSet, detail == nil,
+                      let hit = data?.sets.first(where: { $0.zh.hasPrefix(name) })
+                else { return }
+                detail = hit
+            }
             .sheet(item: $detail) { picked in
                 SetDetailView(set: picked)
                     .presentationDetents([.medium, .large])
