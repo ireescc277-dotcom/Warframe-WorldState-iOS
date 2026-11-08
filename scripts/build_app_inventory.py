@@ -211,12 +211,26 @@ def build() -> dict:
     if os.path.exists(snap):
         try:
             inv = json.loads(gzip.open(snap).read())
-            raw_sync = inv.get("LastInventorySync")
+            # LastInventorySync 是 MongoDB ObjectId，前 4 字节就是同步时刻的
+            # Unix 时间戳；它不是字符串，直接当字符串用会拿到 None。
+            sync_raw = inv.get("LastInventorySync")
+            sync_iso = None
+            if isinstance(sync_raw, dict):
+                oid = sync_raw.get("$oid")
+                if isinstance(oid, str) and len(oid) >= 8:
+                    try:
+                        sync_iso = datetime.fromtimestamp(
+                            int(oid[:8], 16), timezone.utc
+                        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    except ValueError:
+                        sync_iso = None
+            elif isinstance(sync_raw, str):
+                sync_iso = sync_raw
             profile = {
                 "mr": int(inv.get("PlayerLevel") or 0),
                 "plat": int(inv.get("PremiumCreditsFree") or 0) + int(inv.get("PremiumCredits") or 0),
                 "credits": int(inv.get("RegularCredits") or 0),
-                "sync": raw_sync if isinstance(raw_sync, str) else None,
+                "sync": sync_iso,
             }
         except Exception:                                       # noqa: BLE001
             pass

@@ -52,13 +52,28 @@ public struct AssetsView: View {
     // MARK: - 头
 
     private func header(_ data: InventoryData) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("资产")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(WFTheme.textPrimary)
-            Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("资产")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(WFTheme.textPrimary)
+                Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
+
+            Spacer(minLength: WFUI.s2)
+
+            // 白金余额是这里唯一会「花掉」的数字，放最上面
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(AssetFormat.grouped(data.profile.plat))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundColor(WFTheme.cyan)
+                Text("白金")
+                    .font(.system(size: 10))
+                    .foregroundColor(WFTheme.textMuted)
+            }
         }
     }
 
@@ -70,7 +85,7 @@ public struct AssetsView: View {
             HStack(alignment: .top, spacing: 0) {
                 bigNumber("\(AssetFormat.plat(t.loosePlat))", unit: "p", label: "散件可变现")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber(AssetFormat.grouped(t.looseDucats), unit: "", label: "折 Ducats")
+                bigNumber(AssetFormat.grouped(t.looseDucats), unit: "", label: "可换 Ducats")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
                 bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已成套")
             }
