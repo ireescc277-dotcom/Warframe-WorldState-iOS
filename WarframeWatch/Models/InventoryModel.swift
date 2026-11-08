@@ -137,13 +137,21 @@ public enum AssetFormat {
     }
 
     /// `2026-11-08T09:38:00Z` → `11-08 17:38`（本地时区）
+    ///
+    /// DE 的时间戳带毫秒（`...T18:00:00.000Z`），默认的 ISO8601 解析器不认，
+    /// 所以带小数秒要再试一次，否则像「本期到 —」这种空值会静默混进界面。
     public static func stamp(_ iso: String?) -> String {
         guard let iso = iso else { return "—" }
         let parser = ISO8601DateFormatter()
         parser.formatOptions = [.withInternetDateTime]
-        guard let date = parser.date(from: iso) else { return "—" }
+        var date = parser.date(from: iso)
+        if date == nil {
+            parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            date = parser.date(from: iso)
+        }
+        guard let parsed = date else { return "—" }
         let out = DateFormatter()
         out.dateFormat = "MM-dd HH:mm"
-        return out.string(from: date)
+        return out.string(from: parsed)
     }
 }

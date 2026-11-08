@@ -127,6 +127,12 @@ jobs:
 
       - name: Capture Simulator Screenshots
         run: |
+          # 首次启动会弹一次 Apple Intelligence 系统横幅，它会盖在页头上。
+          # 先开一次让这张横幅消耗掉，再开始拍。
+          xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 0 >/dev/null 2>&1 || true
+          sleep 10
+          xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
+
           # One screenshot per state. The app reads -startTab / -assetTab /
           # -assetSet from the command line, so this needs no tapping, which
           # simctl cannot do anyway.

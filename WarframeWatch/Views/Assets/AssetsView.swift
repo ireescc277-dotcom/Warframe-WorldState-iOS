@@ -69,7 +69,9 @@ public struct AssetsView: View {
             }
             .sheet(item: $detail) { picked in
                 SetDetailView(set: picked)
-                    .presentationDetents([.medium, .large])
+                    // 部件表 + 整卖对比 + 遗物列表，medium 高度装不下，
+                    // 底部会切在「能出的遗物」标题上
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
         }
@@ -406,14 +408,13 @@ public struct AssetsView: View {
                 Spacer(minLength: WFUI.s2)
 
                 VStack(alignment: .trailing, spacing: 3) {
+                    // 遗物按张卖，价格是单张的；乘上持有量才是这堆的总值
                     Text(relic.p > 0 ? "\(relic.p) p" : "—")
                         .font(.wfNumSmall)
                         .foregroundColor(relic.p > 0 ? WFTheme.gold : WFTheme.textMuted)
-                    if relic.miss > 0 {
-                        Text("缺 \(relic.miss) 套")
-                            .font(.system(size: 10))
-                            .foregroundColor(WFTheme.cyan)
-                    }
+                    Text(relic.miss > 0 ? "每张 · 缺 \(relic.miss) 套" : "每张")
+                        .font(.system(size: 10))
+                        .foregroundColor(relic.miss > 0 ? WFTheme.cyan : WFTheme.textMuted)
                 }
             }
             .padding(.horizontal, 14)
