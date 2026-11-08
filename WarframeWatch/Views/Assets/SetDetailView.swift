@@ -5,11 +5,11 @@ import SwiftUI
 /// 这里只放「能改变一个动作」的信息：值不值得拆、缺的那件在哪。
 /// 历史价格、走势这类东西没有数据支撑，不编。
 public struct SetDetailView: View {
-    public let set: PrimeSet
+    public let item: PrimeSet
     @Environment(\.dismiss) private var dismiss
 
-    public init(set: PrimeSet) {
-        self.set = set
+    public init(set value: PrimeSet) {
+        self.item = value
     }
 
     public var body: some View {
@@ -21,7 +21,7 @@ public struct SetDetailView: View {
                     title
                     compareCard
                     partsCard
-                    if !set.relics.isEmpty { relicCard }
+                    if !item.relics.isEmpty { relicCard }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 22)
@@ -44,7 +44,7 @@ public struct SetDetailView: View {
 
     private var title: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(set.zh)
+            Text(item.zh)
                 .font(.system(size: 21, weight: .semibold))
                 .foregroundColor(WFTheme.textPrimary)
             Text(statusLine)
@@ -55,16 +55,16 @@ public struct SetDetailView: View {
     }
 
     private var statusLine: String {
-        if set.isOwned {
-            let spare = set.parts.reduce(0) { $0 + $1.n }
-            return "\(set.cat) · 已成套 · 手上还有 \(spare) 件散件"
+        if item.isOwned {
+            let spare = item.parts.reduce(0) { $0 + $1.n }
+            return "\(item.cat) · 已成套 · 手上还有 \(spare) 件散件"
         }
-        if set.isReady { return "\(set.cat) · 部件齐全，还没造" }
-        return "\(set.cat) · 缺 \(set.missing) 件：\(missingLabels)"
+        if item.isReady { return "\(item.cat) · 部件齐全，还没造" }
+        return "\(item.cat) · 缺 \(item.missing) 件：\(missingLabels)"
     }
 
     private var missingLabels: String {
-        set.parts.filter { !$0.owned }.map(\.l).joined(separator: "、")
+        item.parts.filter { !$0.owned }.map(\.l).joined(separator: "、")
     }
 
     // MARK: - 整卖 vs 拆卖
@@ -72,21 +72,21 @@ public struct SetDetailView: View {
     private var compareCard: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                priceCell("整套卖", set.setPrice, highlight: set.splitGain <= 0)
+                priceCell("整套卖", item.setPrice, highlight: item.splitGain <= 0)
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 40)
-                priceCell("拆开卖", set.partsValue, highlight: set.splitGain > 0)
+                priceCell("拆开卖", item.partsValue, highlight: item.splitGain > 0)
             }
             .padding(.vertical, 15)
 
-            if set.setPrice > 0 && set.partsValue > 0 {
+            if item.setPrice > 0 && item.partsValue > 0 {
                 WFHairline()
                 HStack(spacing: 6) {
-                    Image(systemName: set.splitGain > 0 ? "scissors" : "shippingbox")
+                    Image(systemName: item.splitGain > 0 ? "scissors" : "shippingbox")
                         .font(.system(size: 11))
                     Text(verdict)
                         .font(.system(size: 12))
                 }
-                .foregroundColor(set.splitGain > 0 ? WFTheme.cyan : WFTheme.textSecondary)
+                .foregroundColor(item.splitGain > 0 ? WFTheme.cyan : WFTheme.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
             }
@@ -96,9 +96,9 @@ public struct SetDetailView: View {
     }
 
     private var verdict: String {
-        if set.splitGain == 0 { return "整卖和拆卖差不多" }
-        if set.splitGain > 0 { return "拆开卖多 \(set.splitGain) p" }
-        return "整卖更划算，多 \(-set.splitGain) p"
+        if item.splitGain == 0 { return "整卖和拆卖差不多" }
+        if item.splitGain > 0 { return "拆开卖多 \(item.splitGain) p" }
+        return "整卖更划算，多 \(-item.splitGain) p"
     }
 
     private func priceCell(_ label: String, _ value: Int, highlight: Bool) -> some View {
@@ -127,8 +127,8 @@ public struct SetDetailView: View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
             WFSectionHeader("部件", trailing: "持有 · 市价 · Ducats")
             WFSurface {
-                ForEach(Array(set.parts.enumerated()), id: \.element.id) { index, part in
-                    partRow(part, isLast: index == set.parts.count - 1)
+                ForEach(Array(item.parts.enumerated()), id: \.element.id) { index, part in
+                    partRow(part, isLast: index == item.parts.count - 1)
                 }
             }
         }
@@ -177,9 +177,9 @@ public struct SetDetailView: View {
 
     private var relicCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
-            WFSectionHeader("能出的遗物", trailing: "\(set.relics.count) 张")
+            WFSectionHeader("能出的遗物", trailing: "\(item.relics.count) 张")
             WFSurface {
-                FlowingText(items: set.relics)
+                FlowingText(items: item.relics)
                     .padding(14)
             }
         }

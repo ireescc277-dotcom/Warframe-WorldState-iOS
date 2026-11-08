@@ -268,19 +268,19 @@ public struct AssetsView: View {
         .padding(.horizontal, WFUI.s1)
     }
 
-    private func setRow(_ set: PrimeSet, isLast: Bool) -> some View {
+    private func setRow(_ entry: PrimeSet, isLast: Bool) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: WFUI.s3) {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                    .fill(accent(set))
+                    .fill(accent(entry))
                     .frame(width: 3, height: 32)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(set.zh)
+                    Text(entry.zh)
                         .font(.wfTitle)
                         .foregroundColor(WFTheme.textPrimary)
                         .lineLimit(1)
-                    Text(subtitle(set))
+                    Text(subtitle(entry))
                         .font(.wfBody)
                         .foregroundColor(WFTheme.textSecondary)
                         .lineLimit(1)
@@ -289,10 +289,10 @@ public struct AssetsView: View {
                 Spacer(minLength: WFUI.s2)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(set.loose > 0 ? "\(AssetFormat.plat(set.loose)) p" : (set.setPrice > 0 ? "\(AssetFormat.plat(set.setPrice)) p" : "—"))
+                    Text(entry.loose > 0 ? "\(AssetFormat.plat(entry.loose)) p" : (entry.setPrice > 0 ? "\(AssetFormat.plat(entry.setPrice)) p" : "—"))
                         .font(.wfNumSmall)
-                        .foregroundColor(set.loose > 0 ? WFTheme.gold : WFTheme.textSecondary)
-                    Text(set.loose > 0 ? "余件" : "套价")
+                        .foregroundColor(entry.loose > 0 ? WFTheme.gold : WFTheme.textSecondary)
+                    Text(entry.loose > 0 ? "余件" : "套价")
                         .font(.system(size: 10))
                         .foregroundColor(WFTheme.textMuted)
                 }
@@ -305,25 +305,25 @@ public struct AssetsView: View {
         .contentShape(Rectangle())
     }
 
-    private func subtitle(_ set: PrimeSet) -> String {
-        var bits = [set.cat]
-        if set.isOwned {
+    private func subtitle(_ entry: PrimeSet) -> String {
+        var bits = [entry.cat]
+        if entry.isOwned {
             bits.append("已成套")
-            let spare = set.parts.reduce(0) { $0 + $1.n }
+            let spare = entry.parts.reduce(0) { $0 + $1.n }
             if spare > 0 { bits.append("余 \(spare) 件") }
-        } else if set.isReady {
+        } else if entry.isReady {
             bits.append("部件齐全待制造")
         } else {
-            bits.append("缺 \(set.missing) 件")
-            if !set.relics.isEmpty { bits.append("\(set.relics.count) 张遗物可出") }
+            bits.append("缺 \(entry.missing) 件")
+            if !entry.relics.isEmpty { bits.append("\(entry.relics.count) 张遗物可出") }
         }
         return bits.joined(separator: " · ")
     }
 
-    private func accent(_ set: PrimeSet) -> Color {
-        if set.isOwned { return WFTheme.green }
-        if set.isReady { return WFTheme.gold }
-        return set.missing <= 2 ? WFTheme.cyan : WFTheme.textMuted.opacity(0.5)
+    private func accent(_ entry: PrimeSet) -> Color {
+        if entry.isOwned { return WFTheme.green }
+        if entry.isReady { return WFTheme.gold }
+        return entry.missing <= 2 ? WFTheme.cyan : WFTheme.textMuted.opacity(0.5)
     }
 
     private func relicList(_ data: InventoryData) -> some View {
