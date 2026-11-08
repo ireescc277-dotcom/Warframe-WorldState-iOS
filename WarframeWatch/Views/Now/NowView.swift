@@ -207,7 +207,6 @@ public struct NowView: View {
             HStack(spacing: WFUI.s2) {
                 ForEach(NowFilter.allCases) { kind in
                     WFChip(
-                        icon: kind.icon,
                         label: kind.label,
                         count: count(for: kind),
                         tint: kind.tint,
@@ -278,7 +277,8 @@ public struct NowView: View {
 
     private var listBlock: some View {
         let rows = visibleRows
-        let hint: String? = rows.isEmpty ? nil : "\(rows.count) 项"
+        let prefix = filter == .all ? "其余 " : ""
+        let hint: String? = rows.isEmpty ? nil : "\(prefix)\(rows.count) 项"
         return VStack(alignment: .leading, spacing: WFUI.s2) {
             WFSectionHeader("按剩余时间", trailing: hint)
 

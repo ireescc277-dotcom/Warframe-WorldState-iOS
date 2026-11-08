@@ -216,15 +216,13 @@ public struct WFTimeLeft: View {
 /// A filter chip that also carries its own count. Replaces both the KPI grid
 /// and the segmented control, which were saying the same thing twice.
 public struct WFChip: View {
-    private let icon: String
     private let label: String
     private let count: Int
     private let tint: Color
     private let isOn: Bool
     private let action: () -> Void
 
-    public init(icon: String, label: String, count: Int, tint: Color, isOn: Bool, action: @escaping () -> Void) {
-        self.icon = icon
+    public init(label: String, count: Int, tint: Color, isOn: Bool, action: @escaping () -> Void) {
         self.label = label
         self.count = count
         self.tint = tint
@@ -235,8 +233,6 @@ public struct WFChip: View {
     public var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
                 Text(label)
                     .font(.system(size: 12, weight: isOn ? .semibold : .regular))
                 Text("\(count)")
