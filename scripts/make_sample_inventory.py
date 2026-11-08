@@ -42,7 +42,9 @@ def build() -> dict:
     aya["items"] = aya["items"][:AYA]
 
     return {
-        "builtAt": doc["builtAt"],
+        # 时间戳固定在很久以前：样例是兜底，任何时候都不该比 VPS 上的新数据更"新"，
+        # 否则 App 的 builtAt 比较会拒绝替换，界面就永远停在 15 套上。
+        "builtAt": "2020-01-01T00:00:00Z",
         "marketAt": doc.get("marketAt"),
         # 余额不是样例要展示的东西，留着只会把真数写进公开仓库
         "profile": {"mr": 30, "plat": 0, "credits": 0, "sync": doc["profile"].get("sync")},
