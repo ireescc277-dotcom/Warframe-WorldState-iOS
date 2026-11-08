@@ -126,6 +126,21 @@ public final class DictionaryService {
         return id
     }
     
+    /// Node name without the trailing planet suffix. The dictionary stores
+    /// "Galatea （海王星）"; a list row that already shows the planet separately
+    /// does not need it twice.
+    public func nodeShortName(_ id: String?) -> String {
+        let full = nodeName(id)
+        guard let planet = nodePlanet(id), !planet.isEmpty else { return full }
+        for wrapper in ["（\(planet)）", "(\(planet))"] {
+            if full.hasSuffix(wrapper) {
+                let base = String(full.dropLast(wrapper.count)).trimmingCharacters(in: .whitespaces)
+                return base.isEmpty ? full : base
+            }
+        }
+        return full
+    }
+
     public func nodeMissionType(_ id: String?) -> String? {
         guard let id = id else { return nil }
         return nodeMissionTypes[id]

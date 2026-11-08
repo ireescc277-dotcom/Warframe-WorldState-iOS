@@ -2,35 +2,30 @@ import SwiftUI
 
 public struct MainTabView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
-    
+
     public init() {}
-    
+
     public var body: some View {
         TabView {
-            DashboardView()
+            NowView()
                 .tabItem {
-                    Label("焦点", systemImage: "gauge.with.needle.fill")
+                    Label("现在", systemImage: "circle.dotted")
                 }
-            
-            MissionsListView()
+
+            WatchView()
                 .tabItem {
-                    Label("任务", systemImage: "target")
-                }
-            
-            HubEventsView()
-                .tabItem {
-                    Label("探索", systemImage: "globe.asia.australia.fill")
-                }
-            
-            WatchlistView()
-                .tabItem {
-                    Label("关注", systemImage: "star.fill")
+                    Label("蹲守", systemImage: "scope")
                 }
                 .badge(vm.matchedLiveHits.count)
-            
-            ReferenceView()
+
+            CycleView()
                 .tabItem {
-                    Label("资料库", systemImage: "books.vertical.fill")
+                    Label("周期", systemImage: "calendar")
+                }
+
+            MoreView()
+                .tabItem {
+                    Label("更多", systemImage: "ellipsis")
                 }
         }
         .tint(WFTheme.gold)
