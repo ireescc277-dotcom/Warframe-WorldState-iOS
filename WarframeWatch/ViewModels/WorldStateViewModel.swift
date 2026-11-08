@@ -236,6 +236,18 @@ public final class WorldStateViewModel: ObservableObject {
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
     }
+
+    /// Adds a whole branch in one tap, used by the empty-state presets. Adding
+    /// rather than replacing means tapping two presets is additive, which is
+    /// what the buttons imply.
+    public func addWatchPaths(_ paths: [String]) {
+        var updated = watchSelection
+        for path in paths where watchTree.node(path) != nil {
+            updated.select(path)
+        }
+        watchSelection = updated
+        storage.saveWatchPaths(updated.paths)
+    }
     
     public func isWatchExpanded(_ id: String) -> Bool {
         expandedWatchIDs.contains(id)

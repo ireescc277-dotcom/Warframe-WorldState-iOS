@@ -22,7 +22,9 @@ public struct WatchView: View {
                         header
                         summary
                         hitSection
-                        targetSection
+                        if !vm.watchSelection.isEmpty {
+                            targetSection
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -114,6 +116,32 @@ public struct WatchView: View {
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
+
+            WFHairline().padding(.top, WFUI.s1)
+
+            Text("或者从一个常用的开始")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+
+            HStack(spacing: WFUI.s2) {
+                ForEach(WatchPreset.all) { preset in
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            vm.addWatchPaths(preset.paths)
+                        }
+                    } label: {
+                        Text(preset.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(WFTheme.textPrimary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .background(WFUI.raised)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -440,6 +468,26 @@ private struct WatchRow: Identifiable {
     let node: WatchNode
     let depth: Int
     var id: String { node.id }
+}
+
+/// One-tap starting points offered while nothing is selected. Each string is a
+/// real path in the tree, so applying one is exactly what tapping the circles
+/// by hand would produce.
+private struct WatchPreset: Identifiable {
+    let title: String
+    let paths: [String]
+
+    var id: String { title }
+
+    static let all: [WatchPreset] = [
+        WatchPreset(title: "全部仲裁", paths: ["arb"]),
+        WatchPreset(
+            title: "钢铁裂隙",
+            paths: ["fis|VoidT1|sp", "fis|VoidT2|sp", "fis|VoidT3|sp",
+                    "fis|VoidT4|sp", "fis|VoidT5|sp", "fis|VoidT6|sp"]
+        ),
+        WatchPreset(title: "全部入侵", paths: ["inv"])
+    ]
 }
 
 private struct WatchTreeRow: View {
