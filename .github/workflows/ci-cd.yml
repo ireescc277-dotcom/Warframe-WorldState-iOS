@@ -124,20 +124,38 @@ jobs:
           echo "Waiting 6 seconds for network fetch and UI render..."
           sleep 6
 
-      - name: Capture Simulator Screenshot
+      - name: Capture Simulator Screenshots
         run: |
-          xcrun simctl io $SIM_UDID screenshot dashboard_preview.png
-          ls -lh dashboard_preview.png
+          # One screenshot per tab. The app reads -startTab from the command
+          # line, so this needs no tapping, which simctl cannot do anyway.
+          capture() {
+            name=$1
+            tab=$2
+            xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
+            xcrun simctl launch $SIM_UDID com.warframe.watch -startTab $tab >/dev/null
+            sleep 4
+            xcrun simctl io $SIM_UDID screenshot "$name.png"
+            ls -lh "$name.png"
+          }
+          capture dashboard_preview 0
+          capture screen_watch 1
+          capture screen_cycle 2
+          capture screen_more 3
 
       - name: Run Automated Visual Quality Gate
         run: |
-          python scripts/verify_screenshots.py dashboard_preview.png
+          python scripts/verify_screenshots.py \
+            dashboard_preview.png screen_watch.png screen_cycle.png screen_more.png
 
       - name: Upload Screenshot Artifact
         uses: actions/upload-artifact@v4
         with:
           name: simulator-dashboard-preview
-          path: dashboard_preview.png
+          path: |
+            dashboard_preview.png
+            screen_watch.png
+            screen_cycle.png
+            screen_more.png
           retention-days: 14
 
       - name: Add Step Summary
