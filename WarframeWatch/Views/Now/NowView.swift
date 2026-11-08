@@ -31,6 +31,7 @@ public struct NowView: View {
                             fallbackCard
                         } else {
                             heroBlock
+                            arbitrationBlock
                             chipRow
 
                             if filter == .fissures {
@@ -169,6 +170,57 @@ public struct NowView: View {
                 }
                 .padding(16)
             }
+        }
+    }
+
+    // MARK: - Arbitration
+
+    /// 仲裁是这张屏幕上唯一「永远在跑」的内容：一小时一场，从不间断。
+    /// 以前只有蹲守里选中了那个节点才看得见，而第三方镜像现在只会返回占位。
+    /// 排程是确定性的，所以这里直接给「现在是谁、还剩多久」或「下一场几点」。
+    @ViewBuilder
+    private var arbitrationBlock: some View {
+        if let live = vm.arbitrationCurrent {
+            arbitrationCard(live, isLive: true)
+        } else if let next = vm.arbitrationNext {
+            arbitrationCard(next, isLive: false)
+        }
+    }
+
+    private func arbitrationCard(
+        _ slot: WorldStateViewModel.ArbitrationSlotView,
+        isLive: Bool
+    ) -> some View {
+        WFSurface {
+            HStack(alignment: .center, spacing: WFUI.s3) {
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(WFTheme.purple.opacity(isLive ? 1 : 0.35))
+                    .frame(width: 3, height: 42)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(isLive ? "仲裁 · 进行中" : "仲裁 · 下一场")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.purple)
+                    Text(slot.nodeName)
+                        .font(.wfTitle)
+                        .foregroundColor(WFTheme.textPrimary)
+                        .lineLimit(1)
+                    Text(slot.planet.isEmpty ? slot.mode : "\(slot.planet) · \(slot.mode)")
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: WFUI.s2)
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(isLive ? "剩余" : "距开始")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                    WFTimeLeft(isLive ? slot.end : slot.start)
+                }
+            }
+            .padding(14)
         }
     }
 

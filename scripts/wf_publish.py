@@ -29,6 +29,8 @@ PASS = os.environ.get("WF_VPS_PASS", "")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SNAPSHOT = os.path.join(ROOT, "WarframeWatch", "Resources", "InventoryData.json")
+# 仲裁排程和背包放同一目录：App 由背包地址推出它的位置，不用多一个 secret。
+SCHEDULE = os.path.join(ROOT, "data", "world", "arb.json")
 REMOTE_ROOT = os.environ.get("WF_PUBLISH_ROOT", "/var/www/wf")
 
 NGINX = """location /wf/ {{
@@ -87,6 +89,11 @@ def main() -> int:
             stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
             sftp.put(SNAPSHOT, f"{remote_dir}/{stamp}.json")
             sftp.chmod(f"{remote_dir}/inventory.json", 0o644)
+
+            # 排程是公开数据，可以单独更新；没有就跳过，别让一次抓取失败挡住背包。
+            if os.path.exists(SCHEDULE):
+                sftp.put(SCHEDULE, f"{remote_dir}/arb.json")
+                sftp.chmod(f"{remote_dir}/arb.json", 0o644)
         finally:
             sftp.close()
 
@@ -117,6 +124,8 @@ def main() -> int:
         print(f"远端 {remote_dir}/inventory.json")
         if args.base_url:
             print(f"地址 {args.base_url.rstrip('/')}/wf/{token}/inventory.json")
+            if os.path.exists(SCHEDULE):
+                print(f"     {args.base_url.rstrip('/')}/wf/{token}/arb.json")
         else:
             print(f"地址 <base>/wf/{token}/inventory.json")
         return 0

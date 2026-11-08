@@ -11,6 +11,9 @@ public final class WorldStateViewModel: ObservableObject {
     @Published public var errorMessage: String? = nil
     @Published public var lastUpdated: Date = Date()
     @Published public var currentTime: Date = Date()
+
+    /// 仲裁排程。启动时先用缓存或包里那份，刷新时再问 VPS。
+    @Published public private(set) var schedule: ArbitrationSchedule?
     
     // Filters & Search
     @Published public var searchQuery: String = ""
@@ -81,6 +84,7 @@ public final class WorldStateViewModel: ObservableObject {
         self.expandedWatchIDs = Set(tree.roots.map { $0.id })
 
         self.watchItems = storage.loadWatchItems()
+        self.schedule = ArbitrationScheduleStore.localized()
         setupTimer()
         checkNotificationStatus()
         loadInitialData()
@@ -127,6 +131,7 @@ public final class WorldStateViewModel: ObservableObject {
         
         do {
             async let arbitration = WorldStateService.fetchArbitration()
+            async let scheduleTask = ArbitrationScheduleStore.fetch()
             let (state, live) = try await service.fetchWorldState()
             self.worldState = state
             self.isLive = live
@@ -134,6 +139,12 @@ public final class WorldStateViewModel: ObservableObject {
             computeDiff(newWorldState: state)
             if let fresh = await arbitration {
                 arbitrationInfo = fresh
+            }
+            if let fresh = await scheduleTask, fresh.covers(Date()) {
+                // 远端可能还没跟上（VPS 上的那份比手里的旧），别降级。
+                if schedule == nil || fresh.builtAt >= (schedule?.builtAt ?? 0) {
+                    schedule = fresh
+                }
             }
             refreshLiveWatchHits()
         } catch {
@@ -274,19 +285,64 @@ public final class WorldStateViewModel: ObservableObject {
     
     public func nextOccurrence(for id: String) -> Date? {
         guard let state = worldState else { return nil }
-        return watchTree.nextOccurrence(for: id, in: state)
+        return watchTree.nextOccurrence(for: id, in: state, schedule: schedule)
     }
-    
+
     private func refreshLiveWatchHits() {
         guard let state = worldState else {
             liveWatchHits = []
             return
         }
         var hits = watchTree.liveHits(in: state)
-        if let arbitration = watchTree.arbitrationHit(arbitrationInfo) {
-            hits.append(arbitration)
+        // 排程优先。第三方镜像现在只会返回 SolNode000 占位，那句 if 已经是兜底了。
+        if let hit = watchTree.arbitrationHit(schedule: schedule)
+            ?? watchTree.arbitrationHit(arbitrationInfo) {
+            hits.append(hit)
         }
         liveWatchHits = hits
+    }
+
+    // MARK: - 仲裁
+
+    /// 一场仲裁在界面上需要的东西。`planet` 和 `mode` 来自树的路径，
+    /// `nodeName` 才是玩家认得的节点名。
+    public struct ArbitrationSlotView {
+        public let nodeID: String
+        public let nodeName: String
+        public let planet: String
+        public let mode: String
+        public let start: Date
+        public let end: Date
+    }
+
+    public var arbitrationCurrent: ArbitrationSlotView? {
+        guard let schedule, schedule.covers(currentTime),
+              let slot = schedule.current(at: currentTime) else { return nil }
+        return arbitrationView(for: slot.node, start: slot.start, end: slot.end)
+    }
+
+    public var arbitrationNext: ArbitrationSlotView? {
+        guard let schedule, schedule.covers(currentTime),
+              let slot = schedule.next(after: currentTime) else { return nil }
+        return arbitrationView(
+            for: slot.node,
+            start: slot.start,
+            end: slot.start.addingTimeInterval(TimeInterval(schedule.slot))
+        )
+    }
+
+    private func arbitrationView(for nodeID: String, start: Date, end: Date) -> ArbitrationSlotView? {
+        guard let path = watchTree.arbitrationPath(for: nodeID) else { return nil }
+        let parts = path.split(separator: "|")
+        let modeKey = parts.count > 1 ? String(parts[1]) : ""
+        return ArbitrationSlotView(
+            nodeID: nodeID,
+            nodeName: dict.nodeShortName(nodeID),
+            planet: parts.count > 2 ? String(parts[2]) : "",
+            mode: dict.missionType(modeKey),
+            start: start,
+            end: end
+        )
     }
     
     // MARK: - Fingerprint & Snapshot Diff

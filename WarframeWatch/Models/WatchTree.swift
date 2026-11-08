@@ -583,7 +583,18 @@ public final class WatchTreeIndex {
         guard let info, !info.isPlaceholder,
               let nodeID = info.nodeKey,
               let path = arbitrationPaths[nodeID] else { return nil }
+        return arbitrationHit(nodeID: nodeID, path: path, expiry: info.expiryDate)
+    }
 
+    /// 排程版本：browse.wf 的轮换表是确定性的，比第三方镜像更可靠，
+    /// 而且它连「现在这一场什么时候结束」都直接给得出来。
+    public func arbitrationHit(schedule: ArbitrationSchedule?, now: Date = Date()) -> WatchHit? {
+        guard let schedule, let current = schedule.current(at: now),
+              let path = arbitrationPaths[current.node] else { return nil }
+        return arbitrationHit(nodeID: current.node, path: path, expiry: current.end)
+    }
+
+    private func arbitrationHit(nodeID: String, path: String, expiry: Date?) -> WatchHit {
         let parts = path.split(separator: "|")
         let modeKey = parts.count > 1 ? String(parts[1]) : ""
         return WatchHit(
@@ -592,8 +603,36 @@ public final class WatchTreeIndex {
             family: "仲裁",
             title: "仲裁 · \(dict.missionType(modeKey))",
             detail: dict.nodeName(nodeID),
-            expiry: info.expiryDate
+            expiry: expiry
         )
+    }
+
+    /// 界面上那一行（任务类型 / 星球 / 具体节点）下一次有仲裁的时间。
+    /// 分组节点取整棵子树里最近的一次，这样「土星」这一行本身也有意义。
+    public func nextArbitrationDate(
+        for id: String,
+        schedule: ArbitrationSchedule?,
+        now: Date = Date()
+    ) -> Date? {
+        guard let schedule, id.hasPrefix("arb|") else { return nil }
+        var best: Date?
+        for path in arbitrationLeafPaths(under: id) {
+            guard let nodeID = path.split(separator: "|").last.map(String.init),
+                  let date = schedule.nextDate(forNode: nodeID, after: now) else { continue }
+            if best == nil || date < best! { best = date }
+        }
+        return best
+    }
+
+    /// 星图节点 → 树上那条仲裁叶子的路径。界面用它拆出任务类型与星球。
+    public func arbitrationPath(for nodeID: String) -> String? {
+        arbitrationPaths[nodeID]
+    }
+
+    private func arbitrationLeafPaths(under id: String) -> [String] {
+        guard let node = nodeIndex[id] else { return [] }
+        if node.isLeaf { return [id] }
+        return node.children.flatMap { arbitrationLeafPaths(under: $0.id) }
     }
 
     private func fissureHits(_ state: WorldState) -> [WatchHit] {
@@ -730,7 +769,17 @@ public final class WatchTreeIndex {
 
     // MARK: - Next occurrence (cycles only)
 
-    public func nextOccurrence(for id: String, in state: WorldState, now: Date = Date()) -> Date? {
+    public func nextOccurrence(
+        for id: String,
+        in state: WorldState,
+        schedule: ArbitrationSchedule? = nil,
+        now: Date = Date()
+    ) -> Date? {
+        // 仲裁有确定排程，不需要从 worldState 推。
+        if id.hasPrefix("arb|") {
+            return nextArbitrationDate(for: id, schedule: schedule, now: now)
+        }
+
         switch id {
         case "cycle|cetus|night":
             guard let expiry = cetusExpiry(state) else { return nil }

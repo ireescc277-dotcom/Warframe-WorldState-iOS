@@ -196,7 +196,29 @@ if let modeBranch = arbRoot?.children.first(where: { !$0.children.isEmpty }),
     print("✅ Arbitration hit resolves to \(hit.path)")
 }
 
-print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")
+// ---- 仲裁排程：browse.wf 的轮换表是确定性的，App 用它取代已经失效的
+//      第三方镜像（那个接口现在永远返回 SolNode000 占位）。
+let scheduleJSON = """
+{"builtAt":1794146400,"slot":3600,"slots":[
+ {"t":1794146400,"n":"SolNode211"},
+ {"t":1794150000,"n":"SolNode94"},
+ {"t":1794153600,"n":"SolNode230"}
+]}
+""".data(using: .utf8)!
+let schedule = try JSONDecoder().decode(ArbitrationSchedule.self, from: scheduleJSON)
+let insideFirst = Date(timeIntervalSince1970: 1794147000)
+precondition(schedule.covers(insideFirst))
+precondition(schedule.current(at: insideFirst)?.node == "SolNode211",
+             "the slot that started at 1794146400 should still be running")
+precondition(schedule.next(after: insideFirst)?.node == "SolNode94")
+precondition(schedule.nextDate(forNode: "SolNode94", after: insideFirst)
+                == Date(timeIntervalSince1970: 1794150000))
+precondition(schedule.nextDate(forNode: "SolNode211", after: insideFirst) == nil,
+             "each node appears once here; no later date to report")
+precondition(!schedule.covers(Date(timeIntervalSince1970: 1794157200)),
+             "a schedule that has run out must not be used")
+print("✅ ArbitrationSchedule: \(schedule.isEmpty ? "empty" : "3 slots"), "
+      + "current=\(schedule.current(at: insideFirst)?.node ?? "-")")
 
 // ---- 资产快照：真实那份在 .gitignore 里（含账号余额），仓库里只有裁剪过的
 //      样例。CI 上没有真文件，就用样例验证解码路径；本地两种都该过。
@@ -222,3 +244,5 @@ print("✅ InventoryData: \(inventory.sets.count) sets "
       + "(\(inventory.totals.setsOwned) owned), "
       + "\(inventory.relics.count) relics, \(inventory.aya.items.count) aya items, "
       + "\(inventory.totals.loosePlat) p loose")
+
+print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")

@@ -64,10 +64,13 @@ python scripts/wf_market.py items        # 拉 market 商品目录
 python scripts/wf_market.py sync         # 抓价格（首次约 2.5 分钟）
 python scripts/fetch_icons.py            # 套装/遗物缩略图 → Asset Catalog
 python scripts/build_app_inventory.py    # 合并 → WarframeWatch/Resources/InventoryData.json
+python scripts/build_arb_schedule.py     # 仲裁排程（browse.wf）→ data/world/arb.json
 python scripts/wf_publish.py             # 推到 VPS，App 启动时从这里拉
 ```
 
 `wf_market.py sync --missing` 只补没抓过的，日常刷新用它。价格是快照，App 顶部会显示快照时间。
+
+**仲裁为什么不用概率**：仲裁的轮换表（`browse.wf/arbys.txt`）是确定性的，每小时一场，已经排到 2029 年。所以 App 显示的是「现在这场是谁、还剩多久」和「下一场几点」，不是「24 小时内出现的概率」。顺带一提，`api.warframestat.us/pc/arbitration` 现在永远返回 `SolNode000` 占位（activation 1970、expiry +275760），已经不能用了，排程是唯一可靠来源。
 
 **抓价有限速**：官方文档写明公共 API 是 3 req/s，契约类端点只有 10~20 req/min，规则页还要求 User-Agent 可识别、要求缓存而非紧密轮询。这里主动压到配额的一半——任意两次请求之间至少隔 0.55 秒（加 0~0.2 秒抖动）、并发 2，全量 835 件约 9 分钟；遇到 429 优先按 `Retry-After` 退避。别把 `--workers` 调大。
 

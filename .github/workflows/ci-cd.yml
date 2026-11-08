@@ -31,6 +31,7 @@ jobs:
           echo "=== Compiling test_runner executable ==="
           swiftc -O \
             WarframeWatch/Models/ArbitrationInfo.swift \
+            WarframeWatch/Models/ArbitrationSchedule.swift \
             WarframeWatch/Models/CommunityModels.swift \
             WarframeWatch/Models/FocusModels.swift \
             WarframeWatch/Models/InventoryModel.swift \
@@ -76,6 +77,11 @@ jobs:
       - name: Generate Xcode Project
         run: |
           cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          # 仲裁排程是公开数据，构建时现抓一份（30 天），抓不到就用空样例，
+          # 界面上那张卡会自己隐藏，不影响其他页面。
+          python3 scripts/build_arb_schedule.py --days 30 \
+            --out WarframeWatch/Resources/ArbSchedule.json \
+            || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
           xcodegen generate
 
       - name: Boot Simulator & Build App
@@ -213,6 +219,11 @@ jobs:
       - name: Generate Xcode Project
         run: |
           cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          # 仲裁排程是公开数据，构建时现抓一份（30 天），抓不到就用空样例，
+          # 界面上那张卡会自己隐藏，不影响其他页面。
+          python3 scripts/build_arb_schedule.py --days 30 \
+            --out WarframeWatch/Resources/ArbSchedule.json \
+            || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
           xcodegen generate
 
       - name: Build & Archive (Unsigned)

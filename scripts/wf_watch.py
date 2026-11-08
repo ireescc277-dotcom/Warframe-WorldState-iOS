@@ -117,6 +117,8 @@ def sync(dat: str, publish: bool) -> bool:
     if not publish:
         log("跳过发布（--no-publish）")
         return True
+    # 排程和背包分两条线：抓不到 browse.wf 就沿用上一份，不阻断发布。
+    run("build_arb_schedule.py", ["--days", "30"])
     if not (os.environ.get("WF_VPS_HOST") and os.environ.get("WF_VPS_PASS")):
         log("× 没有 WF_VPS_HOST / WF_VPS_PASS，无法发布")
         return False

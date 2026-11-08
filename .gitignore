@@ -28,6 +28,10 @@ data/
 # 复制成这个名字；真数据在手机上由 App 从 VPS 拉。
 WarframeWatch/Resources/InventoryData.json
 
+# 仲裁排程是公开数据，但每天在变：构建时现抓，仓库里只留一个空的占位。
+# App 优先用 VPS 上那份，包里这份只在断网启动时兜底。
+WarframeWatch/Resources/ArbSchedule.json
+
 # 工作区记忆与临时文件
 .workbuddy/
 
