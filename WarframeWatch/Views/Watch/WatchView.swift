@@ -26,9 +26,9 @@ public struct WatchView: View {
                     VStack(alignment: .leading, spacing: WFUI.s4) {
                         header
                         summary
-                        if !vm.watchSelection.isEmpty {
-                            alertRow
-                        }
+                        // 空选择时也留着：整行藏起来的话，新用户永远不知道
+                        // 有这个开关，也就永远不会打开它。
+                        alertRow
                         hitSection
                         if !vm.watchSelection.isEmpty {
                             targetSection
@@ -263,6 +263,9 @@ public struct WatchView: View {
             return "系统里关掉了通知，点右边去开"
         case .notDetermined, .authorized:
             break
+        }
+        guard !vm.watchSelection.isEmpty else {
+            return "先在下面选目标，选了什么就提醒什么"
         }
         guard vm.notificationsEnabled else {
             return "仲裁和周期会提前 5 分钟响，关掉 App 也算数"
