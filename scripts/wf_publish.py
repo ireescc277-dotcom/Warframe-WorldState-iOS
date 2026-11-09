@@ -52,6 +52,16 @@ location /wf/app/ {{
     add_header X-Content-Type-Options nosniff;
     add_header Content-Disposition "attachment";
     limit_except GET HEAD {{ deny all; }}
+}}
+
+# App 上传蹲守选择。服务器端监控按这份路径推送，否则两边各说各话。
+# token 在路径里等于凭证；服务只监听 127.0.0.1，外面只能走这里。
+location = /wf/{token}/watch {{
+    proxy_pass http://127.0.0.1:8787/watch;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    client_max_body_size 64k;
+    limit_except POST {{ deny all; }}
 }}"""
 
 
@@ -116,7 +126,7 @@ def main() -> int:
         run(client, f"chmod 644 {remote_dir}/*.json")
 
         if args.nginx:
-            conf = NGINX.format(root=REMOTE_ROOT)
+            conf = NGINX.format(root=REMOTE_ROOT, token=token)
             script = (
                 "python3 - <<'PY'\n"
                 "import re\n"

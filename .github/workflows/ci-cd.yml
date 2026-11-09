@@ -43,6 +43,7 @@ jobs:
             WarframeWatch/Models/WatchTree.swift \
             WarframeWatch/Models/WorldState.swift \
             WarframeWatch/Services/DictionaryService.swift \
+            WarframeWatch/Services/WatchSync.swift \
             Tests/main.swift \
             -o test_runner
           

@@ -12,8 +12,8 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 目前已编译打包未签名 IPA，不需要开 Xcode 即可直接安装：
 
 1. **直接下载（手机浏览器打开即可）**：
-   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.4.0.ipa`
-2. **GitHub Releases**：[v1.4.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.4.0)
+   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.5.0.ipa`
+2. **GitHub Releases**：[v1.5.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.5.0)
 3. **安装方式**：
    - **TrollStore (巨魔)**：直接分享到 TrollStore 点击 Install，永不过期。
    - **自签 / 证书**：导入爱思助手、SideStore、AltStore 或使用自备个人证书签名安装。
@@ -27,7 +27,11 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 - **提醒（本地通知）**：蹲守页的「开打提醒」开关打开后：
   - 仲裁、周期、重置这类时间确定的事件，按排程提前 5 分钟注册本地通知，**App 关掉也会响**；星标的社区目标提前 30 分钟。
   - 裂隙、入侵、风暴没有排程，只能刷新到才知道，所以退到后台时才会补一条；后台刷新由系统调度，不保证频率。
-  - 全部走 `UNUserNotificationCenter` 本地通知，不需要 VPS 推送、不需要 APNs、不需要第三方推送 App。
+  - 全部走 `UNUserNotificationCenter` 本地通知，不需要 VPS 推送、不需要 APNs。
+- **服务器端监控（推送）**：本地通知覆盖不到裂隙/入侵/风暴，这部分交给 VPS：
+  - `wf-notify.service` 读 recorder 每 120 秒采集的同一个 SQLite 库，把新出现的事件和蹲守路径做前缀匹配，命中就推手机。
+  - 在 App 的蹲守页勾选目标即可，选择会在 1.5 秒防抖后自动 POST 到 VPS，两边用同一套路径。
+  - 推送通道走 [ntfy](https://ntfy.sh)（装 App 订阅一个 topic 即可）或 Bark（更稳，需要设备 key）；不需要 Apple 开发者账号。
 - **随机事件监控**：
   - 核心奖励：Orokin 催化剂、Orokin 反应堆、Forma、特殊功能槽连接器、裂罅碎石、卡瓦特基因、泥丸（Nitain 萃取物）、奥罗金电池、突变原聚合物、电磁盒、爆燃安瓿，以及亡魂/破坏者武器部件入侵。
   - 裂隙全量过滤：古纪、前纪、中纪、后纪、安魂、全能 × 捕获/灭绝/救援/防御/生存/移动防御/中断 × 普通 / 钢铁之路。

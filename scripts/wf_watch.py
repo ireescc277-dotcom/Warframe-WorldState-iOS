@@ -69,6 +69,30 @@ def load_env() -> None:
                 os.environ[key] = val
 
 
+LOCK = os.path.join(DATA, "watch.lock")
+
+
+def acquire_lock():
+    """单实例。开机自启和手动双击同时发生的话，两个进程会重复推同一条。
+
+    Windows 用 msvcrt 的字节锁，POSIX 用 fcntl；锁随进程退出自动释放，
+    所以不需要清理陈旧的 pid 文件。
+    """
+    os.makedirs(DATA, exist_ok=True)
+    handle = open(LOCK, "w")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return None
+    return handle
+
+
 def fingerprint(path: str) -> tuple[int, int]:
     st = os.stat(path)
     return int(st.st_mtime), st.st_size
@@ -163,6 +187,11 @@ def main(argv: list[str] | None = None) -> int:
     if not os.path.exists(args.dat):
         log(f"× 找不到 {args.dat}，AlecaFrame 没装或还没同步过")
         return 2
+
+    lock = acquire_lock()
+    if lock is None:
+        log("已有实例在跑，这个进程退出")
+        return 0
 
     state = read_state()
     state["marketEvery"] = args.market_every

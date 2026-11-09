@@ -340,6 +340,7 @@ public final class WorldStateViewModel: ObservableObject {
         updated.toggle(id, tree: watchTree)
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
+        WatchSync.shared.schedule(updated.paths)
         rebuildNotifications()
     }
 
@@ -353,6 +354,7 @@ public final class WorldStateViewModel: ObservableObject {
         }
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
+        WatchSync.shared.schedule(updated.paths)
         rebuildNotifications()
     }
     
