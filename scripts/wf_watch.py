@@ -14,7 +14,7 @@ AlecaFrame 每几十秒就会重写一次这个文件，写到一半被读到就
 再交给下游（wf_inventory 自己还有 4 次重试兜底）。
 
 价格不跟着每次背包变化重抓——那会把 835 个请求变成刷屏。默认每 12 小时
-补一次缺价，`--market-every 0` 关掉。
+补一次缺价，其中每 24 小时全量重抓一次（835 件约 8 分钟），`--market-every 0` 关掉价格这条线。
 
 用法：
     python scripts/wf_watch.py                   # 常驻，10 秒轮询
@@ -159,17 +159,34 @@ def sync(dat: str, publish: bool) -> bool:
     return True
 
 
-def maybe_market(state: dict) -> None:
-    """价格单独一条低频线：只补缺，不整表重抓。"""
+def maybe_market(state: dict) -> bool:
+    """价格单独一条低频线。
+
+    以前只补缺，等于新装备有价、老装备的价格永远停在第一次抓到的那天。
+    现在改成两档：每天全量重抓一次（835 件约 8 分钟），中间每 12 小时只补缺。
+    全量期间轮询会停一会儿，但背包文件不变，回来补扫就是。
+    """
     every = int(state.get("marketEvery") or 0)
     if every <= 0:
-        return
+        return False
+    now = time.time()
     last = float(state.get("marketTs") or 0)
-    if time.time() - last < every * 3600:
-        return
-    log("补缺价（这会花几十秒到几分钟）")
-    if run("wf_market.py", ["sync", "--missing"]):
-        state["marketTs"] = time.time()
+    if now - last < every * 3600:
+        return False
+
+    refresh = float(state.get("marketRefreshHours") or 24) * 3600
+    full_due = now - float(state.get("marketFull") or 0) >= refresh
+    if full_due:
+        log("全量刷价（835 件，约 8 分钟）")
+        if not run("wf_market.py", ["sync"]):
+            return False
+        state["marketFull"] = now
+    else:
+        log("补缺价")
+        if not run("wf_market.py", ["sync", "--missing"]):
+            return False
+    state["marketTs"] = now
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -179,7 +196,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--once", action="store_true", help="立即同步一次然后退出")
     parser.add_argument("--no-publish", action="store_true")
     parser.add_argument("--market-every", type=float, default=12.0,
-                        help="每 N 小时补一次缺价，0 关闭")
+                        help="每 N 小时检查一次价格，0 关闭")
+    parser.add_argument("--market-refresh", type=float, default=24.0,
+                        help="每 N 小时全量重抓一次（默认 24，其余时候只补缺）")
     parser.add_argument("--force", action="store_true", help="忽略上次记录的时间戳")
     args = parser.parse_args(argv)
 
@@ -195,12 +214,14 @@ def main(argv: list[str] | None = None) -> int:
 
     state = read_state()
     state["marketEvery"] = args.market_every
+    state["marketRefreshHours"] = args.market_refresh
 
     if args.once:
         fp = fingerprint(args.dat)
         state.update(datTs=fp[0], datSize=fp[1])
-        ok = sync(args.dat, not args.no_publish)
+        # 先刷价再构建：反过来的话新价格进不了 InventoryData.json。
         maybe_market(state)
+        ok = sync(args.dat, not args.no_publish)
         write_state(state)
         return 0 if ok else 1
 
@@ -221,6 +242,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         while True:
             time.sleep(args.interval)
+            # 价格有更新就跟一次完整发布，否则新价要等下次背包变化才上线。
+            if maybe_market(state):
+                if sync(args.dat, not args.no_publish):
+                    fp = fingerprint(args.dat)
+                    last_seen = fp
+                    state.update(datTs=fp[0], datSize=fp[1])
+                write_state(state)
             try:
                 fp = fingerprint(args.dat)
             except FileNotFoundError:
