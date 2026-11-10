@@ -361,7 +361,7 @@ final class LocalStaticServer {
                 conn.cancel()
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + 5) { conn.cancel() }
-        }
+        })
     }
 
     static func mimeType(_ path: String) -> String {
