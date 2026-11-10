@@ -50,28 +50,12 @@
       </div>
       <div class="estat" id="estat"></div>
     </div>
-    <div class="extq">
-      <div class="exh">外部条件<span>不计入武器本体</span></div>
-      <div class="row"><span class="lb2">病毒层数</span>
-        <input type="range" id="x-vir-r" min="0" max="10" value="0">
-        <input type="number" id="x-vir" class="num" min="0" max="10" value="0"></div>
-      <div class="row"><span class="lb2">剥甲</span>
-        <input type="range" id="x-arm-r" min="0" max="100" value="0">
-        <input type="number" id="x-arm" class="num" min="0" max="100" value="0"><span class="pc">%</span></div>
-      <div class="row"><span class="lb2">时间窗口</span>
-        <input type="range" id="x-win-r" min="3" max="60" value="10">
-        <input type="number" id="x-win" class="num" min="3" max="60" value="10"><span class="pc">秒</span></div>
-      <div class="row"><span class="lb2">伤害加成</span>
-        <input type="range" id="x-buf-r" min="0" max="500" value="0">
-        <input type="number" id="x-buf" class="num" min="0" max="500" value="0"><span class="pc">%</span></div>
-      <div class="row"><span class="lb2">暴击加成</span>
-        <input type="range" id="x-cc-r" min="0" max="200" value="0">
-        <input type="number" id="x-cc" class="num" min="0" max="200" value="0"><span class="pc">%</span></div>
-      <div class="row chk">
-        <label><input type="checkbox" id="x-hd"> 爆头 ×2</label>
-        <label><input type="checkbox" id="x-crit" checked> 计入暴击</label>
-      </div>
-      <div class="hint">伤害加成对应 Roar / Eclipse / Xata's Whisper；暴击加成对应 Covenant / Wrathful Advance。</div>
+    <div class="extq" id="optbox">
+      <button class="exh" id="opt-toggle">
+        <span class="t">条件</span><b id="opt-n">0</b>
+        <span class="s">不计入武器本体</span><span class="arw">▾</span>
+      </button>
+      <div id="optgroups"></div>
     </div>
     <div class="facres" id="facres"></div>
     <div class="search"><input id="esearch" placeholder="搜索敌人…" autocomplete="off" spellcheck="false"></div>
@@ -87,7 +71,7 @@
     <div class="cmp" id="r-burst-cmp"></div>
   </div>
   <div class="fbox">
-    <div class="lb" id="r-dps-lb">含状态 · 10 秒实战</div>
+    <div class="lb" id="r-dps-lb">含状态 · 实战 DPS</div>
     <div class="big s" id="r-dps">—</div>
     <div class="cmp" id="r-dps-cmp"></div>
   </div>

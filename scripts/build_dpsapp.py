@@ -58,19 +58,34 @@ for e in ("heat", "cold", "electricity", "toxin", "slash", "puncture", "impact",
     STAT_MAP[e] = e
 
 STAT_RE = re.compile(r"^([+-]?\d+(?:\.\d+)?)\s*(%?)\s*(.+?)$")
+# 阵营 mod 是乘数写法："x1.05 Damage to Infested"
+FACTION_MUL_RE = re.compile(r"^[xX]\s*([\d.]+)\s+(.+)$")
 TAG_RE = re.compile(r"<[^>]+>")
 
 
 def parse_stats(lines):
-    """['+165% Damage', '+90% <DT_FREEZE_COLOR>Cold'] -> {'dmg':165,'cold':90}"""
+    """['+165% Damage', '+90% <DT_FREEZE_COLOR>Cold'] -> {'dmg':165,'cold':90}
+
+    描述里的括号是补充说明（"+60% Critical Chance (x2 for Heavy Attacks)"），
+    去掉再查表；查不到的（"Melee Damage on Heavy Attack"、"per Combo Multiplier"、
+    "chance to apply Slash on Critical"）说明它依赖运行期状态，按 0 处理。
+    """
     out = {}
     for raw in lines or []:
         s = TAG_RE.sub("", raw).strip()
+        # 阵营 mod 写成乘数："x1.05 Damage to Infested" → +5%
+        mx = FACTION_MUL_RE.match(s)
+        if mx:
+            name = mx.group(2).strip().lower()
+            key = STAT_MAP.get(name)
+            if key:
+                out[key] = out.get(key, 0.0) + (float(mx.group(1)) - 1) * 100
+            continue
         m = STAT_RE.match(s)
         if not m:
             continue
         val = float(m.group(1))
-        name = m.group(3).strip().lower()
+        name = re.sub(r"\s*\([^)]*\)\s*$", "", m.group(3)).strip().lower()
         key = STAT_MAP.get(name)
         if not key:
             continue

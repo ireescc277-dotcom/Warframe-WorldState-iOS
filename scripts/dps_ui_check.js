@@ -118,6 +118,33 @@ async function main() {
   report.level200 = await ev(`({burst: document.getElementById('r-burst').textContent,
     hp: document.querySelector('#estat').innerText.replace(/\\s+/g,' ')})`);
 
+  // 条件面板：分组、项数、勾选后数值要变
+  await ev(`document.getElementById('opt-toggle').click()`);
+  await sleep(350);
+  report.opts = await ev(`(() => ({
+    open: document.getElementById('optbox').classList.contains('open'),
+    groups: [...document.querySelectorAll('#optgroups .ogh')].map(e => e.textContent),
+    rows: document.querySelectorAll('#optgroups .orow').length,
+    badges: document.getElementById('opt-n').textContent,
+    box: (() => { const r = document.getElementById('optgroups').getBoundingClientRect();
+      return [Math.round(r.y), Math.round(r.height)]; })(),
+  }))()`);
+  await shot('06-cond');
+  const burstBefore = await ev(`document.getElementById('r-burst').textContent`);
+  await ev(`(() => { const b = document.querySelector('[data-k="rhino"]');
+    b.checked = true; b.dispatchEvent(new Event('change')); })()`);
+  await sleep(900);
+  report.optEffect = {
+    before: burstBefore,
+    after: await ev(`document.getElementById('r-burst').textContent`),
+    badge: await ev(`document.getElementById('opt-n').textContent`),
+  };
+  await shot('06b-cond-on');
+  await ev(`(() => { const b = document.querySelector('[data-k="rhino"]');
+    b.checked = false; b.dispatchEvent(new Event('change')); })()`);
+  await sleep(600);
+  await ev(`document.getElementById('opt-toggle').click()`);
+
   // 打开选卡器
   await ev(`document.querySelector('.slot.empty')?.click()`);
   await sleep(900);

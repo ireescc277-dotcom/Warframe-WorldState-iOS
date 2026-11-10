@@ -36,8 +36,11 @@ const S = {
   meta: null, weapons: [], byUid: new Map(), enemies: [], factions: [],
   uid: null, weapon: null, slots: [], inc: null, cfg: 0,
   ei: 0, level: 100, fac: '全部',
-  opt: {status: true, steel: false, extViral: 0, armorStrip: 0, window: 10,
-        headshot: false, crit: true, incarnon: false, dmgBuff: 0, ccBuff: 0},
+  opt: {status: true, steel: false, window: 20,
+        extViral: 0, strength: 100, headshot: false, armorStrip: 0, stealth: false,
+        meleeCombo: 0, sniperCombo: 0,
+        rhino: 0, mirage: 0, xata: 0, tlash: 0, nourish: 0, ccBuff: 0, madurai: false,
+        crit_on: 1, crit: true, incarnon: false},
   mode: 'list', ranking: null, rankKey: '',
   mods: new Map(), view: null,
 };
@@ -112,15 +115,15 @@ async function boot() {
     S.rivens = m.rivens || [];
     $('buildinfo').textContent = `数据 ${m.meta.builtAt.split(' ')[0]} · ${m.meta.weapons} 武器 / ${m.meta.builds} 套`;
     const saved = loadState();
-    if (saved) {
-      if (saved.opt) Object.assign(S.opt, saved.opt);
-      if (Number.isFinite(saved.level)) {
-        S.level = Math.max(1, Math.min(9999, saved.level));
-        $('lvl-range').value = Math.min(200, S.level);
-        $('lvl-num').value = S.level;
-      }
-      syncOptUI();
+    if (saved && saved.opt) Object.assign(S.opt, saved.opt);
+    renderOpts();
+    if (Number.isFinite(saved && saved.level)) {
+      S.level = Math.max(1, Math.min(9999, saved.level));
+      $('lvl-range').value = Math.min(200, S.level);
+      $('lvl-num').value = S.level;
     }
+    syncOptUI();
+    syncOptCount();
     S.ei = (saved && Number.isFinite(saved.ei) && m.enemies[saved.ei]) ? saved.ei : pickEnemy();
     renderFacChips();
     renderEnemyList();
@@ -350,25 +353,130 @@ function renderIncList() {
 // ---------------------------------------------------------------- 计算
 let calcT = 0, calcAbort = null, calcSeq = 0;
 
-function calc() {
-  saveState();
-  clearTimeout(calcT);
-  calcT = setTimeout(doCalc, 90);
+// ---------------------------------------------------------------- 条件选项
+// 与 warframe-damage.com 的「更多选项」逐项对应。
+// 状态里 0 表示该项关闭；数值框还留着上次填的数，重新勾上就恢复。
+const OPTS = [
+  {k:'extViral',    g:'外部条件', n:'外部病毒',        t:'chknum', min:1, max:10,  def:10, u:'层'},
+  {k:'strength',    g:'外部条件', n:'技能强度',        t:'num',    min:0, max:1000, def:100, u:'%'},
+  {k:'headshot',    g:'外部条件', n:'爆头 ×2',         t:'chk'},
+  {k:'armorStrip',  g:'外部条件', n:'减少目标防御',    t:'chknum', min:0, max:99,  def:50, u:'%'},
+  {k:'window',      g:'外部条件', n:'连续射击/攻击时间', t:'num',  min:1, max:60,  def:20, u:'秒'},
+  {k:'crit_on',     g:'外部条件', n:'计入暴击',        t:'chk', def:1},
+
+  {k:'stealth',     g:'近战 / 连击', n:'潜行加成（近战）',   t:'chk'},
+  {k:'meleeCombo',  g:'近战 / 连击', n:'轻攻击连击倍数',     t:'chknum', min:1, max:13, def:12, u:'x'},
+  {k:'sniperCombo', g:'近战 / 连击', n:'狙击连击倍数',       t:'chknum', min:1.5, max:100, def:1.5, u:'x'},
+
+  {k:'rhino',   g:'战甲 / 技能', n:'战吼 (Rhino)',          t:'chknum', min:1, max:9999, def:30, u:'%'},
+  {k:'mirage',  g:'战甲 / 技能', n:'黯然失色 (Mirage)',     t:'chknum', min:1, max:9999, def:30, u:'%'},
+  {k:'xata',    g:'战甲 / 技能', n:'真理密语 (Xaku)',       t:'chknum', min:1, max:9999, def:26, u:'%'},
+  {k:'tlash',   g:'战甲 / 技能', n:'剧毒鞭笞 (Saryn)',      t:'chknum', min:1, max:9999, def:30, u:'%'},
+  {k:'nourish', g:'战甲 / 技能', n:'消化滋养 (Grendel)',    t:'chknum', min:1, max:9999, def:45, u:'%'},
+  {k:'ccBuff',  g:'战甲 / 技能', n:'绝对增加暴击几率',      t:'chknum', min:1, max:200,  def:50, u:'%'},
+  {k:'madurai', g:'战甲 / 技能', n:'Madurai 物理 +30%',     t:'chk'},
+];
+
+const OPT_BY_K = Object.fromEntries(OPTS.map(o => [o.k, o]));
+const isOn = o => o.t === 'chk' ? !!S.opt[o.k] : (S.opt[o.k] || 0) > 0;
+
+function optRow(o) {
+  if (o.t === 'chk') {
+    return `<label class="orow chk"><input type="checkbox" data-k="${o.k}"><span>${o.n}</span></label>`;
+  }
+  const v = isOn(o) ? S.opt[o.k] : o.def;
+  const num = `<input class="num" data-kn="${o.k}" type="number" min="${o.min}" max="${o.max}"
+    step="${o.max <= 20 ? 0.1 : 1}" value="${v}"${o.t === 'chknum' ? '' : ''}><span class="pc">${o.u}</span>`;
+  if (o.t === 'num') {
+    const step = o.max <= 60 ? 1 : 5;
+    return `<div class="orow"><span class="lb2">${o.n}</span>
+      <input type="range" data-kr="${o.k}" min="${o.min}" max="${o.max}" step="${step}" value="${v}">${num}</div>`;
+  }
+  return `<div class="orow"><label class="ck"><input type="checkbox" data-k="${o.k}">
+    <span>${o.n}</span></label>${num}</div>`;
 }
 
-// 把 S.opt / S.level 反映到控件上（读存档后用）
+// 生效项计数（默认值的强度/窗口/计入暴击不算「改了条件」）
+const OPT_COUNT_SKIP = new Set(['strength', 'window', 'crit_on']);
+function optCount() {
+  return OPTS.filter(o => isOn(o) && !OPT_COUNT_SKIP.has(o.k)).length;
+}
+function syncOptCount() {
+  const n = optCount();
+  $('opt-n').textContent = n || '';
+}
+
+function renderOpts() {
+  const G = [];
+  for (const o of OPTS) {
+    let g = G.find(x => x.n === o.g);
+    if (!g) G.push(g = {n: o.g, list: []});
+    g.list.push(o);
+  }
+  $('optgroups').innerHTML = G.map(g =>
+    `<div class="og"><div class="ogh">${g.n}</div>${g.list.map(optRow).join('')}</div>`).join('');
+  OPTS.forEach(bindOpt);
+}
+
+function bindOpt(o) {
+  const box = document.querySelector(`[data-k="${o.k}"]`);
+  const inp = document.querySelector(`[data-kn="${o.k}"]`);
+  const rng = document.querySelector(`[data-kr="${o.k}"]`);
+  if (box) {
+    box.onchange = () => {
+      S.opt[o.k] = o.t === 'chk' ? (box.checked ? 1 : 0)
+                                  : (box.checked ? (parseFloat(inp.value) || o.def) : 0);
+      if (inp) inp.value = S.opt[o.k] || o.def;
+      if (rng) rng.value = S.opt[o.k] || o.def;
+      syncOptCount();
+      calc();
+    };
+  }
+  if (inp) {
+    inp.oninput = () => {
+      let v = parseFloat(inp.value);
+      if (!isFinite(v)) v = o.def;
+      v = Math.max(o.min, Math.min(o.max, v));
+      S.opt[o.k] = (box && !box.checked) ? 0 : v;
+      if (rng) rng.value = v;
+      syncOptCount();
+      calc();
+    };
+  }
+  if (rng) {
+    rng.oninput = () => {
+      inp.value = rng.value;
+      S.opt[o.k] = parseFloat(rng.value);
+      calc();
+    };
+  }
+}
+
+// 把 S.opt 反映到控件上（读存档 / 换武器后用）
 function syncOptUI() {
   const set = (sel, on) => { const b = $(sel).querySelector(`button[data-v="${on ? 1 : 0}"]`);
     if (b) $(sel).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
   set('seg-status', S.opt.status);
   set('seg-steel', S.opt.steel);
-  $('x-hd').checked = !!S.opt.headshot;
-  $('x-crit').checked = S.opt.crit !== false;
-  [['x-vir-r', 'x-vir', 'extViral'], ['x-arm-r', 'x-arm', 'armorStrip'],
-   ['x-win-r', 'x-win', 'window'], ['x-buf-r', 'x-buf', 'dmgBuff'],
-   ['x-cc-r', 'x-cc', 'ccBuff']].forEach(([r, n, k]) => {
-    $(r).value = S.opt[k]; $(n).value = S.opt[k];
-  });
+  S.opt.crit = S.opt.crit_on !== 0;
+  for (const o of OPTS) {
+    if (o.k === 'crit_on') { S.opt.crit_on = S.opt.crit === false ? 0 : 1; }
+    const on = isOn(o);
+    const box = document.querySelector(`[data-k="${o.k}"]`);
+    const inp = document.querySelector(`[data-kn="${o.k}"]`);
+    const rng = document.querySelector(`[data-kr="${o.k}"]`);
+    if (box) box.checked = on;
+    const v = on ? S.opt[o.k] : o.def;
+    if (inp) inp.value = v;
+    if (rng) rng.value = v;
+  }
+}
+
+function calc() {
+  S.opt.crit = S.opt.crit_on !== 0;
+  saveState();
+  clearTimeout(calcT);
+  calcT = setTimeout(doCalc, 90);
 }
 
 async function doCalc() {
@@ -716,26 +824,17 @@ $('seg-steel').onclick = e => {
   if (S.mode === 'rank') buildRanking();
   calc();
 };
+$('opt-toggle').onclick = e => {
+  e.stopPropagation();
+  $('optbox').classList.toggle('open');
+};
+document.addEventListener('click', e => {
+  if (!$('optbox').contains(e.target)) $('optbox').classList.remove('open');
+});
+
 $('btn-rank').onclick = () => setMode(S.mode === 'rank' ? 'list' : 'rank');
 $('btn-riven').onclick = showRivens;
 $('btn-note').onclick = showNote;
-
-function bindPair(rid, nid, key, lo, hi) {
-  const r = $(rid), n = $(nid);
-  const sync = v => {
-    v = Math.max(lo, Math.min(hi, Math.round(v) || 0));
-    S.opt[key] = v;
-    r.value = Math.min(hi, v); n.value = v;
-    calc();
-  };
-  r.oninput = () => sync(+r.value);
-  n.oninput = () => sync(+n.value);
-}
-bindPair('x-vir-r', 'x-vir', 'extViral', 0, 10);
-bindPair('x-arm-r', 'x-arm', 'armorStrip', 0, 100);
-bindPair('x-win-r', 'x-win', 'window', 3, 60);
-bindPair('x-buf-r', 'x-buf', 'dmgBuff', 0, 500);
-bindPair('x-cc-r', 'x-cc', 'ccBuff', 0, 200);
 
 $('lvl-range').oninput = () => {
   S.level = +$('lvl-range').value; $('lvl-num').value = S.level; calc();
@@ -744,9 +843,6 @@ $('lvl-num').oninput = () => {
   S.level = Math.max(1, Math.min(9999, +$('lvl-num').value || 1));
   $('lvl-range').value = Math.min(200, S.level); calc();
 };
-$('x-hd').onchange = e => { S.opt.headshot = e.target.checked; calc(); };
-$('x-crit').onchange = e => { S.opt.crit = e.target.checked; calc(); };
-
 document.addEventListener('keydown', e => {
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault(); $('wsearch').focus();

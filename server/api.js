@@ -92,19 +92,40 @@ const num = (v, lo, hi, dflt) => {
   return Math.max(lo, Math.min(hi, n));
 };
 
+// 选项口径对齐 warframe-damage.com：0 表示该项关闭（战甲 buff 用 0 代表未勾选）
 function readOpt(raw) {
   const o = raw || {};
   return {
     steel: !!o.steel,
     status: o.status !== false,
+    // 外部病毒层数：1-10，勾选才生效
     extViral: num(o.extViral, 0, 10, 0),
-    armorStrip: num(o.armorStrip, 0, 100, 0),
-    window: num(o.window, 3, 60, 10),
+    // 外部削甲：0-99%
+    armorStrip: num(o.armorStrip, 0, 99, 0),
+    // 队列时长（秒）：那一站叫「连续射击/攻击时间」，1-60，默认 20
+    window: num(o.window, 1, 60, 20),
+    // 技能强度：100 = 100%，缩放依赖强度的加成
+    strength: num(o.strength, 0, 1000, 100),
     headshot: !!o.headshot,
+    // 近战偷袭（暴击倍率 +7）
+    stealth: !!o.stealth,
+    // 轻攻击连击倍率：0 关闭，1-13
+    meleeCombo: num(o.meleeCombo, 0, 13, 0),
+    // 狙击连击倍率：0 关闭，1.5-100
+    sniperCombo: num(o.sniperCombo, 0, 100, 0),
+    // 战甲 buff：0 关闭，否则为百分比
+    rhino: num(o.rhino, 0, 9999, 0),
+    mirage: num(o.mirage, 0, 9999, 0),
+    xata: num(o.xata, 0, 9999, 0),
+    tlash: num(o.tlash, 0, 9999, 0),
+    nourish: num(o.nourish, 0, 9999, 0),
+    // 绝对增加暴击几率（Kullervo / Harrow）
+    ccBuff: num(o.ccBuff, 0, 200, 0),
+    // 物理伤害 +30%（Madurai）
+    madurai: !!o.madurai,
     crit: o.crit !== false,
     incarnon: !!o.incarnon,
     dmgBuff: num(o.dmgBuff, 0, 500, 0),
-    ccBuff: num(o.ccBuff, 0, 200, 0),
   };
 }
 
@@ -170,9 +191,8 @@ function calcOne(uid, slots, enemy, level, opt) {
 }
 
 // ---------------------------------------------------------------- 排名
-const rankKey = (ei, level, opt) => [ei, level, opt.steel, opt.status, opt.extViral,
-  opt.armorStrip, opt.window, opt.headshot, opt.crit, opt.incarnon,
-  opt.dmgBuff, opt.ccBuff].join('|');
+// 直接序列化整个 opt：以后加选项不会漏进缓存键
+const rankKey = (ei, level, opt) => ei + '|' + level + '|' + JSON.stringify(opt);
 
 function rankCached(ei, level, opt) {
   const k = rankKey(ei, level, opt);

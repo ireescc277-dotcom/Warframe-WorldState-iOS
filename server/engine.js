@@ -237,8 +237,15 @@ function assemble(wp, slots, enemy, level, opt){
   }).filter(Boolean).flat();
   const comps = buildComponents(wp, a, order);
 
-  const cc = (wp.cc||0)*100 * (1 + a.cc/100) + (opt.ccBuff || 0);
-  const cm = (wp.cm||1) * (1 + a.cd/100);
+  const strength = (opt.strength == null ? 100 : opt.strength) / 100;
+  const isMelee = wp.cat === "Melee";
+
+  // 暴击率：mod 加成（按基数）之后再叠「绝对增加暴击几率」(Kullervo/Harrow)
+  const cc = (wp.cc||0)*100 * (1 + a.cc/100) + (opt.ccBuff||0);
+  // 暴击倍率：近战偷袭把倍率 +7（1 倍时直接变 7，和游戏内偷袭一致）
+  const cmRaw = (wp.cm||1) * (1 + a.cd/100);
+  const stealthOn = !!(opt.stealth && isMelee);
+  const cm = stealthOn ? (cmRaw === 1 ? 7 : cmRaw + 7) : cmRaw;
   const critMul = (opt.crit === false) ? 1 : 1 + (cc/100)*(cm-1);
   const ms = (wp.ms||1) * (1 + a.ms/100);
   const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100));
@@ -252,19 +259,37 @@ function assemble(wp, slots, enemy, level, opt){
   const arRaw = scaleArmor(enemy.ar, lv, enemy.bl, fk);
   const ar0 = Math.max(0, arRaw * (1 - (opt.armorStrip||0)/100));
   const sh = scaleShield(enemy.sh, lv, enemy.bl, fk);
-  const banePct = (a.fac[BANE_KEY[fk]] || 0)/100;
+  // 战吼并进阵营倍率这一项（和那个站一致：有阵营 mod 时相加，没有时从 1 起加）
+  const rhinoPct = (opt.rhino||0)/100 * strength;
+  const banePct = (a.fac[BANE_KEY[fk]] || 0)/100 + rhinoPct;
   const headMul = opt.headshot ? 2 : 1;
-  const buffMul = 1 + (opt.dmgBuff || 0)/100;
+  const mirageMul = 1 + (opt.mirage||0)/100 * strength;
+  const comboMul = (isMelee && opt.meleeCombo > 0) ? opt.meleeCombo : 1;
+  const sniperMul = opt.sniperCombo > 0 ? opt.sniperCombo : 1;
+  const buffMul = 1 + (opt.dmgBuff || 0)/100;   // 旧接口，保留
 
-  const compsF = comps.map(c=>{
+  // 真理密语 / 剧毒鞭笞 / 消化滋养：按武器总伤害的一定比例额外挂一段元素伤害
+  const totBase = comps.reduce((s,c)=>s+c.v,0);
+  const extra = [];
+  const addElem = (t, pc) => {
+    if(pc > 0) extra.push({t, v: totBase * pc/100 * strength, noProc: true});
+  };
+  addElem("void",  opt.xata || 0);
+  addElem("toxin", opt.tlash || 0);
+  addElem("viral", opt.nourish || 0);
+
+  const compsF = comps.concat(extra).map(c=>{
     const f = facMult(fk, c.t);
-    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)*headMul*buffMul};
+    // Madurai 只加物理三系
+    const physMul = (opt.madurai && PHYS.has(c.t)) ? 1.3 : 1;
+    return {t:c.t, v:c.v, f, noProc:!!c.noProc,
+            vCrit: c.v*physMul*f*critMul*ms*(1+banePct)*headMul*mirageMul*comboMul*sniperMul*buffMul};
   });
   const perShotShield = compsF.reduce((s,c)=>s+c.vCrit,0);
   const shotBase = comps.reduce((s,c)=>s+c.v,0) * ms;   // 不含暴击、不含加成
 
   return {a, comps:compsF, shotBase, perShotShield, cc, cm, critMul, ms, fr, mag, rl, sc,
-          hp, ar0, sh, og:enemy.og||0, fk, banePct, lv,
+          hp, ar0, sh, og:enemy.og||0, fk, banePct, lv, strength, comboMul, stealthOn,
           dr0: drOf(ar0)};
 }
 
@@ -302,8 +327,9 @@ function simulate(A, opt){
   let viralAcc = 0, corrAcc = 0;
   let dealt = 0, kill = null, dotTotal = 0, directTotal = 0;
   const N = Math.round(T/dt);
-  const sumV = A.comps.reduce((s,x)=>s+x.v,0) || 1;
-  const weights = A.comps.map(c=>({t:c.t, w:c.v/sumV}));
+  const procComps = A.comps.filter(c => !c.noProc);
+  const sumV = procComps.reduce((s,x)=>s+x.v,0) || 1;
+  const weights = procComps.map(c=>({t:c.t, w:c.v/sumV}));
   const typeShot = {};
   for(const c of A.comps) typeShot[c.t] = (typeShot[c.t]||0) + c.v * A.ms;
 
