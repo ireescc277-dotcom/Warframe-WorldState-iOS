@@ -1,6 +1,6 @@
 # Warframe 伤害计算 · 进度与目标
 
-最后更新：2026-11-11 00:40
+最后更新：2026-11-11 00:35
 
 ## 目标
 
@@ -55,6 +55,7 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
       —— `wf.last` 上次退出的整套（刷新 / 重开接着来），
       `wf.wmem` 每把武器上次的 mod / 紫卡 / 架势（从武器页填装时带回来），
       `wf.loadouts` 手动命名的存档（可存可载入可删，删除要连点两下）。
+      12 项断言全过：`node scripts/dps_store_check.js`
 
 ## 待办（按对「能不能用」的影响排序）
 
@@ -72,7 +73,7 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
 | 形态 | 代价 | 结论 |
 |---|---|---|
 | 静态网页 | 已完成 | `data.ireescc.com/dps/` |
-| iOS App | 已完成 | 武器页 + 内嵌计算器，CI 出未签名 ipa |
+| iOS App | 已完成 | 武器页 + 内嵌计算器，CI 出未签名 ipa（`WarframeWatch-v1.5.2-dps.ipa`） |
 | PWA（加主屏 + Service Worker） | 低 | 还没做；iOS 已走 App，优先级下降 |
 
 ### iOS 上踩过的四个坑
