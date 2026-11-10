@@ -104,6 +104,12 @@ private struct CalcWebView: UIViewRepresentable {
         }
         if let url = comps.url {
             web.load(URLRequest(url: url))
+            // 兜底：didFinish 不一定会来（有资源一直挂着就不会来），
+            // 那 waitForKernel 根本不会启动，页面就永远转圈、且看不到任何原因。
+            DispatchQueue.main.asyncAfter(deadline: .now() + 9) { [weak coordinator = context.coordinator] in
+                guard let c = coordinator, !c.ready.wrappedValue else { return }
+                c.diagnose(web, then: "9 秒还没就绪")
+            }
         }
         return web
     }
@@ -175,15 +181,18 @@ private struct CalcWebView: UIViewRepresentable {
         }
 
         /// 失败时把页内状态摊开显示——模拟器里没有控制台可看。
-        private func diagnose(_ webView: WKWebView, then message: String?) {
+        /// `__wfStep` 是页面自己写的启动进度，比猜有用：它停在哪一步，
+        /// 就知道是内核没起、还是武器数据没回来、还是卡在恢复存档。
+        func diagnose(_ webView: WKWebView, then message: String?) {
             webView.evaluateJavaScript("""
             (function(){
-              var f=document.getElementById('wf-kernel');
-              var c=f&&f.contentWindow;
-              var o={err:window.__wfErr||'',jsErr:window.__jsErr||'',
-                     inline:!!window.__WF_INLINE,wfk:!!window.WFK,
-                     frame:!!f,reCalc:!!(c&&c.reCalc),modsProps:!!(c&&c.modsProps)};
-              try{ if(c){ o.frameErr=c.__wfErr||''; o.frameTitle=c.document?c.document.title:'-'; } }catch(e){ o.frameErr='x-origin'; }
+              var o = {url: location.href, ready: document.readyState,
+                       step: window.__wfStep || '', jsErr: window.__jsErr || '',
+                       wfErr: window.__wfErr || '', inline: !!window.__WF_INLINE,
+                       wfk: !!window.WFK, frame: !!document.getElementById('wf-kernel')};
+              o.pending = performance.getEntriesByType('resource')
+                .filter(function(r){ return !r.responseEnd })
+                .map(function(r){ return r.name.split('/').pop() });
               return JSON.stringify(o);
             })()
             """) { value, error in
@@ -266,15 +275,35 @@ final class LocalStaticServer {
 
             l.start(queue: queue)
             _ = sem.wait(timeout: .now() + 3)
-            if port > 0 {
+            // 「绑上了」不等于「能收请求」：这里自己取一次首页，取不到就换下一个端口。
+            // 抢端口失败、旧进程还挂着这类情况都会走到这儿。
+            if port > 0, probe(port: port) {
                 listener = l
                 return port
             }
             l.cancel()
+            port = 0
             return nil
         } catch {
             return nil
         }
+    }
+
+    private func probe(port: UInt16) -> Bool {
+        guard let url = URL(string: "http://127.0.0.1:\(port)/index.html") else { return false }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 3
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        let sem = DispatchSemaphore(value: 0)
+        var ok = false
+        URLSession.shared.dataTask(with: req) { data, resp, _ in
+            if let http = resp as? HTTPURLResponse, http.statusCode == 200, (data?.count ?? 0) > 0 {
+                ok = true
+            }
+            sem.signal()
+        }.resume()
+        _ = sem.wait(timeout: .now() + 3.5)
+        return ok
     }
 
     func stop() {

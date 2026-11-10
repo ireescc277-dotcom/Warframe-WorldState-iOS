@@ -60,8 +60,18 @@ const modName = n => n === 'Riven' ? '紫卡' : (MOD_LOC[n] || n);
 
 // ---------------------------------------------------------------- 启动
 
+// 启动进度写到页面标题栏，并且留在那儿。iOS 上出问题看不见控制台，
+// 屏幕是唯一能读的地方——卡在哪一步、哪个资源没回来，截图就能看出来。
+function step(name) {
+  window.__wfStep = name;
+  const el = $('buildinfo');
+  if (el) el.textContent = name;
+}
+
 async function boot() {
+  step('meta');
   META = await WFK.meta();
+  step('meta ' + META.weapons.length + '/' + META.enemies.length);
   $('wcount').textContent = META.weapons.length + ' 把';
   $('ecount').textContent = META.enemies.length + ' 个';
   const factions = [...new Set(META.enemies.map(e => e.faction))];
@@ -71,8 +81,10 @@ async function boot() {
   bindPick();
   bindFrame();
   bindHeader();
+  step('restore');
   await restore();
   BOOTED = true;
+  step('ready');
   calc();
 }
 
@@ -99,6 +111,7 @@ async function restore() {
   const mem = (stGet(ST_WMEM, {}) || {})[w.n];
 
   HYDRA = true;
+  step('weapon ' + w.n);
   await setWeapon(w.n, true);
   if (mem) {
     S.mods = Object.assign({}, mem.mods || {});
@@ -926,4 +939,14 @@ function banner(msg) {
   BAN_T = setTimeout(() => el.classList.remove('on'), 3000);
 }
 
-boot().catch(e => banner('启动失败：' + e.message));
+boot().catch(e => {
+  step('启动失败 ' + (e && e.message || e));
+  banner('启动失败：' + (e && e.message || e));
+});
+
+// 8 秒还没走完启动流程就把卡住的位置摆到标题栏上——iOS 里没有别的办法看
+setTimeout(() => {
+  if (BOOTED) return;
+  const extra = window.__jsErr ? ' / ' + window.__jsErr : '';
+  step('卡在 ' + (window.__wfStep || '?') + extra);
+}, 8000);
