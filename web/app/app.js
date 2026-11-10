@@ -127,6 +127,7 @@ async function boot() {
     S.ei = (saved && Number.isFinite(saved.ei) && m.enemies[saved.ei]) ? saved.ei : pickEnemy();
     renderFacChips();
     renderEnemyList();
+    renderTargetCard();
     renderWeaponList();
     const keep = !!(saved && S.byUid.has(saved.uid));
     if (keep && Number.isFinite(saved.cfg)) S.cfg = saved.cfg;
@@ -152,7 +153,6 @@ function renderWeaponList() {
   const q = $('wsearch').value.trim().toLowerCase();
   el.innerHTML = '';
   if (S.mode === 'rank') {
-    $('wtitle').textContent = '排名';
     $('wcount').textContent = S.ranking ? S.ranking.length + ' 项' : '…';
     if (!S.ranking) { el.innerHTML = '<div class="empty">计算中…</div>'; return; }
     S.ranking.forEach((r, i) => {
@@ -161,12 +161,11 @@ function renderWeaponList() {
       d.className = 'item' + (r.uid === S.uid ? ' on' : '');
       d.innerHTML = `<div class="rank">${i + 1}</div><div class="nm">${esc(r.n)}</div>
         <div class="sub">${fmt(r.val)}</div>`;
-      d.onclick = () => { setMode('list'); selectWeapon(r.uid); };
+      d.onclick = () => { setMode('list'); selectWeapon(r.uid); closePick('w'); };
       el.appendChild(d);
     });
     return;
   }
-  $('wtitle').textContent = '武器';
   $('wcount').textContent = S.weapons.length + ' 把';
   const frag = document.createDocumentFragment();
   for (const w of S.weapons) {
@@ -177,7 +176,7 @@ function renderWeaponList() {
       ${w.inc ? '<span class="tag inc">灵</span>' : ''}
       ${w.riven ? '<span class="tag">紫</span>' : ''}
       <div class="sub">${w.ncfg}</div>`;
-    d.onclick = () => selectWeapon(w.uid);
+    d.onclick = () => { selectWeapon(w.uid); closePick('w'); };
     frag.appendChild(d);
   }
   el.appendChild(frag);
@@ -185,11 +184,31 @@ function renderWeaponList() {
   if (on) on.scrollIntoView({block: 'nearest'});
 }
 
+// ---------------------------------------------------------------- 下拉开关
+function openPick(k) { $('pick-' + k).classList.add('open'); }
+function closePick(k) {
+  $('pick-' + k).classList.remove('open');
+  const inp = $(k === 'w' ? 'wsearch' : 'esearch');
+  if (inp) inp.blur();
+}
+function togglePick(k) {
+  const on = $('pick-' + k).classList.contains('open');
+  closePick('w'); closePick('t');
+  if (!on) {
+    openPick(k);
+    const inp = $(k === 'w' ? 'wsearch' : 'esearch');
+    inp.focus();
+    if (inp.setSelectionRange) inp.setSelectionRange(inp.value.length, inp.value.length);
+  }
+}
+
 function setMode(m) {
   S.mode = m;
   $('btn-rank').classList.toggle('on', m === 'rank');
   $('btn-rank').textContent = m === 'rank' ? '列表' : '排名';
-  if (m === 'rank') buildRanking();
+  $('wsearch').value = '';
+  if (m === 'rank') { openPick('w'); buildRanking(); }
+  else closePick('w');
   renderWeaponList();
 }
 
@@ -227,6 +246,7 @@ async function selectWeapon(uid, keepCfg) {
     S.allSlots = r.slots;
     S.cfg = Math.max(0, Math.min(S.cfg, r.slots.length - 1));
     S.slots = cloneSlots(r.slots[S.cfg]);
+    renderWeaponCard();
     renderBuild();
     calc();
   } catch (e) {
@@ -241,10 +261,7 @@ function renderBuild() {
   if (!S.weapon) return;
   const w = S.weapon;
   const b = $('bwrap');
-  let html = `<div class="wtitle"><h2>${esc(w.z || w.n)}</h2><span class="en">${esc(w.n)}</span>`;
-  if (S.inc && S.opt.incarnon) html += `<span class="pill inc">灵化形态</span>`;
-  if (TRIG_NOTE[w.tr]) html += `<span class="pill">${TRIG_NOTE[w.tr]}</span>`;
-  html += `</div><div class="wstats" id="wstats">${statsHtml(null)}</div>`;
+  let html = '';
 
   if (S.allSlots.length > 1) {
     html += '<div class="tabs">';
@@ -265,10 +282,10 @@ function renderBuild() {
       <div class="hint">节点数值加在基础值上，再走 mod 乘算；基础伤害类只在灵化形态生效。</div>
     </div>`;
   }
-  html += `<div class="sec"><div class="sechd"><span>配卡明细</span></div>
+  const main = `<div class="bcol">${html}</div>`;
+  const side = `<div class="bside"><div class="sechd"><span>配卡明细</span></div>
     <div class="contrib" id="contrib"><div class="hint">—</div></div></div>`;
-  html += `<div class="sec" id="simpane"></div>`;
-  b.innerHTML = html;
+  b.innerHTML = main + side;
 
   const slotsEl = $('slots');
   S.slots.forEach((s, i) => slotsEl.appendChild(slotEl(s, i)));
@@ -288,6 +305,34 @@ function renderBuild() {
   }
 }
 
+function renderWeaponCard() {
+  const w = S.weapon;
+  if (!w) return;
+  let h = `<div class="wc-top"><h2>${esc(w.z || w.n)}</h2><span class="en">${esc(w.n)}</span>`;
+  if (S.inc && S.opt.incarnon) h += `<span class="pill inc">灵化形态</span>`;
+  if (TRIG_NOTE[w.tr]) h += `<span class="pill">${TRIG_NOTE[w.tr]}</span>`;
+  h += `</div><div class="wstats" id="wstats">${statsHtml(null)}</div>`;
+  h += dmgBars(w.dmg);
+  $('wcard').innerHTML = h;
+  $('wsearch').placeholder = w.z || w.n;
+  $('wsearch').value = '';
+}
+
+// 基础伤害构成（武器卡片的色条）
+const DMG_ORDER = ['impact','puncture','slash','heat','cold','electricity','toxin',
+  'blast','radiation','magnetic','viral','corrosive','gas'];
+function dmgBars(dmg) {
+  if (!dmg || !dmg.length) return '';
+  const rows = DMG_ORDER.map((k, i) => ({k, v: dmg[i] || 0})).filter(x => x.v > 0);
+  const sum = rows.reduce((a, x) => a + x.v, 0) || 1;
+  const chips = rows.map(x =>
+    `<span class="dt"><i style="background:${COL[x.k] || '#666'}"></i>${ZH[x.k] || x.k} <b>${num(x.v, 1)}</b></span>`
+  ).join('');
+  const bar = rows.map(x =>
+    `<i style="width:${(x.v / sum * 100).toFixed(1)}%;background:${COL[x.k] || '#666'}"></i>`).join('');
+  return `<div class="wdmg"><div class="dbar">${bar}</div><div class="dtags">${chips}</div></div>`;
+}
+
 function statsHtml(v) {
   const w = v ? v.weapon : (S.weapon || {});
   const rows = [
@@ -299,8 +344,8 @@ function statsHtml(v) {
     ['装填', (w.rl || 0).toFixed(2) + 's'],
     ['多重', num(w.ms || 1, 2)],
   ];
-  let h = rows.map(([k, v]) => `<div>${k} <b>${v}</b></div>`).join('');
-  if (w.cat) h += `<div style="color:#4d5661">${CAT[w.cat] || w.cat}</div>`;
+  let h = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  if (w.cat) h += `<div><span>类型</span><b style="color:#7c8792">${CAT[w.cat] || w.cat}</b></div>`;
   return h;
 }
 
@@ -569,6 +614,8 @@ function renderSim(r) {
 
 function renderTargetStats(r) {
   const t = r.target;
+  const e = S.enemies[S.ei];
+  if (e) $('tname').innerHTML = `${esc(e.n)}${e.fk ? `<span class="fk">${esc(e.fk)}</span>` : ''}`;
   $('estat').innerHTML = `
     <div><span>血量</span><b>${fmt(t.hp)}</b></div>
     <div><span>护甲</span><b>${Math.round(t.ar)}</b></div>
@@ -670,7 +717,7 @@ function renderFacChips() {
 }
 
 function renderEnemyList() {
-  const el = $('elist');
+  const el = $('elistbody');
   const q = $('esearch').value.trim().toLowerCase();
   el.innerHTML = '';
   const frag = document.createDocumentFragment();
@@ -682,11 +729,26 @@ function renderEnemyList() {
     const d = document.createElement('div');
     d.className = 'item' + (e.i === S.ei ? ' on' : '');
     d.innerHTML = `<div class="nm">${esc(e.n)}</div>${e.fk ? '' : '<span class="tag lo">无克制</span>'}`;
-    d.onclick = () => { S.ei = e.i; renderEnemyList(); calc(); };
+    d.onclick = () => {
+      S.ei = e.i;
+      renderEnemyList();
+      renderTargetCard();
+      closePick('t');
+      calc();
+    };
     frag.appendChild(d);
   });
   el.appendChild(frag);
   $('ecount').textContent = n + ' 个';
+}
+
+// 顶部「敌人」卡片：名字 + 等级 + 六格状态 + 阵营克制
+function renderTargetCard() {
+  const e = S.enemies[S.ei];
+  if (!e) return;
+  $('tname').innerHTML = `${esc(e.n)}${e.fk ? `<span class="fk">${esc(e.fk)}</span>` : ''}`;
+  $('esearch').placeholder = e.n;
+  $('esearch').value = '';
 }
 
 // ---------------------------------------------------------------- 选卡
@@ -806,8 +868,18 @@ document.addEventListener('keydown', e => {
 });
 
 // ---------------------------------------------------------------- 交互绑定
-$('wsearch').oninput = renderWeaponList;
-$('esearch').oninput = renderEnemyList;
+$('wsearch').oninput = () => { openPick('w'); renderWeaponList(); };
+$('esearch').oninput = () => { openPick('t'); renderEnemyList(); };
+$('wsearch').onfocus = () => { openPick('w'); renderWeaponList(); };
+$('esearch').onfocus = () => { openPick('t'); renderEnemyList(); };
+$('wsearch').onclick = () => openPick('w');
+$('esearch').onclick = () => openPick('t');
+$('wsearch').onkeydown = e => { if (e.key === 'Enter') { const f = $('wlist').querySelector('.item'); if (f) f.click(); } };
+$('esearch').onkeydown = e => { if (e.key === 'Enter') { const f = $('elist').querySelector('.item'); if (f) f.click(); } };
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#pick-w')) closePick('w');
+  if (!e.target.closest('#pick-t')) closePick('t');
+});
 
 $('seg-status').onclick = e => {
   const b = e.target.closest('button');
@@ -824,10 +896,6 @@ $('seg-steel').onclick = e => {
   if (S.mode === 'rank') buildRanking();
   calc();
 };
-$('opt-toggle').onclick = e => {
-  e.stopPropagation();
-  $('optbox').classList.toggle('open');
-};
 
 $('btn-rank').onclick = () => setMode(S.mode === 'rank' ? 'list' : 'rank');
 $('btn-riven').onclick = showRivens;
@@ -842,15 +910,10 @@ $('lvl-num').oninput = () => {
 };
 document.addEventListener('keydown', e => {
   if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
-    e.preventDefault(); $('wsearch').focus();
+    e.preventDefault(); $('wsearch').focus(); openPick('w');
   }
+  if (e.key === 'Escape') { closePick('w'); closePick('t'); }
 });
 
-document.querySelectorAll('#tabbar button').forEach(b => {
-  b.onclick = () => {
-    document.body.dataset.pane = b.dataset.pane;
-    document.querySelectorAll('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
-  };
-});
 
 boot();

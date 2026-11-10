@@ -7,7 +7,7 @@
 <title>Warframe 伤害计算</title>
 <link rel="stylesheet" href="app.css">
 </head>
-<body data-pane="b">
+<body>
 
 <header>
   <div class="brand">WARFRAME <b>伤害计算</b><span id="buildinfo"></span></div>
@@ -25,68 +25,79 @@
   <button class="hbtn" id="btn-note">口径</button>
 </header>
 
-<main>
-  <aside class="col" id="col-w">
-    <div class="colhd">
-      <span id="wtitle">武器</span>
-      <span class="sp"></span>
+<!-- 顶部：左选武器，右选敌人 -->
+<div class="top">
+  <div class="pick" id="pick-w">
+    <div class="pickhd">
+      <span class="pt">武器</span><span class="sp"></span>
       <span class="chip" id="wcount">—</span>
     </div>
-    <div class="search"><input id="wsearch" placeholder="搜索武器…" autocomplete="off" spellcheck="false"></div>
-    <div class="list" id="wlist"></div>
-  </aside>
+    <div class="pinput">
+      <input id="wsearch" placeholder="搜索或选择武器…" autocomplete="off" spellcheck="false">
+      <span class="car">▾</span>
+      <div class="plist" id="wlist"></div>
+    </div>
+    <div class="pcard" id="wcard"></div>
+  </div>
 
-  <section class="col" id="col-b">
-    <div class="bwrap" id="bwrap"><div class="empty">加载中…</div></div>
-  </section>
-
-  <aside class="col" id="col-t">
-    <div class="colhd"><span>目标</span><span class="sp"></span><span class="chip" id="ecount">—</span></div>
-    <div class="tgtlevel">
-      <div class="row">
-        <span class="lb">等级</span>
-        <input type="range" id="lvl-range" min="1" max="200" value="100">
-        <input type="number" id="lvl-num" class="num" min="1" max="9999" value="100">
+  <div class="pick" id="pick-t">
+    <div class="pickhd">
+      <span class="pt">敌人</span><span class="sp"></span>
+      <span class="chip" id="ecount">—</span>
+    </div>
+    <div class="pinput">
+      <input id="esearch" placeholder="搜索或选择敌人…" autocomplete="off" spellcheck="false">
+      <span class="car">▾</span>
+      <div class="plist" id="elist">
+        <div class="fchips" id="fchips"></div>
+        <div id="elistbody"></div>
       </div>
-      <div class="estat" id="estat"></div>
     </div>
-    <div class="extq" id="optbox">
-      <button class="exh" id="opt-toggle">
-        <span class="t">条件</span><b id="opt-n">0</b>
-        <span class="s">不计入武器本体</span><span class="arw">▾</span>
-      </button>
-      <div id="optgroups"></div>
+    <div class="pcard" id="tcard">
+      <div class="tname" id="tname">—</div>
+      <div class="tgtlevel">
+        <div class="row">
+          <span class="lb">等级</span>
+          <input type="range" id="lvl-range" min="1" max="200" value="100">
+          <input type="number" id="lvl-num" class="num" min="1" max="9999" value="100">
+        </div>
+        <div class="estat" id="estat"></div>
+      </div>
+      <div class="facres" id="facres"></div>
     </div>
-    <div class="facres" id="facres"></div>
-    <div class="search"><input id="esearch" placeholder="搜索敌人…" autocomplete="off" spellcheck="false"></div>
-    <div class="fchips" id="fchips"></div>
-    <div class="list" id="elist"></div>
+  </div>
+</div>
+
+<!-- 配置页 -->
+<div class="build" id="bwrap"><div class="empty">加载中…</div></div>
+
+<!-- 结果：左选项，右结果 -->
+<div class="lower">
+  <aside class="optpanel">
+    <div class="opthd"><span>条件</span><b id="opt-n">0</b><span class="s">不计入武器本体</span></div>
+    <div id="optgroups"></div>
   </aside>
-</main>
-
-<footer>
-  <div class="fbox">
-    <div class="lb">直伤 BURST · 不计状态</div>
-    <div class="big" id="r-burst">—</div>
-    <div class="cmp" id="r-burst-cmp"></div>
-  </div>
-  <div class="fbox">
-    <div class="lb" id="r-dps-lb">含状态 · 实战 DPS</div>
-    <div class="big s" id="r-dps">—</div>
-    <div class="cmp" id="r-dps-cmp"></div>
-  </div>
-  <div class="fbox">
-    <div class="lb">击杀时间 TTK</div>
-    <div class="big s" id="r-ttk">—</div>
-    <div class="cmp" id="r-ttk-cmp"></div>
-  </div>
-  <div id="brk"></div>
-</footer>
-
-<div id="tabbar">
-  <button data-pane="w">武器</button>
-  <button data-pane="b" class="on">配卡</button>
-  <button data-pane="t">目标</button>
+  <section class="respanel">
+    <div class="rbar">
+      <div class="fbox">
+        <div class="lb">直伤 BURST · 不计状态</div>
+        <div class="big" id="r-burst">—</div>
+        <div class="cmp" id="r-burst-cmp"></div>
+      </div>
+      <div class="fbox">
+        <div class="lb" id="r-dps-lb">含状态 · 实战 DPS</div>
+        <div class="big s" id="r-dps">—</div>
+        <div class="cmp" id="r-dps-cmp"></div>
+      </div>
+      <div class="fbox">
+        <div class="lb">击杀时间 TTK</div>
+        <div class="big s" id="r-ttk">—</div>
+        <div class="cmp" id="r-ttk-cmp"></div>
+      </div>
+    </div>
+    <div id="brk"></div>
+    <div class="sec" id="simpane"></div>
+  </section>
 </div>
 
 <div id="modal">
