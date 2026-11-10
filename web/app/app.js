@@ -84,7 +84,9 @@ async function boot() {
   step('restore');
   await restore();
   BOOTED = true;
+  // 走到这儿就说明起来了，标题栏上的进度标记收掉，别平时也挂着
   step('ready');
+  $('buildinfo').textContent = '';
   calc();
 }
 
@@ -948,5 +950,5 @@ boot().catch(e => {
 setTimeout(() => {
   if (BOOTED) return;
   const extra = window.__jsErr ? ' / ' + window.__jsErr : '';
-  step('卡在 ' + (window.__wfStep || '?') + extra);
+  $('buildinfo').textContent = '卡在 ' + (window.__wfStep || '?') + extra;
 }, 8000);

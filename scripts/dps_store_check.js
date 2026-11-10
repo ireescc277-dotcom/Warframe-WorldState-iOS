@@ -173,10 +173,17 @@ const BASE = `http://127.0.0.1:${WEB_PORT}/`;
        enemy:'Bombard',level:200,ts:${now - 86400000},mods:{0:'Serration'}}
     ])); openLoadouts(); 1;`);
     await sleep(300);
+    const mobile = process.argv.includes('--mobile');
+    if (mobile) {
+      await send('Emulation.setDeviceMetricsOverride',
+        { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+      await sleep(400);
+    }
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     fs.mkdirSync('build/tmp', { recursive: true });
-    fs.writeFileSync('build/tmp/store.png', Buffer.from(shot.data, 'base64'));
-    out.shot = 'build/tmp/store.png';
+    const outPath = mobile ? 'build/tmp/store-mobile.png' : 'build/tmp/store.png';
+    fs.writeFileSync(outPath, Buffer.from(shot.data, 'base64'));
+    out.shot = outPath;
   }
 
   out.errors = errors.slice(0, 5);
