@@ -828,9 +828,6 @@ $('opt-toggle').onclick = e => {
   e.stopPropagation();
   $('optbox').classList.toggle('open');
 };
-document.addEventListener('click', e => {
-  if (!$('optbox').contains(e.target)) $('optbox').classList.remove('open');
-});
 
 $('btn-rank').onclick = () => setMode(S.mode === 'rank' ? 'list' : 'rank');
 $('btn-riven').onclick = showRivens;

@@ -47,7 +47,6 @@ header .sp{flex:1}
 main{flex:1;display:grid;grid-template-columns:250px minmax(400px,1fr) 296px;
   grid-template-rows:minmax(0,1fr);min-height:0;overflow:hidden}
 .col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);overflow:hidden}
-#col-t{overflow:visible}   /* 条件面板是浮层，不能被列裁掉 */
 .col:last-child{border-right:none}
 .colhd{
   flex:none;padding:8px 12px;font-size:11px;letter-spacing:1px;color:var(--mute);
@@ -143,7 +142,7 @@ main{flex:1;display:grid;grid-template-columns:250px minmax(400px,1fr) 296px;
 .estat div{background:#1a1f27;border-radius:4px;padding:4px 7px}
 .estat span{display:block;color:var(--mute);font-size:9.5px;letter-spacing:.3px}
 .estat b{font-variant-numeric:tabular-nums;font-size:12px;font-weight:500}
-.extq{border-bottom:1px solid var(--line);flex:none;position:relative;padding:0}
+.extq{border-bottom:1px solid var(--line);flex:none;padding:0}
 .extq .exh{display:flex;align-items:center;gap:6px;width:100%;padding:8px 12px;
   font-size:11px;color:var(--gold);letter-spacing:.4px;text-align:left;cursor:pointer}
 .extq .exh b{background:var(--panel3);color:var(--gold);border-radius:8px;
@@ -152,18 +151,22 @@ main{flex:1;display:grid;grid-template-columns:250px minmax(400px,1fr) 296px;
 .extq .exh .s{margin-left:auto;color:var(--faint);font-size:10px;letter-spacing:0}
 .extq .exh .arw{color:var(--faint);font-size:10px;transition:transform .15s}
 .extq.open .exh .arw{transform:rotate(180deg)}
-/* 抽屉式：fixed 定位，不受三栏容器的 overflow 裁剪 */
-#optgroups{display:none;position:fixed;right:0;top:44px;bottom:0;z-index:60;
-  width:min(348px,100vw);background:var(--panel);border-left:1px solid var(--line);
-  padding:10px 14px 20px;overflow-y:auto;
-  box-shadow:-16px 0 34px rgba(0,0,0,.55)}
-.extq.open #optgroups{display:block}
-.og{margin-bottom:7px}
-.ogh{font-size:10px;color:var(--mute);letter-spacing:.6px;padding:5px 0 5px 7px;
-  position:sticky;top:0;background:var(--panel);z-index:2;
-  border-left:2px solid var(--gold);margin-bottom:2px}
+/* 就地展开在「条件」这一行下面，不另起栏；展开时接管目标栏剩余空间 */
+#optgroups{display:none;padding:2px 12px 10px;overflow-y:auto;overscroll-behavior:contain;
+  border-top:1px solid var(--line);background:rgba(12,14,18,.5)}
+.extq.open{flex:1;min-height:0;display:flex;flex-direction:column}
+.extq.open #optgroups{display:block;flex:1;min-height:0}
+/* 展开时其余部分让位，别把敌人列表压成半行 */
+#optbox.open ~ #elist,
+#optbox.open ~ #fchips,
+#optbox.open ~ .search,
+#optbox.open ~ #facres{display:none}
+.og{margin-bottom:4px}
+.ogh{font-size:10px;color:var(--mute);letter-spacing:.6px;padding:3px 0 3px 7px;
+  position:sticky;top:0;z-index:2;border-left:2px solid var(--gold);margin-bottom:2px;
+  background:var(--panel)}
 .og + .og .ogh{margin-top:4px}
-.orow{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.orow{display:flex;align-items:center;gap:6px;margin-bottom:3px;min-height:20px}
 .orow .lb2{font-size:11px;color:var(--mute);flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .orow .ck{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mute);
