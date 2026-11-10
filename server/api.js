@@ -168,6 +168,45 @@ function calcOne(uid, slots, enemy, level, opt) {
   return payload;
 }
 
+// ---------------------------------------------------------------- 排名
+const rankKey = (ei, level, opt) => [ei, level, opt.steel, opt.status, opt.extViral,
+  opt.armorStrip, opt.window, opt.headshot, opt.crit, opt.incarnon,
+  opt.dmgBuff, opt.ccBuff].join('|');
+
+function rankCached(ei, level, opt) {
+  const k = rankKey(ei, level, opt);
+  const hit = RANK_CACHE.get(k);
+  if (hit) { RANK_CACHE.delete(k); RANK_CACHE.set(k, hit); }
+  return hit || null;
+}
+
+function rankCompute(ei, level, opt) {
+  const k = rankKey(ei, level, opt);
+  const enemy = DB.e[ei];
+  const t0 = process.hrtime.bigint();
+  const rows = index.builds.map((b, i) => {
+    const r = ENG.compute(DB.w[b.w], padSlots(b.slots[0]), enemy, level, opt, b.w);
+    const val = opt.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
+    return {i, uid: b.w, n: DB.w[b.w].z || DB.w[b.w].n, val};
+  });
+  rows.sort((a, b) => b.val - a.val);
+  const out = {rows, ms: Number(process.hrtime.bigint() - t0) / 1e6};
+  RANK_CACHE.set(k, out);
+  if (RANK_CACHE.size > RANK_MAX) RANK_CACHE.delete(RANK_CACHE.keys().next().value);
+  return out;
+}
+
+// 1 核小机器上第一次跑要付 JIT 的钱（~1.2s）。开机先按最可能的那组参数跑一遍，
+// 用户第一次点「排名」就是热的。
+function warmup() {
+  const ei = DB.e.findIndex(e => e.n === 'Heavy Gunner');
+  const level = 100;
+  const opt = readOpt({});
+  const t0 = Date.now();
+  rankCompute(ei < 0 ? 0 : ei, level, opt);
+  console.log(`[warm] 排名预热 ${Date.now() - t0}ms`);
+}
+
 // ---------------------------------------------------------------- HTTP
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
@@ -333,26 +372,9 @@ async function route(req, res) {
     const ei = num(body.ei, 0, DB.e.length - 1, 0) | 0;
     const level = num(body.level, 1, 9999, 100);
     const opt = readOpt(body.opt);
-    const key = [ei, level, opt.steel, opt.status, opt.extViral, opt.armorStrip,
-                 opt.window, opt.headshot, opt.crit, opt.incarnon,
-                 opt.dmgBuff, opt.ccBuff].join('|');
-    let hit = RANK_CACHE.get(key);
-    if (hit) {
-      RANK_CACHE.delete(key); RANK_CACHE.set(key, hit);
-      return sendJSON(res, 200, {...hit, cached: true}, ae);
-    }
-    const t0 = process.hrtime.bigint();
-    const enemy = DB.e[ei];
-    const rows = index.builds.map((b, i) => {
-      const r = ENG.compute(DB.w[b.w], padSlots(b.slots[0]), enemy, level, opt, b.w);
-      const val = opt.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
-      return {i, uid: b.w, n: DB.w[b.w].z || DB.w[b.w].n, val};
-    });
-    rows.sort((a, b) => b.val - a.val);
-    const out = {rows, ms: Number(process.hrtime.bigint() - t0) / 1e6};
-    RANK_CACHE.set(key, out);
-    if (RANK_CACHE.size > RANK_MAX) RANK_CACHE.delete(RANK_CACHE.keys().next().value);
-    return sendJSON(res, 200, {...out, cached: false}, ae);
+    const hit = rankCached(ei, level, opt);
+    if (hit) return sendJSON(res, 200, {...hit, cached: true}, ae);
+    return sendJSON(res, 200, {...rankCompute(ei, level, opt), cached: false}, ae);
   }
 
   if (p.startsWith('/api/')) return sendJSON(res, 404, {error: 'not found'}, ae);
@@ -377,6 +399,7 @@ function main() {
   server.listen(PORT, HOST, () => {
     console.log(`wf-dps listening on http://${HOST}:${PORT}  web=${WEB}`);
     console.log(`payload mtime=${new Date(DATA_MTIME).toISOString()}`);
+    setTimeout(() => { try { warmup(); } catch (e) { console.error('[warm] ' + e.message); } }, 200);
   });
   const bye = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 800); };
   process.on('SIGTERM', bye);

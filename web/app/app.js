@@ -581,7 +581,8 @@ async function openPicker(i) {
   if (!S.view && !S.weapon) return;
   pickIdx = i;
   const cat = CAT[(S.view ? S.view.weapon.cat : S.weapon.cat)] || '';
-  const used = new Set(S.slots.filter(s => s && s.m).map(s => s.m));
+  // 换卡时当前槽位那张要留在可选列表里，否则改不了等级以外的东西
+  const used = new Set(S.slots.filter((s, k) => s && s.m && k !== i).map(s => s.m));
   showModal();
   $('m-search').style.display = '';
   $('m-title').style.display = 'none';
