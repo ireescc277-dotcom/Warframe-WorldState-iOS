@@ -159,6 +159,10 @@ private struct CalcWebView: UIViewRepresentable {
             }
             webView.evaluateJavaScript("!!(window.WFK && window.WFK.W)") { value, _ in
                 if (value as? Bool) == true {
+                    // CI 拍结果区用：simctl 不能滚动，靠启动参数把页面滚到底
+                    if CommandLine.arguments.contains("-calcScroll") {
+                        webView.evaluateJavaScript("window.scrollTo(0, document.body.scrollHeight)")
+                    }
                     DispatchQueue.main.async { self.ready.wrappedValue = true }
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {

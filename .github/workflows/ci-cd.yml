@@ -179,7 +179,12 @@ jobs:
           xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid >/dev/null
           sleep 22
           xcrun simctl io $SIM_UDID screenshot screen_calc.png
-          ls -lh screen_calc.png
+          # 再拍一张滚到底的：确认结果表真的算出来了
+          xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
+          xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid -calcScroll >/dev/null
+          sleep 24
+          xcrun simctl io $SIM_UDID screenshot screen_calc_result.png
+          ls -lh screen_calc.png screen_calc_result.png
           capture screen_more -startTab 4
 
       - name: Run Automated Visual Quality Gate
@@ -205,6 +210,7 @@ jobs:
             screen_arsenal.png
             screen_arsenal_melee.png
             screen_calc.png
+            screen_calc_result.png
             screen_more.png
           retention-days: 14
 
