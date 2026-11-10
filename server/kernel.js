@@ -24,6 +24,7 @@ const readSite = f => fs.readFileSync(path.join(SITE, f), 'utf8');
 const JQ_SRC = readSite('jquery-min.js');
 const MIN_SRC = readSite('min.js');
 const HTML = readSite('index.html');
+const ZH_SRC = fs.existsSync(path.join(SITE, 'zh.js')) ? readSite('zh.js') : '';
 const MANIFEST = JSON.parse(readSite('weapons.json'));
 const ENEMIES = JSON.parse(readSite('data/json/enemies-min.json'));
 
@@ -71,7 +72,10 @@ function boot() {
       const ctx = dom.getInternalVMContext();
       const w = dom.window;
       vm.runInContext(JQ_SRC, ctx, { filename: 'jquery-min.js' });
-      w.lang = 'en';
+      // 站点自带中文对照表（/zh/zh.js，2438 条）；先定义 localeLang，再设 lang，
+      // 脚本加载时会调 weaponWithLocale(lang) 把 localeName 填上。
+      if (ZH_SRC) vm.runInContext(ZH_SRC, ctx, { filename: 'zh.js' });
+      w.lang = ZH_SRC ? 'zh' : 'en';
       w.fetch = localFetch(w);
       w.scrollTo = () => {};
       vm.runInContext(MIN_SRC, ctx, { filename: 'min.js' });
@@ -108,7 +112,7 @@ function clearMods() {
   W.invalidateModStatsCache();
 }
 
-function setEnemy(name, steel, level, eximus) {
+function setEnemy(name, steel, level, eximus, party) {
   const hit = ENEMIES.find(e => e.name === name);
   if (!hit) throw new Error('未知敌人: ' + name);
   W.currEnemyLvl = W.currEnemyLvl || 1;
@@ -117,10 +121,13 @@ function setEnemy(name, steel, level, eximus) {
   W.currEnemyLvl = lv;
   try { W.currEnemySPStatus = !!steel; } catch (e) {}
   W.$('#setEnemyLvl').val(String(lv));
-  if (W.currEnemyEximusStatus !== !!eximus) {
-    W.currEnemyEximusStatus = !!eximus;
-    W.$('#eEximus').prop('checked', !!eximus);
-  }
+  // 有些敌人（爆破型等）没有卓越者形态，站点连勾选框都不渲染
+  const ex = hit.eximusOff ? false : !!eximus;
+  W.currEnemyEximusStatus = ex;
+  W.$('#eEximus').prop('checked', ex);
+  // 队伍人数只对 showPartyCount 的敌人有意义，correctEnemyLvl 直接读这个输入框
+  const pv = W.$('#eParty');
+  if (pv.length) pv.val(String(Math.max(1, Math.min(4, Number(party) || 1))));
   if (typeof W.correctEnemyLvl === 'function') W.correctEnemyLvl(lv);
 }
 
@@ -259,7 +266,7 @@ function collect() {
 async function calc(req) {
   await boot();
   await setWeapon(req.weapon);
-  setEnemy(req.enemy, req.steel, req.level, req.eximus);
+  setEnemy(req.enemy, req.steel, req.level, req.eximus, req.party);
 
   const lost = applyMods(req.mods);
   applyOpts(req.opts);
@@ -274,6 +281,8 @@ async function calc(req) {
     enemy: W.currEnemy.name,
     level: W.currEnemyLvl,
     steel: !!W.currEnemySPStatus,
+    eximus: !!W.currEnemyEximusStatus,
+    party: (W.$('#eParty').length ? Number(W.$('#eParty').val()) : 1) || 1,
     target: {
       hp: W.currEnemy.currHealth, ar: W.currEnemy.currArmor,
       sh: W.currEnemy.currShield, og: W.currEnemy.currOverguard,
@@ -291,13 +300,20 @@ async function calc(req) {
 
 // ---------------------------------------------------------------- 列表
 
+// 站点用 localeLang 做显示名，内部 name 始终是英文；计算只认 name。
+function loc(name) {
+  const m = (W && W.localeLang) || {};
+  return m[name] || name;
+}
+
 function weapons() {
   return Object.keys(MANIFEST).sort();
 }
 
 function enemies() {
   return ENEMIES.map(e => ({
-    name: e.name, faction: e.faction,
+    name: e.name, l: loc(e.name), faction: e.faction, faction_l: loc(e.faction),
+    party: !!e.showPartyCount, eximusOff: !!e.eximusOff,
     hp: e.health ? Number(e.health.val) : 0,
     ar: e.armor ? Number(e.armor.val) : 0,
     sh: e.shield ? Number(e.shield.val) : 0,
@@ -309,6 +325,7 @@ function mods() {
   if (modCache) return modCache;
   modCache = W.modsProps.map(m => ({
     name: m.name,
+    l: loc(m.name),
     img: m.img,
     tags: m.tags || [],
     type: m.type || '',
@@ -328,4 +345,4 @@ function weaponInfo(name) {
   return j;
 }
 
-module.exports = { boot, calc, weapons, enemies, mods, weaponInfo, get W() { return W; } };
+module.exports = { boot, calc, weapons, enemies, mods, weaponInfo, loc, get W() { return W; } };

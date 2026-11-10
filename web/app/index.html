@@ -12,18 +12,10 @@
 <header>
   <div class="brand">WARFRAME <b>伤害计算</b><span id="buildinfo"></span></div>
   <div class="sp"></div>
-  <div class="seg" id="seg-steel">
-    <button data-v="0" class="on">普通</button>
-    <button data-v="1">钢铁</button>
-  </div>
-  <div class="seg" id="seg-eximus">
-    <button data-v="0" class="on">普通敌人</button>
-    <button data-v="1">卓越者</button>
-  </div>
   <button class="hbtn" id="btn-note">口径</button>
 </header>
 
-<!-- 左上选武器，右上选敌人 -->
+<!-- 左上选武器，右上选敌人。敌人等级/钢铁/卓越者都属于敌人，放它卡里。 -->
 <div class="top">
   <div class="pick" id="pick-w">
     <div class="pickhd"><span class="pt">武器</span><span class="sp"></span><span class="chip" id="wcount">—</span></div>
@@ -55,15 +47,28 @@
         </div>
         <div class="estat" id="estat"></div>
         <div class="facres" id="facres"></div>
+        <div class="tflags" id="tflags"></div>
+        <div class="tnote" id="tnote"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 配卡 -->
+<!-- 配卡：武器槽位 + 右侧概要 -->
 <div class="build" id="bwrap">
   <div class="slots" id="slots"></div>
   <div class="side" id="wside"></div>
+</div>
+
+<!-- 战甲：光环 / 4 mod / 2 赋能 / 5 执政官碎片。这些同样进计算。 -->
+<div class="frame" id="frame">
+  <button class="frhd" id="fr-toggle" aria-expanded="true">
+    <span class="frt">战甲</span>
+    <span class="frs">光环 · Mod · 赋能 · 执政官碎片</span>
+    <span class="frc" id="fr-count">0</span>
+    <span class="frar">▾</span>
+  </button>
+  <div class="frbody" id="frbody"></div>
 </div>
 
 <!-- 下：左条件，右结果 -->

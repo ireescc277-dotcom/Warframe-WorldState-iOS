@@ -84,6 +84,14 @@ const SLOT_KIND = {
 const has = (arr, v) => Array.isArray(arr) && arr.includes(v);
 const hasAny = (arr, vs) => Array.isArray(arr) && vs.some(v => arr.includes(v));
 
+// 战甲类 mod 的 tags 有两种含义：武器类别（primary/melee…）或战甲名（BARUUK）。
+// 前者按当前武器筛，后者不筛。
+function tagOk(m, w) {
+  const t = m.tags || [];
+  if (!t.length) return true;
+  return hasAny(w.categories, t);
+}
+
 function modsFor(weaponName, slot) {
   const w = WEAPONS[weaponName];
   if (!w) return [];
@@ -103,11 +111,13 @@ function modsFor(weaponName, slot) {
     } else if (kind === 'arcane') {
       ok = t === 'weapon_mist' && hasAny(w.categories, m.tags);
     } else if (kind === 'frameArcane') {
-      ok = t === 'frame_mist';
-    } else if (kind === 'frame' || kind === 'aura') {
-      ok = kind === 'aura' ? t === 'aura' : !t;
+      ok = t === 'frame_mist' && tagOk(m, w);
+    } else if (kind === 'frame') {
+      ok = t === 'frame_mod';
+    } else if (kind === 'aura') {
+      ok = t === 'aura_mod' && tagOk(m, w);
     } else if (kind === 'shard') {
-      ok = t === 'shard';
+      ok = t === 'shard' && tagOk(m, w);
     }
     if (ok) out.push(m);
   }
@@ -214,7 +224,7 @@ async function route(req, res) {
   if (p === '/api/meta') {
     return sendJSON(res, 200, {
       weapons: Object.values(WEAPONS).map(w => ({
-        n: w.name, cat: w.category, atk: w.attacks, tags: w.tags,
+        n: w.name, l: K.loc(w.name), cat: w.category, atk: w.attacks, tags: w.tags,
         inc: w.incarnon, mr: w.masteryReq, img: w.imageName,
       })),
       enemies: K.enemies(),
@@ -237,8 +247,8 @@ async function route(req, res) {
     const list = modsFor(name, slot);
     return sendJSON(res, 200, {
       slot, kind: SLOT_KIND[slot] || 'main',
-      mods: list.map(m => ({ n: m.name, t: m.type, tags: m.tags, info: m.info,
-                             set: m.set, act: m.action })),
+      mods: list.map(m => ({ n: m.name, l: m.l, t: m.type, tags: m.tags, info: m.info,
+                             img: m.img, set: m.set, shard: m.shard, act: m.action })),
     }, ae);
   }
 
@@ -252,6 +262,7 @@ async function route(req, res) {
         level: body.level,
         steel: body.steel,
         eximus: body.eximus,
+        party: body.party,
         mods: body.mods,
         opts: body.opts,
       }));
