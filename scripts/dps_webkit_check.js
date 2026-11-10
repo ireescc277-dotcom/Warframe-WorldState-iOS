@@ -2,7 +2,12 @@
 // 用 WebKit（Playwright 的 webkit build）把 iOS 那条链路在本地复现一遍。
 // Chrome 跑得通、模拟器跑不通时，只能靠这个把页内报错捞出来。
 //
-// 用法：node scripts/dps_webkit_check.js [站点目录] [query]
+// 用法（**必须先把代理清掉**，否则请求会经本机透明代理变成绝对 URI，
+// 页面会拿到空文档，看着像 WebKit 的 bug，其实是代理）：
+//   HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= \
+//   NO_PROXY=127.0.0.1,localhost node scripts/dps_webkit_check.js ios/DamageCalc "?weapon=Torid"
+//
+// 首次使用：npm i --no-save playwright && npx playwright install webkit
 
 const fs = require('fs'), path = require('path'), http = require('http');
 const { webkit } = require('playwright');
