@@ -103,6 +103,12 @@ def main() -> int:
     # 外部字体：离线环境会挂起，直接去掉引用（保留 <link> 会拖慢 iframe load）。
     html = re.sub(r'<link[^>]+fonts\.(googleapis|gstatic)\.com[^>]*>', "", html)
 
+    # 没抓下来的样式表也去掉。它每次都是 404，而 <script src> 要等前面的样式表
+    # 有结果才执行——内核页一共加载十几次，这条死链只会白白拖住站点脚本。
+    html, n3 = re.subn(r'<link[^>]+style-min\.css[^>]*>', "", html)
+    if n3:
+        print(f"  去掉 style-min.css 引用 {n3} 处")
+
     # 在 head 第一个 script 之前插入 shim 与武器名→文件名映射（shim 要用）。
     # 武器索引是给主页面的 kernel-web.js 用的，不进 iframe。
     html, n1 = re.subn(

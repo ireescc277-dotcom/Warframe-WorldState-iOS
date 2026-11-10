@@ -19,6 +19,7 @@
   var FIELD = { health: 'queue_hp', armor: 'queue_armor', shield: 'queue_shield', overguard: 'queue_overguard' };
 
   var W = null;            // iframe 的 window（常驻）
+  var BOOT_SEQ = 0;        // 每次重建内核换一个地址，避开 WebKit 的 iframe 复用
   var frame = null;
   var booting = null;
   var loadedWeapon = null;
@@ -57,10 +58,20 @@
       frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
 
       var loaded = new Promise(function (res, rej) {
-        frame.onload = res;
-        frame.onerror = function () { rej(new Error('内核页面加载失败')); };
+        var done = false;
+        // 每次重建都换个地址：WebKit 里同一个 src 的 iframe 被移除后立刻重建，
+        // 新 iframe 的 load 可能永远不来（旧请求被 cancel 的那条缓存记录挡住了），
+        // 表现就是一直转圈、连错误都没有。加个序号把这种复用彻底断掉。
+        var seq = ++BOOT_SEQ;
+        frame.onload = function () { if (!done) { done = true; res(); } };
+        frame.onerror = function () { if (!done) { done = true; rej(new Error('内核页面加载失败')); } };
+        setTimeout(function () {
+          if (done) return;
+          done = true;
+          rej(new Error('内核页面 ' + (Math.round((performance.now() - t0) / 100) / 10) + 's 没加载完'));
+        }, 15000);
+        frame.src = BASE + 'index.html?n=' + seq;
       });
-      frame.src = BASE + 'index.html';
       document.body.appendChild(frame);
       await loaded;
 
@@ -442,16 +453,19 @@
     // 站点把连击计数、触发计时、逐发队列这些状态挂在闭包与 DOM 上，跨计算残留。
     // 在真浏览器里它们会让同一配置反复算出 ±80% 的跳变，jsdom 里因为不跑计时器看不出来。
     // 这些状态无法从外部精确重置，所以每次计算重建内核环境——等于每次都从干净页面算。
-    if (frame) {
-      frame.remove();
-      frame = null;
-    }
+    //
+    // 顺序要紧：先建新的，等它加载好，再拆旧的。反过来的话，WebKit 会把旧 iframe
+    // 正在进行的请求全部取消，紧接着新 iframe 请求同样的地址就会拿到一个空文档
+    // （readyState 是 complete、里面什么都没有），站点脚本不执行，内核永远不就绪。
+    var stale = frame;
+    frame = null;
     W = null;
     booting = null;
     loadedWeapon = null;
     modCache = null;
 
     await boot();
+    if (stale) stale.remove();
     await setWeapon(req.weapon);
     setEnemy(req.enemy, req.steel, req.level, req.eximus, req.party);
 

@@ -352,7 +352,16 @@ final class LocalStaticServer {
         header += "Connection: close\r\n\r\n"
         var out = Data(header.utf8)
         if !head { out.append(body) }
-        conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
+        conn.send(content: out, isComplete: true, completion: .contentProcessed { _ in
+            // 发完别立刻断。`.contentProcessed` 只代表数据交给了传输层，socket 里可能还剩
+            // 没发出去的尾巴；立刻 cancel 会把它丢掉——小的 CSS 侥幸发完，几十 KB 的脚本
+            // 被截断，页面就成了「样式对、脚本一行没执行」。等对端读完自己关
+            // （Content-Length 是准的），最多再等 5 秒。
+            conn.receive(minimumIncompleteLength: 1, maximumLength: 4096) { _, _, _, _ in
+                conn.cancel()
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5) { conn.cancel() }
+        }
     }
 
     static func mimeType(_ path: String) -> String {
