@@ -77,7 +77,11 @@
       W.__bootMs = Math.round(performance.now() - t0);
       return W;
     })();
-    booting.catch(function () { booting = null; });
+    booting.catch(function (e) {
+      booting = null;
+      // iOS 上出问题看不到控制台，把原因留给外层读
+      global.__wfErr = String((e && e.message) || e);
+    });
     return booting;
   }
 

@@ -134,7 +134,7 @@ private struct CalcWebView: UIViewRepresentable {
                 print("[calc] page state: \(value ?? error?.localizedDescription ?? "nil")")
             }
             // 页面文档加载完还要等内核 boot（iframe 里 448KB 站点脚本 + 内联数据）
-            waitForKernel(webView, tries: 80)
+            waitForKernel(webView, tries: 40)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -154,10 +154,7 @@ private struct CalcWebView: UIViewRepresentable {
 
         private func waitForKernel(_ webView: WKWebView, tries: Int) {
             guard tries > 0 else {
-                DispatchQueue.main.async {
-                    self.failure.wrappedValue = "计算内核没有起来"
-                    self.ready.wrappedValue = true
-                }
+                diagnose(webView, then: "计算内核没有起来")
                 return
             }
             webView.evaluateJavaScript("!!(window.WFK && window.WFK.W)") { value, _ in
@@ -167,6 +164,28 @@ private struct CalcWebView: UIViewRepresentable {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         self.waitForKernel(webView, tries: tries - 1)
                     }
+                }
+            }
+        }
+
+        /// 失败时把页内状态摊开显示——模拟器里没有控制台可看。
+        private func diagnose(_ webView: WKWebView, then message: String?) {
+            webView.evaluateJavaScript("""
+            (function(){
+              var f=document.getElementById('wf-kernel');
+              var c=f&&f.contentWindow;
+              var o={err:window.__wfErr||'',jsErr:window.__jsErr||'',
+                     inline:!!window.__WF_INLINE,wfk:!!window.WFK,
+                     frame:!!f,reCalc:!!(c&&c.reCalc),modsProps:!!(c&&c.modsProps)};
+              try{ if(c){ o.frameErr=c.__wfErr||''; o.frameTitle=c.document?c.document.title:'-'; } }catch(e){ o.frameErr='x-origin'; }
+              return JSON.stringify(o);
+            })()
+            """) { value, error in
+                let detail = (value as? String) ?? (error?.localizedDescription ?? "no detail")
+                print("[calc] diagnose: \(detail)")
+                DispatchQueue.main.async {
+                    self.failure.wrappedValue = (message ?? "") + "\n" + detail
+                    self.ready.wrappedValue = true
                 }
             }
         }

@@ -10,6 +10,12 @@
 
   window.lang = 'zh';
 
+  // 站点脚本在 iOS 上出问题时没有控制台可看，记到最后一条错误里供外层读取
+  window.addEventListener('error', function (e) {
+    window.__jsErr = (e.message || '') + ' @ ' + String(e.filename || '').split('/').pop() +
+      ':' + (e.lineno || '');
+  });
+
   function parse(u) {
     try { return new URL(String(u), location.href); } catch (e) { return null; }
   }

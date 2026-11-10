@@ -125,6 +125,10 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchStoryboardName string LaunchScreen" "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP_PATH/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP_PATH/Info.plist"
+          # 计算器页由 App 内 127.0.0.1 的本地服务提供，ATS 默认拦明文 http
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$APP_PATH/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$APP_PATH/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$APP_PATH/Info.plist" 2>/dev/null || true
           plutil -p "$APP_PATH/Info.plist"
 
       - name: Install & Launch App on Simulator
@@ -169,8 +173,13 @@ jobs:
           capture screen_assets_detail -startTab 2 -assetSet "Hildryn Prime"
           capture screen_arsenal -startTab 3
           capture screen_arsenal_melee -startTab 3 -arsenalCat melee
-          # 从武器列表点进计算器的那一跳：simctl 点不了屏，用启动参数直接做掉
-          capture screen_calc -startTab 3 -calcWeapon Torid
+          # 从武器列表点进计算器的那一跳：simctl 点不了屏，用启动参数直接做掉。
+          # 内核要加载站点脚本 + 内联数据，比原生页慢，给它单独的长等待。
+          xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
+          xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid >/dev/null
+          sleep 22
+          xcrun simctl io $SIM_UDID screenshot screen_calc.png
+          ls -lh screen_calc.png
           capture screen_more -startTab 4
 
       - name: Run Automated Visual Quality Gate
@@ -266,6 +275,10 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchStoryboardName string LaunchScreen" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
+          # 计算器页由 App 内 127.0.0.1 的本地服务提供，ATS 默认拦明文 http
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$APP/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$APP/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$APP/Info.plist" 2>/dev/null || true
 
           # 账号快照在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
           INVENTORY_URL="${{ secrets.INVENTORY_URL }}"
