@@ -135,6 +135,7 @@ function calcOne(uid, slots, enemy, level, opt) {
 
   const w2 = r.wp2;
   const payload = {
+    uid,
     weapon: {
       n: w2.n, z: w2.z || w2.n, tr: w2.tr || '', cat: w2.cat || '',
       td: w2.td || 0, cc: w2.cc || 0, cm: w2.cm || 1, sc: w2.sc || 0,

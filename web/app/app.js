@@ -377,6 +377,12 @@ async function doCalc() {
   if (calcAbort) calcAbort.abort();
   calcAbort = new AbortController();
   busy(true);
+  if (!S.view || S.view.uid !== S.uid) {
+    $('r-burst').textContent = '…';
+    $('r-dps').textContent = '…';
+    $('r-ttk').textContent = '…';
+    $('estat').innerHTML = '<div><span>计算中</span><b>…</b></div>';
+  }
   try {
     const r = await api('/calc', {
       uid: S.uid, slots: S.slots, ei: S.ei, level: S.level, opt: S.opt,
@@ -539,7 +545,8 @@ function renderResults(r) {
 function renderFacChips() {
   const el = $('fchips');
   const set = new Set(S.enemies.map(e => e.f));
-  const list = ['全部', ...FAC_ORDER.filter(f => set.has(f)), ...[...set].filter(f => !FAC_ORDER.includes(f))];
+  const rest = [...set].filter(f => !FAC_ORDER.includes(f));
+  const list = ['全部', ...FAC_ORDER.filter(f => set.has(f)), ...(rest.length ? ['其他'] : [])];
   el.innerHTML = '';
   list.forEach(f => {
     const b = document.createElement('button');
@@ -561,7 +568,7 @@ function renderEnemyList() {
   const frag = document.createDocumentFragment();
   let n = 0;
   S.enemies.forEach(e => {
-    if (S.fac !== '全部' && e.f !== S.fac) return;
+    if (S.fac === '其他' ? FAC_ORDER.includes(e.f) : (S.fac !== '全部' && e.f !== S.fac)) return;
     if (q && !e.n.toLowerCase().includes(q)) return;
     n++;
     const d = document.createElement('div');

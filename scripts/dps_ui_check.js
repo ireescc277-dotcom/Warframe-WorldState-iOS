@@ -63,7 +63,7 @@ async function main() {
   });
 
   await send('Page.navigate', {url: URL_});
-  await sleep(1800);
+  await sleep(3500);   // 跨境链路 + 三次请求（meta / weapon / calc）
 
   const ev = async expr => {
     const r = await send('Runtime.evaluate', {expression: expr, returnByValue: true, awaitPromise: true});
