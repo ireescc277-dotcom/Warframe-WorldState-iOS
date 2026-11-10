@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Warframe 伤害计算 · 本地原型</title>
+<title>Warframe 伤害计算</title>
 <style>
 :root{
   --bg:#0c0e11; --panel:#14171c; --panel2:#1a1e25; --line:#272d36;
@@ -26,53 +26,57 @@ input:focus{border-color:var(--gold)}
 ::-webkit-scrollbar-thumb:hover{background:#3b4450}
 
 header{
-  height:48px;flex:none;display:flex;align-items:center;gap:14px;
-  padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);
+  height:46px;flex:none;display:flex;align-items:center;gap:12px;
+  padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel);
 }
 header .ttl{font-weight:600;letter-spacing:.5px}
 header .ttl b{color:var(--gold)}
 header .sp{flex:1}
 .seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
-.seg button{padding:5px 10px;color:var(--mute);font-size:12px}
+.seg button{padding:4px 10px;color:var(--mute);font-size:12px}
 .seg button.on{background:var(--gold);color:#1a1408;font-weight:600}
 .seg button:not(.on):hover{background:var(--panel2);color:var(--fg)}
+.hbtn{padding:4px 10px;border:1px solid var(--line);border-radius:4px;color:var(--mute);font-size:12px}
+.hbtn:hover{color:var(--fg);border-color:#3d4550}
 
-main{flex:1;display:grid;grid-template-columns:270px minmax(420px,1fr) 300px;min-height:0}
+main{flex:1;display:grid;grid-template-columns:264px minmax(420px,1fr) 292px;min-height:0}
 .col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
 .col:last-child{border-right:none}
 .colhd{
-  flex:none;padding:9px 12px;font-size:11px;letter-spacing:1px;color:var(--mute);
+  flex:none;padding:8px 12px;font-size:11px;letter-spacing:1px;color:var(--mute);
   text-transform:uppercase;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px
 }
 .colhd span{flex:1}
 .list{flex:1;overflow-y:auto;padding:6px}
 .item{
-  display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;
+  display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:4px;
   cursor:pointer;border:1px solid transparent;
 }
 .item:hover{background:var(--panel2)}
 .item.on{background:#22262e;border-color:var(--gold)}
 .item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.item .sub{font-size:11px;color:var(--mute);flex:none}
+.item .sub{font-size:11px;color:var(--mute);flex:none;font-variant-numeric:tabular-nums}
 .badge{font-size:10px;padding:1px 5px;border-radius:3px;background:#2a3038;color:var(--mute)}
 .badge.hi{background:#1e2a1f;color:#6fae7f}
 .badge.lo{background:#2e2621;color:#c08a5e}
+.rank{width:20px;text-align:right;color:#4d5661;font-size:11px;flex:none;font-variant-numeric:tabular-nums}
+.item.on .rank{color:var(--gold)}
 
-/* 中栏 */
 #build{position:relative}
 .bwrap{padding:14px 16px;overflow-y:auto;flex:1}
-.wtitle{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.wtitle{display:flex;align-items:baseline;gap:10px;margin-bottom:2px;flex-wrap:wrap}
 .wtitle h2{margin:0;font-size:18px;font-weight:600}
 .wtitle .en{color:var(--mute);font-size:12px}
-.wstats{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 14px;font-size:12px;color:var(--mute)}
+.wtitle .trig{font-size:10px;padding:1px 6px;border-radius:3px;background:#2e2621;color:#c08a5e}
+.wstats{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 12px;font-size:12px;color:var(--mute)}
 .wstats b{color:var(--fg);font-weight:500}
 .tabs{display:flex;gap:6px;margin-bottom:10px}
-.tabs button{padding:4px 12px;border:1px solid var(--line);border-radius:4px;color:var(--mute);font-size:12px}
+.tabs button{padding:3px 12px;border:1px solid var(--line);border-radius:4px;color:var(--mute);font-size:12px}
 .tabs button.on{border-color:var(--gold);color:var(--gold);background:#1d1a10}
 .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:640px}
 .slot{
-  height:78px;border:1px solid var(--line);border-radius:5px;background:var(--panel);
-  display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;
+  height:76px;border:1px solid var(--line);border-radius:5px;background:var(--panel);
+  display:flex;flex-direction:column;justify-content:space-between;padding:6px 8px;
   cursor:pointer;position:relative;transition:.1s;
 }
 .slot:hover{border-color:#3d4550}
@@ -81,7 +85,8 @@ main{flex:1;display:grid;grid-template-columns:270px minmax(420px,1fr) 300px;min
 .slot .snm{font-size:12px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .slot .rkw{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mute)}
 .slot .rkw b{color:var(--gold2);font-weight:600}
-.slot .rm{position:absolute;top:3px;right:4px;color:#4d5661;font-size:13px;opacity:0}
+.slot .rkw button{padding:0 3px}
+.slot .rm{position:absolute;top:2px;right:4px;color:#4d5661;font-size:13px;opacity:0}
 .slot:hover .rm{opacity:1}
 .slot .rm:hover{color:var(--red)}
 .slot .verbad{color:var(--red);font-size:11px}
@@ -91,77 +96,93 @@ main{flex:1;display:grid;grid-template-columns:270px minmax(420px,1fr) 300px;min
 .contrib .cl{flex:none;width:52px;color:var(--gold2);font-variant-numeric:tabular-nums}
 .contrib .cv{color:var(--mute)}
 .contrib .cr:nth-child(odd){background:#12151a}
+.simpane{margin-top:16px;max-width:640px;border-top:1px solid var(--line);padding-top:10px}
+.simpane .hd{font-size:11px;letter-spacing:1px;color:var(--mute);margin-bottom:8px}
+.simpane .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.simpane .cell{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:7px 9px}
+.simpane .cell span{display:block;font-size:10px;color:var(--mute)}
+.simpane .cell b{font-size:15px;font-variant-numeric:tabular-nums;font-weight:600}
+.simpane .bar{height:6px;border-radius:3px;background:#22262e;margin-top:10px;overflow:hidden;display:flex}
+.simpane .bar i{display:block;height:100%}
+.simpane .lg{display:flex;gap:14px;font-size:11px;color:var(--mute);margin-top:6px}
+.simpane .lg em{font-style:normal;color:var(--fg)}
 
-/* 右栏 */
 #enemyList{flex:1;overflow-y:auto;padding:6px;min-height:0}
-.fchips{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px 6px}
+.fchips{display:flex;flex-wrap:wrap;gap:4px;padding:0 8px 6px}
 .fchips button{font-size:11px;padding:2px 7px;border-radius:10px;background:var(--panel2);color:var(--mute)}
 .fchips button.on{background:var(--gold);color:#1a1408}
-.elvl{padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.elvl{padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
 .elvl .row{display:flex;align-items:center;gap:10px}
 .elvl input[type=range]{flex:1;accent-color:var(--gold)}
-.elvl .num{width:64px;text-align:center;font-variant-numeric:tabular-nums}
+.elvl .num{width:60px;text-align:center;font-variant-numeric:tabular-nums;padding:3px 4px}
 .estat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:11px}
-.estat div{background:#1d222a;border-radius:4px;padding:5px 7px}
+.estat div{background:#1d222a;border-radius:4px;padding:4px 7px}
 .estat span{display:block;color:var(--mute);font-size:10px}
 .estat b{font-variant-numeric:tabular-nums;font-size:12px}
+.facres{padding:7px 12px;border-bottom:1px solid var(--line);font-size:11px;line-height:1.7}
+.facres b{color:#b9a06a;font-weight:500}
 
-/* 底栏 */
 footer{
   flex:none;border-top:1px solid var(--line);background:var(--panel);
-  display:grid;grid-template-columns:230px 230px 1fr;gap:0;height:196px;
+  display:grid;grid-template-columns:210px 210px 170px 1fr;height:190px;
 }
-.fbox{padding:12px 16px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
-.fbox .lb{font-size:11px;color:var(--mute);letter-spacing:.5px}
-.fbox .big{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
-.fbox .big.s{font-size:24px}
-.fbox .cmp{font-size:11px;color:var(--mute);margin-top:3px}
-.fbox .cmp b{font-weight:500}
-#brk{overflow-y:auto;padding:10px 14px;border-right:none}
+.fbox{padding:10px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center}
+.fbox .lb{font-size:10.5px;color:var(--mute);letter-spacing:.4px}
+.fbox .big{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.fbox .big.s{font-size:22px}
+.fbox .cmp{font-size:11px;color:var(--mute);margin-top:3px;line-height:1.5}
+.fbox .cmp b{font-weight:500;color:var(--fg)}
+#brk{overflow-y:auto;padding:8px 12px}
 table.brk{width:100%;border-collapse:collapse;font-size:11.5px}
-table.brk th{text-align:right;color:var(--mute);font-weight:400;padding:3px 6px;border-bottom:1px solid var(--line)}
+table.brk th{text-align:right;color:var(--mute);font-weight:400;padding:2px 6px;border-bottom:1px solid var(--line)}
 table.brk th:first-child{text-align:left}
-table.brk td{padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid #1c2128}
+table.brk td{padding:2px 6px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid #1c2128}
 table.brk td:first-child{text-align:left}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .pos{color:var(--green)} .neg{color:var(--red)}
 
-/* 模态 */
 #modal{position:fixed;inset:0;background:#08090bcc;display:none;align-items:center;justify-content:center;z-index:50}
 #modal.on{display:flex}
-.mbox{width:520px;max-height:74vh;background:var(--panel);border:1px solid var(--line);
+.mbox{width:540px;max-height:76vh;background:var(--panel);border:1px solid var(--line);
   border-radius:8px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px #000a}
-.mhd{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.mhd{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
 .mhd input{flex:1}
 .mlist{overflow-y:auto;padding:6px}
-.mrow{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:4px;cursor:pointer}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px 9px;border-radius:4px;cursor:pointer}
 .mrow:hover{background:var(--panel2)}
 .mrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .meta{font-size:11px;color:var(--mute);flex:none}
 .foot{flex:none;padding:8px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--mute)}
-.note{font-size:11px;color:var(--mute);margin-top:10px;line-height:1.6}
-.note b{color:#b9a06a}
+.note{font-size:11px;color:var(--mute);margin-top:10px;line-height:1.65}
+.note b{color:#b9a06a;font-weight:500}
+.note p{margin:5px 0}
 .warn{color:#c08a5e}
+code{background:#1d222a;padding:0 4px;border-radius:3px;font-size:11px;color:#b9c4d0}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="ttl">WARFRAME <b>伤害计算</b> · 本地原型</div>
+  <div class="ttl">WARFRAME <b>伤害计算</b></div>
   <div class="sp"></div>
-  <div class="seg" id="drseg">
-    <button data-v="linear" class="on">护甲 0.9×A/2700</button>
-    <button data-v="sqrt">护甲 √(3A)/100</button>
+  <div class="seg" id="stseg">
+    <button data-v="1" class="on">含状态</button>
+    <button data-v="0">仅直伤</button>
   </div>
   <div class="seg" id="spseg">
     <button data-v="0" class="on">普通</button>
-    <button data-v="1">钢铁之路 +100</button>
+    <button data-v="1">钢铁 +100</button>
   </div>
+  <button class="hbtn" id="btnnote">口径</button>
 </header>
 
 <main>
   <aside class="col">
-    <div class="colhd"><span>武器</span><span id="wcount" class="badge"></span></div>
+    <div class="colhd">
+      <span id="ltitle">武器</span>
+      <span id="wcount" class="badge"></span>
+      <button class="hbtn" id="btnmode" style="padding:1px 6px;font-size:11px">排名</button>
+    </div>
     <div style="padding:0 8px 6px"><input id="wsearch" placeholder="搜索武器…" style="width:100%"></div>
     <div class="list" id="wlist"></div>
   </aside>
@@ -182,6 +203,7 @@ table.brk td:first-child{text-align:left}
       </div>
       <div class="estat" id="estat"></div>
     </div>
+    <div class="facres" id="facres"></div>
     <div style="padding:6px 8px 0"><input id="esearch" placeholder="搜索敌人…" style="width:100%"></div>
     <div class="fchips" id="fchips"></div>
     <div id="enemyList"></div>
@@ -190,20 +212,25 @@ table.brk td:first-child{text-align:left}
 
 <footer>
   <div class="fbox">
-    <div class="lb">BURST DPS · 对当前目标</div>
+    <div class="lb">直伤 BURST · 不计状态</div>
     <div class="big" id="rburst">—</div>
     <div class="cmp" id="rburstcmp"></div>
   </div>
   <div class="fbox">
-    <div class="lb">SUSTAINED DPS · 含装填</div>
-    <div class="big s" id="rsust">—</div>
-    <div class="cmp" id="rsustcmp"></div>
+    <div class="lb">含状态 · 10 秒实战</div>
+    <div class="big s" id="rdps">—</div>
+    <div class="cmp" id="rdpscmp"></div>
+  </div>
+  <div class="fbox">
+    <div class="lb">击杀时间 TTK</div>
+    <div class="big s" id="rttk">—</div>
+    <div class="cmp" id="rttkcmp"></div>
   </div>
   <div id="brk"></div>
 </footer>
 
 <div id="modal"><div class="mbox">
-  <div class="mhd"><input id="msearch" placeholder="搜索 mod…"><button id="mclose" style="color:var(--mute)">关闭</button></div>
+  <div class="mhd"><input id="msearch" placeholder="搜索 mod…"><span id="mttl" style="flex:1;display:none;font-size:13px">口径与数据来源</span><button id="mclose" style="color:var(--mute)">关闭</button></div>
   <div class="mlist" id="mlist"></div>
   <div class="foot" id="mfoot"></div>
 </div></div>
@@ -211,6 +238,7 @@ table.brk td:first-child{text-align:left}
 <script src="data.js"></script>
 <script>
 const W = WF.w, M = WF.m, E = WF.e;
+
 const DT = ["impact","puncture","slash","heat","cold","electricity","toxin",
             "blast","radiation","magnetic","viral","corrosive","gas"];
 const ZH = {impact:"冲击",puncture:"穿刺",slash:"切割",heat:"火焰",cold:"冰冻",
@@ -225,30 +253,40 @@ const ALLELEM = ["heat","cold","electricity","toxin","blast","radiation","magnet
 const COMBO_OF = {"heat|cold":"blast","heat|electricity":"radiation","heat|toxin":"gas",
   "cold|electricity":"magnetic","cold|toxin":"viral","electricity|toxin":"corrosive"};
 
-// 键名统一按小写查
-const HEALTH = {
-  flesh:{impact:-.25,slash:.25,heat:.25,toxin:.5,viral:.5,gas:.5},
-  "cloned flesh":{impact:-.25,slash:.25,heat:.25,viral:.75,gas:-.5},
-  fossilized:{slash:.15,cold:-.25,toxin:-.5,blast:.5,corrosive:.75,radiation:-.25},
-  infested:{slash:.25,heat:.25,gas:.75,radiation:-.5},
-  "infested flesh":{slash:.5,heat:.5,gas:.5,corrosive:.75,viral:-.5},
-  machinery:{impact:.25,electricity:.5,toxin:-.25,blast:.75,viral:-.25},
-  robotic:{puncture:.25,slash:-.25,electricity:.5,toxin:-.25,radiation:.25},
-  sinew:{puncture:.25,slash:.25,blast:.5,gas:.25,corrosive:-.25,viral:-.5}
+// ---------------------------------------------------------------- 阵营克制
+// Update 36（2024-06-18）起血量/护甲/护盾类型合并，克制只按阵营查：
+// 弱点 ×1.5、抗性 ×0.5。来源：Warframe Wiki 伤害总览表 + warframe.today（2026-09 复核）。
+const FACMOD = {
+  "Grineer":        {impact:1.5, corrosive:1.5},
+  "Kuva Grineer":   {impact:1.5, corrosive:1.5, heat:0.5},
+  "Corpus":         {puncture:1.5, magnetic:1.5},
+  "Corpus Amalgam": {electricity:1.5, magnetic:1.5, blast:0.5},
+  "Infested":       {slash:1.5, heat:1.5},
+  "Infested Deimos":{blast:1.5, gas:1.5, viral:0.5},
+  "Orokin":         {puncture:1.5, viral:1.5, radiation:0.5},
+  "Sentient":       {cold:1.5, radiation:1.5, corrosive:0.5},
+  "Narmer":         {slash:1.5, toxin:1.5, magnetic:0.5},
+  "Murmur":         {electricity:1.5, radiation:1.5, viral:0.5},
+  "Scaldra":        {impact:1.5, corrosive:1.5},
+  "Techrot":        {magnetic:1.5, gas:1.5, cold:0.5},
+  "Zariman":        {void:1.5}
 };
-const ARMOR = {
-  ferrite:{puncture:.5,slash:-.15,toxin:.25,corrosive:.75,blast:-.25},
-  alloy:{puncture:.15,slash:-.5,cold:.25,magnetic:-.5,radiation:.75}
-};
-const SHIELD = {
-  shield:{impact:.5,puncture:-.2,cold:.5,magnetic:.75,radiation:-.25},
-  "proto shield":{impact:-.15,puncture:-.5,heat:-.5,toxin:.25,magnetic:.75,corrosive:-.5}
+function facMult(fk, t){ const m = FACMOD[fk]; return (m && m[t]) || 1; }
+
+// ---------------------------------------------------------------- 状态效果
+// 数值来源：Warframe Wiki / warframe.today / sanctumaeterna，2026-09 口径。
+const ST = {
+  viral:    {max:10, dur:6,  hp:[1.00, 0.25]},   // 首层 +100%，每层 +25%，10 层 +325%
+  corrosive:{max:10, dur:8,  strip:0.26, cap:0.80},
+  heat:     {dur:6, dot:0.50, strip:0.50},       // 燃烧：护甲上限 −50%
+  slash:    {dur:6, dot:0.35},                   // 流血：35% 总伤/秒，无视护甲
+  toxin:    {dur:6, dot:0.50}                    // 中毒：50% 毒素伤/秒，无视护盾
 };
 
 const CATT = {LongGuns:"PRIMARY",Pistols:"SECONDARY",Melee:"MELEE",
   SentinelWeapons:"SENTINEL",SpaceGuns:"ARCH-GUN",SpaceMelee:"ARCH-MELEE"};
 
-// ---------- 统计 ----------
+// ---------------------------------------------------------------- 统计
 function statVal(m, lv, k){
   const L = m.lv; if(!L || !L.length) return 0;
   const i = Math.max(0, Math.min(lv, L.length-1));
@@ -261,7 +299,7 @@ function aggregate(slots){
   for(const s of slots){
     if(!s) continue;
     const m = M[s.m];
-    if(!m){ a.bad.push((s.m.split("/").pop()||"").replace(/^Lotus/,"")); continue; }
+    if(!m){ a.bad.push((s.m.split("/").pop()||"")); continue; }
     a.dmg += statVal(m,s.lv,"dmg");
     a.cc  += statVal(m,s.lv,"cc");
     a.cd  += statVal(m,s.lv,"cd");
@@ -283,7 +321,7 @@ function aggregate(slots){
   return a;
 }
 
-// 元素合流：先天的排最前，之后按槽位顺序
+// 元素合流：先天元素排最前，之后按槽位顺序
 function buildComponents(wp, a, slotOrder){
   const baseTotal0 = DT.reduce((s,t)=>s+(wp.dmg[DT.indexOf(t)]||0),0) || wp.td || 1;
   const dMul = 1 + a.dmg/100;
@@ -293,22 +331,18 @@ function buildComponents(wp, a, slotOrder){
     if(a.phys[t]) v *= (1 + a.phys[t]/100);
     if(v > 0) phys.push({t,v,innate:true});
   }
-  // 元素队列
   const q = [];
   for(const t of ELEM_ORDER){
     const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
     if(v > 0) q.push({t,v,innate:true});
   }
-  // 组合元素（天生带组合元素的武器）
   for(const t of ["blast","radiation","magnetic","viral","corrosive","gas"]){
     const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
     if(v > 0) q.push({t,v,innate:true,combo:true});
   }
-  // mod 元素，按槽位顺序
   for(const t of slotOrder){
     if(a.elem[t]) q.push({t, v: baseTotal0 * dMul * a.elem[t]/100, innate:false});
   }
-  // 合流
   const out = [];
   let pend = null;
   for(const e of q){
@@ -323,47 +357,60 @@ function buildComponents(wp, a, slotOrder){
   return phys.concat(out);
 }
 
-// ---------- 等级缩放 ----------
-function scaleHealth(base, level, faction){
-  const d = level - 1; if(d<=0) return base;
-  const exp = (faction||"").toLowerCase()==="infested" ? 2.15 : 2.0;
-  const lo=(x)=>base*(1+0.015*Math.pow(x,exp));
-  if(d<70) return lo(d);
-  const a80 = lo(80);
-  if(d>80) return a80*(1+(d-80)*0.005);
-  const t=(d-70)/10, sm=t*t*(3-2*t);
-  return lo(d)*(1-sm) + (a80*(1+(d-80)*0.005))*sm;
+// ---------------------------------------------------------------- 等级缩放
+// 每条曲线两端点 + smoothstep（L=70,U=80）。系数按阵营分叉，
+// 取自 Wiki「Enemy Level Scaling」并与 warframe-damage.com 的实现逐项对齐。
+// 每条曲线记作 [c1,e1,c2,e2]：f1=1+c1·q^e1，f2=1+c2·q^e2。
+const SCALES = {
+  _h: [0.015, 2.12, 10.7332, 0.72],
+  _s: [0.02, 1.76, 2, 0.76],
+  _a: [0.005, 1.75, 0.4, 0.75],
+  "Infested":        {h:[0.0225,2.12,16.1,0.72]},
+  "Infested Deimos": {h:[0.0225,2.12,16.1,0.72]},
+  "Corpus":          {h:[0.015,2.12,13.416,0.55]},
+  "Corpus Amalgam":  {h:[0.015,2.12,13.416,0.55]},
+  "Orokin":          {h:[0.015,2.1,10.7332,0.685], s:[0.02,1.75,2,0.75]},
+  "Techrot":         {h:[0.015,2.1,13.64,0.72],    s:[0.02,1.76,3.4106,0.76]},
+  "Sentient":        {h:[0.015,2.0,10.7332,0.5],   s:[0.02,1.75,2,0.75]},
+  "Murmur":          {h:[0.015,2.0,10.7332,0.5],   s:[0.02,1.75,2,0.75]}
+};
+function curve(fk, kind){
+  const o = SCALES[fk] || {};
+  return o[kind] || SCALES["_"+kind];
 }
-function scaleArmor(base, level){
-  if(base<=0) return 0;
-  const d = level-1;
-  if(d<=0) return Math.min(base,2700);
-  const lo=(x)=>base*(1+0.005*Math.pow(x,1.75));
-  const a80=lo(80);
-  let s;
-  if(d<70) s=lo(d);
-  else if(d>80) s=a80+(d-80)*0.5;
-  else{ const t=(d-70)/10, sm=t*t*(3-2*t); s=lo(d)*(1-sm)+(a80+(d-80)*0.5)*sm; }
-  return Math.max(base, Math.min(s,2700));
+function multAt(c, q){
+  if(q <= 0) return 1;
+  const f1 = 1 + c[0]*Math.pow(q, c[1]);
+  const f2 = 1 + c[2]*Math.pow(q, c[3]);
+  const t = Math.min(1, Math.max(0, (q-70)/10));
+  const s = t*t*(3-2*t);
+  return f1 + (f2-f1)*s;
 }
-function scaleShield(base, level){
-  if(base<=0 || level<=1) return base;
-  const d=level-1;
-  const lo=(x)=>base*(1+0.0075*x*x);
-  const a80=lo(80);
-  if(d<70) return lo(d);
-  if(d>80) return a80*(1+(d-80)*0.003);
-  const t=(d-70)/10, sm=t*t*(3-2*t);
-  return lo(d)*(1-sm)+(a80*(1+(d-80)*0.003))*sm;
+function scaleHealth(base, level, bl, fk){
+  return base * multAt(curve(fk,"h"), level-(bl||1));
 }
-function drOf(netArmor, mode){
-  if(netArmor<=0) return 0;
-  if(mode==="sqrt") return Math.min(0.9, Math.sqrt(3*netArmor)/100);
-  return Math.min(0.9, 0.9*netArmor/2700);
+function scaleArmor(base, level, bl, fk){
+  if(base <= 0) return 0;
+  const v = base * multAt(curve(fk,"a"), level-(bl||1));
+  return Math.max(200, Math.min(v, 2700));
+}
+function scaleShield(base, level, bl, fk){
+  if(base <= 0) return 0;
+  return base * multAt(curve(fk,"s"), level-(bl||1));
+}
+// 敌方护甲减伤：≤2700 用 0.9·√(A/2700)，超过则 A/(A+300)
+function drOf(A){
+  if(A <= 0) return 0;
+  if(A <= 2700) return 0.9*Math.sqrt(A/2700);
+  return A/(A+300);
 }
 
-// ---------- 主计算 ----------
-function compute(wp, slots, enemy, level, mode){
+// ---------------------------------------------------------------- 组装
+const BANE_KEY = {Grineer:"grineer","Kuva Grineer":"grineer",Corpus:"corpus",
+  "Corpus Amalgam":"corpus",Infested:"infested","Infested Deimos":"infested",
+  Orokin:"corrupted",Sentient:"sentient",Narmer:"narmer",Murmur:"murmur"};
+
+function assemble(wp, slots, enemy, level, opt){
   const a = aggregate(slots);
   const order = slots.filter(Boolean).map(s=>{
     const m=M[s.m]; if(!m) return null;
@@ -375,60 +422,204 @@ function compute(wp, slots, enemy, level, mode){
   const cm = (wp.cm||1) * (1 + a.cd/100);
   const critMul = 1 + (cc/100)*(cm-1);
   const ms = (wp.ms||1) * (1 + a.ms/100);
-  const fr = Math.max(0.01,(wp.fr||1) * (1 + a.fr/100));
-  const mag = Math.max(1, Math.ceil((wp.mag||1) * (1 + a.mag/100)));
-  const rl  = (wp.rl||0) / (1 + a.rl/100);
-  const sc  = (wp.sc||0)*100 * (1 + a.sc/100);
+  const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100));
+  const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100)));
+  const rl  = Math.max(0,(wp.rl||0) / (1 + a.rl/100));
+  const sc  = Math.max(0,(wp.sc||0) * (1 + a.sc/100));
 
-  const perShotRaw = comps.reduce((s,c)=>s+c.v,0) * critMul * ms;
+  const lv = level + (opt.steel ? 100 : 0);
+  const fk = enemy.fk || "";
+  const hp = scaleHealth(enemy.hp, lv, enemy.bl, fk);
+  const ar0 = scaleArmor(enemy.ar, lv, enemy.bl, fk);
+  const sh = scaleShield(enemy.sh, lv, enemy.bl, fk);
+  const banePct = (a.fac[BANE_KEY[fk]] || 0)/100;
 
-  const lv = level + (state.sp ? 100 : 0);
-  const hp = scaleHealth(enemy.hp, lv, enemy.f);
-  const ar = scaleArmor(enemy.ar, lv);
-  const sh = scaleShield(enemy.sh, lv);
+  const compsF = comps.map(c=>{
+    const f = facMult(fk, c.t);
+    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)};
+  });
+  const perShotShield = compsF.reduce((s,c)=>s+c.vCrit,0);
+  const shotBase = comps.reduce((s,c)=>s+c.v,0) * ms;   // 不含暴击、不含加成
 
-  const hTab = HEALTH[(enemy.ht||"").toLowerCase()] || {};
-  const aTab = ARMOR[(enemy.at||"").toLowerCase()] || {};
-  const sTab = SHIELD[(enemy.st||"").toLowerCase()] || {};
-  const facMod = (a.fac[enemy.f.toLowerCase().replace(/\s+/g,"_")]||0)/100;
-
-  let toHealth = 0, toShield = 0;
-  const rows = [];
-  for(const c of comps){
-    const tam = aTab[c.t]||0, thm = hTab[c.t]||0, tsm = sTab[c.t]||0;
-    const netAr = ar * (1 - tam);
-    const dr = drOf(netAr, mode);
-    const vH = c.v * (1+tam) * (1+thm) * (1-dr) * (1+facMod) * critMul * ms;
-    const vS = c.v * (1+tsm) * (1+facMod) * critMul * ms;
-    toHealth += vH; toShield += vS;
-    rows.push({t:c.t, base:c.v*critMul*ms, tam, thm, tsm, dr, vH, vS,
-               share: 0});
-  }
-  const totH = rows.reduce((s,r)=>s+r.vH,0) || 1;
-  rows.forEach(r=> r.share = r.vH/totH);
-
-  const burst = toHealth * fr;
-  const sust  = (toHealth * mag) / (mag/fr + rl);
-  const shots = (sh>0 ? Math.ceil(sh/Math.max(1e-9,toShield)) : 0) + Math.ceil(hp/Math.max(1e-9,toHealth));
-  const ttk = shots / fr;
-
-  return {a, comps, perShotRaw, toHealth, toShield, burst, sust, ttk, shots,
-          cc, cm, critMul, ms, fr, mag, rl, sc, hp, ar, sh, rows,
-          dr: drOf(ar, mode)};
+  return {a, comps:compsF, shotBase, perShotShield, cc, cm, critMul, ms, fr, mag, rl, sc,
+          hp, ar0, sh, og:enemy.og||0, fk, banePct, lv,
+          dr0: drOf(ar0)};
 }
 
-// ---------- 状态 ----------
-const state = {wi:-1, ci:0, slots:[], enemy:null, level:100, mode:"linear", sp:false, fac:"全部"};
+function healthPerShot(A, armor, viralMul){
+  let toHealth = 0;
+  for(const c of A.comps) toHealth += c.vCrit * (1 - drOf(armor)) * viralMul;
+  return toHealth;
+}
 
-// ---------- 武器列表 ----------
+// 直伤口径：不叠状态、不剥甲
+function direct(A){
+  const rows = [];
+  let toHealth = 0, toShield = 0;
+  for(const c of A.comps){
+    const dr = drOf(A.ar0);
+    const vH = c.vCrit * (1 - dr);
+    toHealth += vH; toShield += c.vCrit;
+    rows.push({t:c.t, base:c.vCrit, f:c.f, dr, vH, share:0});
+  }
+  const tot = rows.reduce((s,r)=>s+r.vH,0) || 1;
+  rows.forEach(r=>r.share = r.vH/tot);
+  const burst = toHealth * A.fr;
+  const sust = A.mag > 0 ? (toHealth * A.mag) / (A.mag/A.fr + A.rl) : burst;
+  return {rows, toHealth, toShield, burst, sust};
+}
+
+// ---------------------------------------------------------------- 状态时间轴
+// 确定性模拟：按期望值推进，不做随机抽样。
+function simulate(A, opt){
+  const T = 10, dt = 0.05;
+  let hp = A.hp, sh = A.sh, og = A.og, armor = A.ar0;
+  let mag = A.mag || 1, reload = 0, t = 0;
+  let viral = [], corr = [], heatUntil = -1, dots = [];
+  let viralAcc = 0, corrAcc = 0;
+  let dealt = 0, kill = null, dotTotal = 0, directTotal = 0;
+  const N = Math.round(T/dt);
+  const sumV = A.comps.reduce((s,x)=>s+x.v,0) || 1;
+  const weights = A.comps.map(c=>({t:c.t, w:c.v/sumV}));
+  const typeShot = {};
+  for(const c of A.comps) typeShot[c.t] = (typeShot[c.t]||0) + c.v * A.ms;
+
+  for(let i=0;i<N;i++){
+    // 开火（含装填）
+    let fired = 0;
+    if(reload > 0){
+      reload -= dt;
+      if(reload <= 1e-6){ mag = A.mag || 1; reload = 0; }
+    } else {
+      fired = A.fr * dt;
+      if(fired >= mag){
+        fired = mag; mag = 0;
+        if(A.rl > 0) reload = A.rl; else mag = A.mag || 1;
+      } else mag -= fired;
+    }
+
+    // 挂状态：按期望值累积，小数部分留到下一步
+    if(fired > 0){
+      const procs = A.sc * A.ms * fired;
+      for(const w of weights){
+        const p = procs * w.w;
+        if(p <= 1e-9) continue;
+        if(w.t === "viral"){
+          viralAcc += p;
+          while(viralAcc >= 1){ viral.push(t + ST.viral.dur); viralAcc -= 1; }
+        } else if(w.t === "corrosive"){
+          corrAcc += p;
+          while(corrAcc >= 1){ corr.push(t + ST.corrosive.dur); corrAcc -= 1; }
+        } else if(w.t === "heat"){
+          heatUntil = t + ST.heat.dur;
+          dots.push({until:t+ST.heat.dur, n:"燃烧",
+            dps: p * ST.heat.dot * typeShot.heat * (1+A.banePct)**2 * facMult(A.fk,"heat"),
+            armor:true});
+        } else if(w.t === "slash"){
+          dots.push({until:t+ST.slash.dur, n:"流血",
+            dps: p * ST.slash.dot * A.shotBase * (1+A.banePct)**2 * facMult(A.fk,"slash"),
+            armor:false});
+        } else if(w.t === "toxin"){
+          dots.push({until:t+ST.toxin.dur, n:"中毒",
+            dps: p * ST.toxin.dot * typeShot.toxin * (1+A.banePct)**2 * facMult(A.fk,"toxin"),
+            armor:false, shieldPierce:true});
+        }
+      }
+      viral = viral.filter(x=>x>t); if(viral.length>10) viral = viral.slice(-10);
+      corr  = corr.filter(x=>x>t);  if(corr.length>10)  corr  = corr.slice(-10);
+    }
+    dots = dots.filter(d=>d.until > t);
+
+    // 病毒加伤 / 剥甲
+    const vn = viral.length;
+    const viralMul = vn > 0 ? 1 + (ST.viral.hp[0] + ST.viral.hp[1]*(vn-1)) : 1;
+    const cStrip = Math.min(ST.corrosive.cap, ST.corrosive.strip * corr.length);
+    const hStrip = (t < heatUntil) ? ST.heat.strip : 0;
+    const strip = 1 - (1-cStrip)*(1-hStrip);
+    const armorNow = Math.max(0, armor * (1-strip));
+
+    let dmg = fired * healthPerShot(A, armorNow, viralMul);
+    directTotal += dmg;
+
+    let dotDmg = 0;
+    for(const d of dots){
+      let v = d.dps * dt * viralMul;
+      if(d.armor) v *= (1 - drOf(armorNow));
+      dotDmg += v;
+    }
+    dotTotal += dotDmg;
+    dmg += dotDmg;
+
+    if(sh > 0){
+      const toS = Math.min(sh, dmg);
+      sh -= toS; dmg -= toS;
+    }
+    if(og > 0){
+      const toO = Math.min(og, dmg);
+      og -= toO; dmg -= toO;
+    }
+    if(dmg > 0){
+      hp -= dmg; dealt += Math.max(0, dmg);
+      if(hp <= 0 && kill === null){
+        kill = Math.max(0, t + dt*(1 + hp/dmg));
+        hp = 0; break;
+      }
+    }
+    t += dt;
+  }
+
+  const dur = kill !== null ? kill : Math.min(T, t) || T;
+  const total = directTotal + dotTotal;
+  const cStripEnd = Math.min(ST.corrosive.cap, ST.corrosive.strip * corr.length);
+  return {
+    dps: dur > 0 ? total/dur : 0,
+    dps10: total/T,
+    directDps: dur>0 ? directTotal/dur : 0,
+    dotDps: dur>0 ? dotTotal/dur : 0,
+    kill, viralAtEnd: viral.length, corrAtEnd: corr.length,
+    stripAtEnd: cStripEnd, dur
+  };
+}
+
+function compute(wp, slots, enemy, level, opt){
+  const A = assemble(wp, slots, enemy, level, opt);
+  const d = direct(A);
+  const s = opt.status ? simulate(A, opt) : null;
+  return {A, d, s};
+}
+
+// ---------------------------------------------------------------- 状态
+const state = {wi:-1, ci:0, slots:[], enemy:null, level:100, steel:false,
+               status:true, fac:"全部", mode:"weapon", ranking:null, rankingKey:""};
+
+// ---------------------------------------------------------------- 武器列表
 const wlistEl = document.getElementById("wlist");
 const builds = WF.b.filter(b=>W[b.w]).sort((a,b)=>
   (W[a.w].z||W[a.w].n).localeCompare(W[b.w].z||W[b.w].n,"zh"));
 document.getElementById("wcount").textContent = builds.length + " 把";
 
+const TRIG_NOTE = {BURST:"连发：未建连发间隔", CHARGE:"蓄力：射速按蓄满计",
+  DUPLEX:"双发：未建双发节奏", HELD:"持续：按连发计"};
+
 function renderWeapons(){
   const q = document.getElementById("wsearch").value.trim().toLowerCase();
   wlistEl.innerHTML = "";
+  if(state.mode === "rank"){
+    const rows = state.ranking || [];
+    document.getElementById("ltitle").textContent = "排名";
+    rows.forEach((r,i)=>{
+      if(q && !r.name.toLowerCase().includes(q)) return;
+      const d = document.createElement("div");
+      d.className = "item" + (r.idx===state.wi ? " on" : "");
+      d.innerHTML = `<div class="rank">${i+1}</div>
+        <div class="nm">${r.name}</div>
+        <div class="sub">${fmt(r.val)}</div>`;
+      d.onclick = ()=> { state.mode="weapon"; document.getElementById("btnmode").textContent="排名"; selectWeapon(r.idx); };
+      wlistEl.appendChild(d);
+    });
+    return;
+  }
+  document.getElementById("ltitle").textContent = "武器";
   builds.forEach((b,i)=>{
     const w = W[b.w];
     if(q && !((w.z||"").toLowerCase().includes(q) || (w.n||"").toLowerCase().includes(q))) return;
@@ -449,12 +640,18 @@ function selectWeapon(i){
 }
 function pad8(a){ const x = a.slice(0,8); while(x.length<8) x.push(null); return JSON.parse(JSON.stringify(x)); }
 
-// ---------- 配卡 ----------
+// ---------------------------------------------------------------- 配卡
 const bwrap = document.getElementById("bwrap");
+const LABEL = {dmg:"伤害",cc:"暴击",cd:"暴伤",ms:"多重",fr:"射速",sc:"触发",
+  mag:"弹匣",rl:"装填",impact:"冲击",puncture:"穿刺",slash:"切割",heat:"火焰",
+  cold:"冰冻",electricity:"电击",toxin:"毒素",blast:"爆炸",radiation:"辐射",
+  magnetic:"磁力",viral:"病毒",corrosive:"腐蚀",gas:"毒气"};
 function renderBuild(){
   if(state.wi<0){ bwrap.innerHTML = '<div style="color:var(--mute)">左侧选一把武器。</div>'; return; }
   const b = builds[state.wi], w = W[b.w];
-  let html = `<div class="wtitle"><h2>${w.z||w.n}</h2><span class="en">${w.n}</span></div>`;
+  let html = `<div class="wtitle"><h2>${w.z||w.n}</h2><span class="en">${w.n}</span>`;
+  if(TRIG_NOTE[w.tr]) html += `<span class="trig">${TRIG_NOTE[w.tr]}</span>`;
+  html += `</div>`;
   html += `<div class="wstats">
     <div>基伤 <b>${(w.td||0).toFixed(1)}</b></div>
     <div>暴击 <b>${((w.cc||0)*100).toFixed(0)}% / ${(w.cm||1).toFixed(1)}×</b></div>
@@ -473,36 +670,23 @@ function renderBuild(){
     html += `</div>`;
   }
   html += `<div class="slots" id="slots"></div>`;
-  // 每张卡实际贡献
-  const LABEL = {dmg:"伤害",cc:"暴击",cd:"暴伤",ms:"多重",fr:"射速",sc:"触发",
-    mag:"弹匣",rl:"装填",impact:"冲击",puncture:"穿刺",slash:"切割",heat:"火焰",
-    cold:"冰冻",electricity:"电击",toxin:"毒素",blast:"爆炸",radiation:"辐射",
-    magnetic:"磁力",viral:"病毒",corrosive:"腐蚀",gas:"毒气"};
   const contrib = [];
   state.slots.forEach(s=>{
     if(!s) return;
     const m = M[s.m]; if(!m) return;
     const row = m.lv[Math.min(s.lv, m.lv.length-1)] || {};
-    const parts = Object.keys(row).map(k=>{
-      const v = row[k];
-      return `${LABEL[k]||k} ${v>0?"+":""}${v}%`;
-    });
+    const parts = Object.keys(row).map(k=>`${LABEL[k]||k} ${row[k]>0?"+":""}${row[k]}%`);
     contrib.push(`<div class="cr"><span class="cn">${m.z&&m.z!==m.n?m.z:m.n}</span>
       <span class="cl">Lv${s.lv}/${m.mx}</span>
       <span class="cv">${parts.join(" · ")||'<i style="color:#5a636e">无数值（行为型）</i>'}</span></div>`);
   });
-  if(contrib.length){
-    html += `<div class="contrib">${contrib.join("")}</div>`;
-  }
+  if(contrib.length) html += `<div class="contrib">${contrib.join("")}</div>`;
   const a = aggregate(state.slots);
   if(a.bad.length){
     html += `<div class="note warn">未解析 ${a.bad.length} 个槽位：${a.bad.slice(0,4).join("、")}${a.bad.length>4?"…":""}
-      <br>这些是路径型（未升级堆叠 / Riven），本地数据里没有实例等级，不计入。</div>`;
+      <br>这些是路径型（未升级堆叠 / Riven），本地数据里没有实例等级。</div>`;
   }
-  html += `<div class="note">
-    口径：<b>直伤 + 暴击期望 + 多重</b>，不含触发状态、DoT、条件叠层（镀层/私法按 0 层算）。
-    元素按槽位顺序合流，先天元素排最前。
-  </div>`;
+  html += `<div class="simpane" id="simpane"></div>`;
   bwrap.innerHTML = html;
 
   const slotsEl = document.getElementById("slots");
@@ -544,7 +728,7 @@ function renderBuild(){
   recompute();
 }
 
-// ---------- 选卡 ----------
+// ---------------------------------------------------------------- 选卡
 let pickTarget = -1;
 function openPicker(idx){
   pickTarget = idx;
@@ -587,11 +771,11 @@ function renderPicker(){
   document.getElementById("mfoot").textContent = `${rows.length} 个可用（${want||"全部"}）`;
 }
 
-// ---------- 敌人 ----------
+// ---------------------------------------------------------------- 敌人
 const eListEl = document.getElementById("enemyList");
 document.getElementById("ecount").textContent = E.length + " 个";
 const FAC_ORDER = ["Grineer","Kuva Grineer","Corpus","Corpus Amalgam","Infested",
-  "Infested Deimos","Orokin","Sentient","Narmer","Murmur","Stalker","Scaldra","Techrot","Neutral"];
+  "Infested Deimos","Orokin","Sentient","Narmer","Murmur","Scaldra","Techrot","Stalker","Neutral"];
 const facSet = new Set(E.map(e=>e.f));
 const factions = ["全部", ...FAC_ORDER.filter(f=>facSet.has(f)), "其他"];
 const chipsEl = document.getElementById("fchips");
@@ -615,88 +799,192 @@ function renderEnemies(){
     if(q && !e.n.toLowerCase().includes(q)) return;
     const d = document.createElement("div");
     d.className = "item" + (state.enemy && state.enemy.n===e.n ? " on" : "");
-    d.innerHTML = `<div class="nm">${e.n}</div>
-      <div class="badge ${e.cf==="high"?"hi":"lo"}">${e.cf==="high"?"类型确定":"类型推断"}</div>`;
+    const tag = e.fk ? "" : `<div class="badge lo">无克制</div>`;
+    d.innerHTML = `<div class="nm">${e.n}</div>${tag}`;
     d.onclick = ()=>{ state.enemy = e; renderEnemies(); recompute(); };
     eListEl.appendChild(d);
   });
 }
 document.getElementById("esearch").oninput = renderEnemies;
-
-// 默认目标
 state.enemy = E.find(e=>e.n==="Heavy Gunner") || E.find(e=>e.f==="Grineer") || E[0];
 
-// ---------- 等级 / 口径 ----------
+// ---------------------------------------------------------------- 交互
 const rangeEl = document.getElementById("lvlrange"), numEl = document.getElementById("lvlnum");
 rangeEl.oninput = ()=>{ state.level = +rangeEl.value; numEl.value = state.level; recompute(); };
 numEl.oninput = ()=>{ state.level = Math.max(1, Math.min(9999, +numEl.value||1));
   rangeEl.value = Math.min(200, state.level); recompute(); };
-document.querySelectorAll("#drseg button").forEach(b=>{
-  b.onclick = ()=>{ state.mode = b.dataset.v;
-    document.querySelectorAll("#drseg button").forEach(x=>x.classList.toggle("on",x===b)); recompute(); };
+document.querySelectorAll("#stseg button").forEach(b=>{
+  b.onclick = ()=>{ state.status = b.dataset.v==="1";
+    document.querySelectorAll("#stseg button").forEach(x=>x.classList.toggle("on",x===b)); recompute(); };
 });
 document.querySelectorAll("#spseg button").forEach(b=>{
-  b.onclick = ()=>{ state.sp = b.dataset.v==="1";
+  b.onclick = ()=>{ state.steel = b.dataset.v==="1";
     document.querySelectorAll("#spseg button").forEach(x=>x.classList.toggle("on",x===b)); recompute(); };
 });
+document.getElementById("btnmode").onclick = ()=>{
+  state.mode = state.mode==="rank" ? "weapon" : "rank";
+  document.getElementById("btnmode").textContent = state.mode==="rank" ? "列表" : "排名";
+  if(state.mode==="rank") buildRanking();
+  renderWeapons();
+};
+document.getElementById("btnnote").onclick = showNote;
 
-// ---------- 结果 ----------
+// ---------------------------------------------------------------- 结果
 function fmt(n){
-  if(!isFinite(n)) return "—";
+  if(!isFinite(n)||n===0) return n===0 ? "0" : "—";
   if(n>=1e6) return (n/1e6).toFixed(2)+"M";
   if(n>=1e4) return (n/1e3).toFixed(1)+"k";
   return Math.round(n).toLocaleString();
 }
+const opt = ()=>({steel:state.steel, status:state.status});
+
+function buildRanking(){
+  const key = [state.level, state.steel, state.status, state.enemy.n].join("|");
+  if(state.rankingKey === key && state.ranking) return;
+  const rows = builds.map((b,i)=>{
+    const w = W[b.w];
+    const r = compute(w, pad8Cache(b,0), state.enemy, state.level, opt());
+    const val = state.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
+    return {idx:i, name:w.z||w.n, val};
+  });
+  rows.sort((a,b)=>b.val-a.val);
+  state.ranking = rows; state.rankingKey = key;
+}
+const padCache = new Map();
+function pad8Cache(b, ci){
+  const k = b.w+"|"+ci;
+  if(!padCache.has(k)) padCache.set(k, pad8(b.slots[ci]||[]));
+  return padCache.get(k);
+}
+
 function recompute(){
   if(state.wi<0 || !state.enemy){ return; }
   const w = W[builds[state.wi].w];
-  const r = compute(w, state.slots, state.enemy, state.level, state.mode);
+  const r = compute(w, state.slots, state.enemy, state.level, opt());
+  const A = r.A, d = r.d, s = r.s;
 
-  document.getElementById("rburst").textContent = fmt(r.burst);
-  document.getElementById("rsust").textContent  = fmt(r.sust);
-  const pctH = r.toHealth/r.perShotRaw*100;
+  document.getElementById("rburst").textContent = fmt(d.burst);
   document.getElementById("rburstcmp").innerHTML =
-    `每发 <b>${fmt(r.toHealth)}</b> · 裸伤 <b>${fmt(r.perShotRaw)}</b> · 保留 <b>${pctH.toFixed(0)}%</b>`;
-  document.getElementById("rsustcmp").innerHTML =
-    `TTK <b>${r.shots}</b> 发 / <b>${r.ttk.toFixed(2)}s</b> · 暴击 <b>${r.cc.toFixed(0)}%</b>×<b>${r.cm.toFixed(2)}</b>`;
+    `每发 <b>${fmt(d.toHealth)}</b> · 裸伤 <b>${fmt(A.perShotShield)}</b> · 保留 <b>${(d.toHealth/A.perShotShield*100).toFixed(0)}%</b>`;
 
-  // 敌人面板
-  const lv = state.level + (state.sp?100:0);
+  if(s){
+    document.getElementById("rdps").textContent = fmt(s.dps);
+    document.getElementById("rdpscmp").innerHTML =
+      `直伤 <b>${fmt(s.directDps)}</b> · DoT <b>${fmt(s.dotDps)}</b> · 病毒 <b>${s.viralAtEnd}</b> 层`;
+  } else {
+    document.getElementById("rdps").textContent = "—";
+    document.getElementById("rdpscmp").innerHTML = "已关闭状态计算";
+  }
+
+  if(s && s.kill !== null){
+    document.getElementById("rttk").textContent = s.kill.toFixed(2)+"s";
+    document.getElementById("rttkcmp").innerHTML = `10 秒内击杀`;
+  } else {
+    document.getElementById("rttk").textContent = ">10s";
+    const hpLeft = 0;
+    document.getElementById("rttkcmp").innerHTML = `10 秒未击杀`;
+  }
+
+  // 目标面板
   document.getElementById("estat").innerHTML = `
-    <div><span>血量</span><b>${fmt(r.hp)}</b></div>
-    <div><span>护甲</span><b>${Math.round(r.ar)}</b></div>
-    <div><span>护盾</span><b>${fmt(r.sh)}</b></div>
-    <div><span>护甲减伤</span><b>${(r.dr*100).toFixed(0)}%</b></div>
-    <div><span>实际等级</span><b>${lv}</b></div>
-    <div><span>血量类型</span><b style="font-size:11px">${r.rows&&state.enemy.ht}</b></div>`;
+    <div><span>血量</span><b>${fmt(A.hp)}</b></div>
+    <div><span>护甲</span><b>${Math.round(A.ar0)}</b></div>
+    <div><span>护盾</span><b>${fmt(A.sh)}</b></div>
+    <div><span>护甲减伤</span><b>${(A.dr0*100).toFixed(0)}%</b></div>
+    <div><span>实际等级</span><b>${A.lv}</b></div>
+    <div><span>过载</span><b>${A.og?fmt(A.og):"—"}</b></div>`;
 
-  // 拆分表
+  const fm = FACMOD[A.fk] || null;
+  let fr = "";
+  if(fm){
+    const plus = Object.keys(fm).filter(k=>fm[k]>1).map(k=>ZH[k]||k);
+    const minus = Object.keys(fm).filter(k=>fm[k]<1).map(k=>ZH[k]||k);
+    fr = `<b>${A.fk}</b> 弱点 ${plus.join(" / ")||"—"}` + (minus.length?` · 抗性 ${minus.join(" / ")}`:"");
+  } else {
+    fr = `<span class="warn">该目标没有阵营克制数据（按 ×1 计）</span>`;
+  }
+  if(A.banePct) fr += ` · 你的阵营卡 +${(A.banePct*100).toFixed(0)}%`;
+  document.getElementById("facres").innerHTML = fr;
+
+  // 10 秒推演
+  const sp = document.getElementById("simpane");
+  if(sp){
+    if(s){
+      const tot = (s.directDps + s.dotDps) || 1;
+      const ehp = A.hp + A.sh + A.og;
+      const dealt = s.dps * s.dur;
+      sp.innerHTML = `<div class="hd">10 秒推演 · ${state.enemy.n} Lv${A.lv}</div>
+        <div class="grid">
+          <div class="cell"><span>病毒层</span><b>${s.viralAtEnd}</b></div>
+          <div class="cell"><span>腐蚀层</span><b>${s.corrAtEnd}</b></div>
+          <div class="cell"><span>剥甲</span><b>${(s.stripAtEnd*100).toFixed(0)}%</b></div>
+          <div class="cell"><span>DoT 占比</span><b>${(s.dotDps/tot*100).toFixed(0)}%</b></div>
+        </div>
+        <div class="bar">
+          <i style="width:${s.directDps/tot*100}%;background:var(--gold)"></i>
+          <i style="width:${s.dotDps/tot*100}%;background:var(--red)"></i>
+        </div>
+        <div class="lg">
+          <span><em style="color:var(--gold2)">■</em> 直伤 ${fmt(s.directDps)}</span>
+          <span><em style="color:var(--red)">■</em> DoT ${fmt(s.dotDps)}</span>
+          <span>有效血量 ${fmt(ehp)}</span>
+          <span>10 秒打掉 ${(dealt/ehp*100).toFixed(1)}%</span>
+        </div>`;
+    } else {
+      sp.innerHTML = `<div class="hd">直伤口径</div>
+        <div class="note">已关闭状态计算：不含病毒、腐蚀剥甲与 DoT。</div>`;
+    }
+  }
+
+  // 拆分
   let html = `<table class="brk"><thead><tr>
-    <th>伤害类型</th><th>每发</th><th>护甲</th><th>血量</th><th>到血</th><th>占比</th>
+    <th>伤害类型</th><th>每发</th><th>阵营</th><th>减伤后</th><th>到血</th><th>占比</th>
     </tr></thead><tbody>`;
-  const rows = r.rows.slice().sort((a,b)=>b.vH-a.vH);
-  for(const x of rows){
+  for(const x of d.rows.slice().sort((a,b)=>b.vH-a.vH)){
     html += `<tr>
       <td><span class="dot" style="background:${COL[x.t]}"></span>${ZH[x.t]}</td>
       <td>${x.base.toFixed(1)}</td>
-      <td class="${x.tam>0?'pos':x.tam<0?'neg':''}">${x.tam?((x.tam>0?"+":"")+(x.tam*100).toFixed(0)+"%"):"—"}</td>
-      <td class="${x.thm>0?'pos':x.thm<0?'neg':''}">${x.thm?((x.thm>0?"+":"")+(x.thm*100).toFixed(0)+"%"):"—"}</td>
+      <td class="${x.f>1?'pos':x.f<1?'neg':''}">${x.f!==1?("×"+x.f.toFixed(1)):"—"}</td>
+      <td>${(x.dr*100).toFixed(0)}%</td>
       <td>${x.vH.toFixed(1)}</td>
       <td>${(x.share*100).toFixed(0)}%</td></tr>`;
   }
-  html += `</tbody></table>
-    <div class="note" style="padding:8px 2px 0">
-    目标 <b>${state.enemy.n}</b> · ${state.enemy.f} · ${state.enemy.ht} / ${state.enemy.at==="none"?"无甲":state.enemy.at} / ${state.enemy.st==="none"?"无盾":state.enemy.st}
-    ${state.enemy.cf==="low"?'<span class="warn"> · 该怪的类型是按阵营推断的，可能不准</span>':""}
-    </div>`;
+  html += `</tbody></table>`;
   document.getElementById("brk").innerHTML = html;
+
+  if(state.mode==="rank"){ state.rankingKey=""; buildRanking(); renderWeapons(); }
+}
+
+// ---------------------------------------------------------------- 口径说明
+function showNote(){
+  const el = document.getElementById("modal");
+  el.classList.add("on");
+  document.getElementById("msearch").style.display="none";
+  document.getElementById("mttl").style.display="";
+  document.getElementById("mfoot").textContent = "点击任意处关闭";
+  document.getElementById("mlist").innerHTML = `
+  <div class="note" style="padding:10px 14px;font-size:12px">
+  <p><b>克制</b>：Update 36（2024-06）之后血量/护甲/护盾类型已合并，克制只按阵营：弱点 ×1.5、抗性 ×0.5，按伤害类型查。旧表（Cloned Flesh / Ferrite / Alloy 那套）已失效。</p>
+  <p><b>敌方护甲减伤</b>：<code>A ≤ 2700 → 0.9·√(A/2700)</code>，<code>A &gt; 2700 → A/(A+300)</code>。护甲按等级缩放后夹在 [200, 2700]。</p>
+  <p><b>等级缩放</b>：Wiki 的双端点曲线 + smoothstep（L=70, U=80）。血量 q^2.12 / q^0.72，护甲 q^1.75 / q^0.75，护盾 q^1.76 / q^0.76。</p>
+  <p><b>暴击</b>：按期望算 <code>1 + cc·(cm−1)</code>，超过 100% 时等效暴击阶层，公式仍成立。</p>
+  <p><b>状态</b>：病毒首层 +100%、每层 +25%（10 层 +325%）；腐蚀 26%/层、上限 80%、8 秒；燃烧剥甲 50% 并 50% 火焰伤/秒；流血 35% 总伤/秒无视护甲；中毒 50% 毒素伤/秒无视护盾。触发按伤害占比分配。</p>
+  <p><b>未建模</b>：连发/蓄力节奏、范围伤害、穿透多目标、磁力对护盾的加伤、冰缓的暴伤加成、赋能与战甲增益、镀层类条件叠层。</p>
+  <p><b>数据</b>：武器与 mod 数值来自 DE PublicExport；敌人 497 条来自 warframe-damage.com；配卡来自本机 lastData。</p>
+  </div>`;
+  document.getElementById("mlist").onclick = closeModal;
+}
+function closeModal(){
+  document.getElementById("modal").classList.remove("on");
+  document.getElementById("msearch").style.display="";
+  document.getElementById("mttl").style.display="none";
+  document.getElementById("msearch").oninput = renderPicker;
+  document.getElementById("mlist").onclick = null;
 }
 
 renderWeapons(); renderEnemies();
-// 默认选一把有完整配卡的，别让首屏空着
 const defIdx = builds.findIndex(b=>b.w.includes("TenoraPrime"));
 selectWeapon(defIdx >= 0 ? defIdx : 0);
-// 让选中的目标出现在视野里
 const sel = eListEl.querySelector(".item.on");
 if(sel) sel.scrollIntoView({block:"center"});
 </script>

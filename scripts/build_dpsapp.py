@@ -78,59 +78,30 @@ def parse_stats(lines):
     return out
 
 
-# ---------------------------------------------------------------- 敌人类型
-# DE 的敌人导出只有 血量/护甲/护盾 三个数值，没有类型。
-# 这张表按阵营 + 名字规则归类，conf 标出可信度。
-FACTION_DEFAULT = {
-    "Grineer":        ("Cloned Flesh", "Ferrite", "none", "high"),
-    "Kuva Grineer":   ("Cloned Flesh", "Ferrite", "none", "high"),
-    "Corpus":         ("Flesh", "none", "Shield", "high"),
-    "Corpus Amalgam": ("Flesh", "none", "Shield", "high"),
-    "Infested":       ("Infested", "none", "none", "high"),
-    "Infested Deimos": ("Infested Flesh", "none", "none", "low"),
-    "Orokin":         ("Cloned Flesh", "Ferrite", "none", "low"),
-    "Sentient":       ("Robotic", "Ferrite", "none", "low"),
-    "Narmer":         ("Flesh", "none", "Shield", "low"),
-    "Murmur":         ("Robotic", "none", "none", "low"),
-    "Stalker":        ("Flesh", "none", "none", "low"),
-    "Neutral":        ("Flesh", "none", "none", "low"),
-    "Anarchs":        ("Flesh", "none", "Shield", "low"),
-    "Scaldra":        ("Flesh", "Ferrite", "none", "low"),
-    "Techrot":        ("Infested Flesh", "none", "none", "low"),
-    "Zariman":        ("Flesh", "none", "none", "low"),
+# ---------------------------------------------------------------- 敌人
+# Update 36（2024-06）之后，血量/护甲/护盾类型已合并，克制改挂在阵营上：
+# 弱点 ×1.5、抗性 ×0.5，按伤害类型查。所以这里只需要阵营键，不需要类型表。
+FACTION_KEY = {
+    "grineer": "Grineer",
+    "kuva grineer": "Kuva Grineer",
+    "corpus": "Corpus",
+    "corpus amalgam": "Corpus Amalgam",
+    "infested": "Infested",
+    "infestation": "Infested",
+    "infested deimos": "Infested Deimos",
+    "deimos infested": "Infested Deimos",
+    "orokin": "Orokin",
+    "sentient": "Sentient",
+    "narmer": "Narmer",
+    "murmur": "Murmur",
+    "scaldra": "Scaldra",
+    "techrot": "Techrot",
+    "zariman": "Zariman",
 }
 
-# 名字命中就改判（先命中先用）
-NAME_RULES = [
-    # Grineer / Kuva：合金甲单位
-    (re.compile(r"bombard|napalm|elite lancer|eviscerator|guardsman|prosecutor|kela|vay hek", re.I),
-     ("Cloned Flesh", "Alloy", "none", "high")),
-    # 感染体：远古 / 孵化者 是化石化
-    (re.compile(r"ancient|boiler|brood mother|jugulus|saxum|carnis|lephantis", re.I),
-     ("Fossilized", "none", "none", "high")),
-    # 感染体：共生体 / 焦油 属于感染血肉
-    (re.compile(r"mutalist|tar mutalist|swarm|osprey", re.I),
-     ("Infested Flesh", "none", "none", "low")),
-    # 科普斯：原型护盾
-    (re.compile(r"\btech\b|sniper crewman|detron crewman|corpus target|hyena|razorback", re.I),
-     ("Flesh", "none", "Proto Shield", "low")),
-    # Orokin / 堕落者：按兵种拆
-    (re.compile(r"corrupted bombard|corrupted napalm", re.I),
-     ("Cloned Flesh", "Alloy", "none", "high")),
-    (re.compile(r"corrupted lancer|corrupted heavy gunner|corrupted butcher|corrupted gunner", re.I),
-     ("Cloned Flesh", "Ferrite", "none", "high")),
-    (re.compile(r"corrupted crewman|corrupted moa|corrupted drone|corrupted nullifier", re.I),
-     ("Flesh", "none", "Shield", "high")),
-    (re.compile(r"corrupted ancient", re.I),
-     ("Fossilized", "none", "none", "high")),
-]
 
-
-def resolve_types(name, faction):
-    for rx, triple in NAME_RULES:
-        if rx.search(name):
-            return triple
-    return FACTION_DEFAULT.get(faction, ("Flesh", "none", "none", "low"))
+def faction_key(raw: str) -> str:
+    return FACTION_KEY.get((raw or "").strip().lower(), "")
 
 
 def load_enemies():
@@ -138,24 +109,29 @@ def load_enemies():
     rows = json.load(open(path, encoding="utf-8"))
     out = []
     for r in rows:
-        name = r["name"]
-        fac = r.get("faction") or "Neutral"
-        ht, at, st, conf = resolve_types(name, fac)
+        name = (r.get("name") or "").strip()
+        fac = (r.get("faction") or "").strip() or "Neutral"
         e = {
             "n": name,
             "f": fac,
+            "fk": faction_key(fac),
             "hp": float((r.get("health") or {}).get("val") or 0),
             "ar": float((r.get("armor") or {}).get("val") or 0),
             "sh": float((r.get("shield") or {}).get("val") or 0),
-            "ht": ht, "at": at, "st": st,
-            "cf": conf,
         }
+        if r.get("b_lvl"):
+            e["bl"] = int(r["b_lvl"])
         if r.get("overguard"):
-            e["og"] = float(str(r["overguard"].get("val") if isinstance(r.get("overguard"), dict) else r["overguard"]).strip() or 0) or None
+            og = r["overguard"].get("val") if isinstance(r.get("overguard"), dict) else r["overguard"]
+            v = float(str(og).strip() or 0)
+            if v:
+                e["og"] = v
         if r.get("immun"):
             e["im"] = r["immun"]
         if r.get("innateDR"):
             e["dr"] = r["innateDR"]
+        if r.get("eximusOff"):
+            e["xo"] = 1
         out.append({k: v for k, v in e.items() if v is not None})
     out.sort(key=lambda x: (x["f"], x["n"]))
     return out
