@@ -1,15 +1,19 @@
+import Network
 import SwiftUI
 import WebKit
 
-/// 伤害计算器。页面本体是 `web/app`，作为 folder reference 打进 App 包，
-/// 通过自定义 scheme `wfapp://` 读——用 file:// 加载的话，页面里那些
-/// `fetch('site/weapons.json')` 会被 WebKit 当成跨源请求拒掉。
+/// 伤害计算器。页面本体是 `web/app`，作为 folder reference 打进 App 包。
+///
+/// 用了一个 127.0.0.1 上的极简静态服务来喂页面，而不是 `loadFileURL` 或自定义
+/// scheme：WebKit 的 `fetch()` 只认 http/https，file:// 和 wfapp:// 下页面里的
+/// 数据请求会被直接拒掉，内核就永远起不来。回环 http 和线上环境一致，没有特例。
 public struct DamageCalcView: View {
     /// nil 表示空计算器：进去自己选武器、自己配卡。
     private let weapon: String?
     private let title: String
 
     @State private var ready = false
+    @State private var failure: String?
 
     public init(weapon: String? = nil, title: String = "伤害计算") {
         self.weapon = weapon
@@ -20,16 +24,27 @@ public struct DamageCalcView: View {
         ZStack {
             WFTheme.bgPrimary.ignoresSafeArea()
 
-            CalcWebView(weapon: weapon, ready: $ready)
+            CalcWebView(weapon: weapon, ready: $ready, failure: $failure)
                 .ignoresSafeArea(edges: .bottom)
 
             if !ready {
                 VStack(spacing: WFUI.s3) {
-                    ProgressView()
-                        .tint(WFTheme.gold)
-                    Text("加载计算内核…")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
+                    if let failure = failure {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 22))
+                            .foregroundColor(WFTheme.red)
+                        Text(failure)
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    } else {
+                        ProgressView()
+                            .tint(WFTheme.gold)
+                        Text("加载计算内核…")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                    }
                 }
             }
         }
@@ -46,15 +61,14 @@ public struct DamageCalcView: View {
 private struct CalcWebView: UIViewRepresentable {
     let weapon: String?
     @Binding var ready: Bool
+    @Binding var failure: String?
 
-    func makeCoordinator() -> Coordinator { Coordinator(ready: $ready) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(ready: $ready, failure: $failure)
+    }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        if let root = WeaponCatalog.bundleRoot {
-            config.setURLSchemeHandler(BundleSchemeHandler(root: root), forURLScheme: BundleSchemeHandler.scheme)
-        }
-        // 站点脚本用 localStorage 存少量界面偏好，给它一个持久化的数据目录
         config.websiteDataStore = .default()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
@@ -67,9 +81,23 @@ private struct CalcWebView: UIViewRepresentable {
         web.allowsBackForwardNavigationGestures = false
         if #available(iOS 16.4, *) { web.isInspectable = true }
 
+        guard let root = WeaponCatalog.bundleRoot else {
+            DispatchQueue.main.async { failure = "App 包里没有计算器资源（ios/DamageCalc）" }
+            return web
+        }
+
+        let server = LocalStaticServer(root: root)
+        let port = server.start()
+        guard port > 0 else {
+            DispatchQueue.main.async { failure = "本地计算服务没能启动" }
+            return web
+        }
+        context.coordinator.server = server
+
         var comps = URLComponents()
-        comps.scheme = BundleSchemeHandler.scheme
-        comps.host = "local"
+        comps.scheme = "http"
+        comps.host = "127.0.0.1"
+        comps.port = Int(port)
         comps.path = "/index.html"
         if let weapon = weapon {
             comps.queryItems = [URLQueryItem(name: "weapon", value: weapon)]
@@ -82,41 +110,59 @@ private struct CalcWebView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKNavigationDelegate {
-        private let ready: Binding<Bool>
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        coordinator.server?.stop()
+    }
 
-        init(ready: Binding<Bool>) { self.ready = ready }
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        let ready: Binding<Bool>
+        let failure: Binding<String?>
+        var server: LocalStaticServer?
+
+        init(ready: Binding<Bool>, failure: Binding<String?>) {
+            self.ready = ready
+            self.failure = failure
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // 页内状态打到构建日志：iOS 上这层出问题看不见控制台，只能靠这行
             webView.evaluateJavaScript("""
             (function(){try{return JSON.stringify({inline:!!window.__WF_INLINE,
               wfk:!!window.WFK, ready:!!(window.WFK&&window.WFK.W),
-              body:document.body?document.body.innerHTML.length:-1,
-              scripts:Array.from(document.scripts).map(function(s){return (s.src||'inline').split('/').pop()}).slice(0,6)})}catch(e){return 'err:'+e.message}})()
+              body:document.body?document.body.innerHTML.length:-1})}catch(e){return 'err:'+e.message}})()
             """) { value, error in
                 print("[calc] page state: \(value ?? error?.localizedDescription ?? "nil")")
             }
             // 页面文档加载完还要等内核 boot（iframe 里 448KB 站点脚本 + 内联数据）
-            waitForKernel(webView, tries: 60)
+            waitForKernel(webView, tries: 80)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            ready.wrappedValue = true
+            fail(with: error)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            ready.wrappedValue = true
+            fail(with: error)
+        }
+
+        private func fail(with error: Error) {
+            DispatchQueue.main.async {
+                self.failure.wrappedValue = "页面加载失败：\(error.localizedDescription)"
+                self.ready.wrappedValue = true
+            }
         }
 
         private func waitForKernel(_ webView: WKWebView, tries: Int) {
             guard tries > 0 else {
-                ready.wrappedValue = true
+                DispatchQueue.main.async {
+                    self.failure.wrappedValue = "计算内核没有起来"
+                    self.ready.wrappedValue = true
+                }
                 return
             }
             webView.evaluateJavaScript("!!(window.WFK && window.WFK.W)") { value, _ in
                 if (value as? Bool) == true {
-                    self.ready.wrappedValue = true
+                    DispatchQueue.main.async { self.ready.wrappedValue = true }
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         self.waitForKernel(webView, tries: tries - 1)
@@ -127,75 +173,101 @@ private struct CalcWebView: UIViewRepresentable {
     }
 }
 
-// MARK: - 包内资源
+// MARK: - 本地静态服务
 
-/// `wfapp://local/<path>` → App 包里 DamageCalc 目录下的同名文件。
-///
-/// 同源的自定义 scheme，页面里的相对 fetch 才能成立；顺便给每个响应挂上
-/// CORS 头，避免 WebKit 把 iframe 里的数据请求当成跨源。
-final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
-    static let scheme = "wfapp"
-
+/// 只做一件事：把 `GET /path` 映射成 App 包里的文件，回一个 Connection: close
+/// 的响应。没有 keep-alive、没有 Range，WKWebView 取静态资源不需要这些。
+final class LocalStaticServer {
     private let root: URL
+    private let queue = DispatchQueue(label: "wf.calc.static", attributes: .concurrent)
+    private var listener: NWListener?
+    private(set) var port: UInt16 = 0
 
     init(root: URL) {
         self.root = root.standardizedFileURL
     }
 
-    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
-        guard let url = task.request.url else {
-            finish(task, status: 400, body: Data())
-            return
-        }
+    deinit { stop() }
 
-        var rel = url.path
-        if rel.hasPrefix("/") { rel.removeFirst() }
-        if rel.isEmpty { rel = "index.html" }
-        if let decoded = rel.removingPercentEncoding { rel = decoded }
+    func start() -> UInt16 {
+        if listener != nil { return port }
+        do {
+            let params = NWParameters.tcp
+            params.allowLocalEndpointReuse = true
+            let l = try NWListener(using: params, on: .any)
+            let sem = DispatchSemaphore(value: 0)
 
-        let file = root.appendingPathComponent(rel).standardizedFileURL
-        // 不允许跳出资源目录
-        guard file.path.hasPrefix(root.path) else {
-            finish(task, status: 403, body: Data())
-            return
-        }
-        guard let data = try? Data(contentsOf: file) else {
-            finish(task, status: 404, body: Data())
-            return
-        }
+            l.stateUpdateHandler = { [weak self] state in
+                switch state {
+                case .ready:
+                    self?.port = l.port?.rawValue ?? 0
+                    sem.signal()
+                case .failed, .cancelled:
+                    sem.signal()
+                default:
+                    break
+                }
+            }
+            l.newConnectionHandler = { [weak self] conn in
+                self?.accept(conn)
+            }
 
-        let mime = BundleSchemeHandler.mimeType(rel)
-        let header = [
-            "Content-Type": mime,
-            "Content-Length": String(data.count),
-            "Access-Control-Allow-Origin": "*",
-            "Cache-Control": "no-cache",
-        ]
-        // 自定义 scheme 上 HTTPURLResponse 未必总能构造，兜一个普通响应
-        let response: URLResponse
-        if let http = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
-                                      headerFields: header) {
-            response = http
-        } else {
-            response = URLResponse(url: url, mimeType: mime, expectedContentLength: data.count,
-                                   textEncodingName: "utf-8")
+            l.start(queue: queue)
+            listener = l
+            _ = sem.wait(timeout: .now() + 3)
+        } catch {
+            return 0
         }
-        task.didReceive(response)
-        task.didReceive(data)
-        task.didFinish()
+        return port
     }
 
-    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
+    func stop() {
+        listener?.cancel()
+        listener = nil
+    }
 
-    private func finish(_ task: WKURLSchemeTask, status: Int, body: Data) {
-        guard let url = task.request.url else { return }
-        if let r = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1",
-                                   headerFields: ["Content-Type": "text/plain; charset=utf-8",
-                                                  "Access-Control-Allow-Origin": "*"]) {
-            task.didReceive(r)
+    private func accept(_ conn: NWConnection) {
+        conn.start(queue: queue)
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { [weak self] data, _, _, _ in
+            guard let self = self, let data = data,
+                  let head = String(data: data, encoding: .utf8) else {
+                conn.cancel()
+                return
+            }
+            let firstLine = head.components(separatedBy: "\r\n").first ?? ""
+            let fields = firstLine.split(separator: " ")
+            guard fields.count >= 2 else { conn.cancel(); return }
+
+            let isHead = fields[0] == "HEAD"
+            var rawPath = String(fields[1])
+            if let cut = rawPath.firstIndex(of: "?") { rawPath = String(rawPath[..<cut]) }
+            var rel = rawPath
+            if rel.hasPrefix("/") { rel.removeFirst() }
+            if rel.isEmpty { rel = "index.html" }
+            rel = rel.removingPercentEncoding ?? rel
+
+            let file = self.root.appendingPathComponent(rel).standardizedFileURL
+            guard file.path.hasPrefix(self.root.path),
+                  let body = try? Data(contentsOf: file) else {
+                self.respond(conn, status: "404 Not Found", type: "text/plain; charset=utf-8",
+                             body: Data("not found".utf8), head: isHead)
+                return
+            }
+            self.respond(conn, status: "200 OK", type: LocalStaticServer.mimeType(rel),
+                         body: body, head: isHead)
         }
-        task.didReceive(body)
-        task.didFinish()
+    }
+
+    private func respond(_ conn: NWConnection, status: String, type: String, body: Data, head: Bool) {
+        var header = "HTTP/1.1 \(status)\r\n"
+        header += "Content-Type: \(type)\r\n"
+        header += "Content-Length: \(body.count)\r\n"
+        header += "Access-Control-Allow-Origin: *\r\n"
+        header += "Cache-Control: no-cache\r\n"
+        header += "Connection: close\r\n\r\n"
+        var out = Data(header.utf8)
+        if !head { out.append(body) }
+        conn.send(content: out, completion: .contentProcessed { _ in conn.cancel() })
     }
 
     static func mimeType(_ path: String) -> String {
