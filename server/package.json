@@ -1,0 +1,10 @@
+{
+  "name": "wf-dps-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Warframe DPS 计算服务：在 jsdom 里跑 warframe-damage.com 的内核",
+  "main": "api.js",
+  "dependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

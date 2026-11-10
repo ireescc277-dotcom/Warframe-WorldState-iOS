@@ -12,39 +12,31 @@
 <header>
   <div class="brand">WARFRAME <b>伤害计算</b><span id="buildinfo"></span></div>
   <div class="sp"></div>
-  <div class="seg" id="seg-status">
-    <button data-v="1" class="on">含状态</button>
-    <button data-v="0">仅直伤</button>
-  </div>
   <div class="seg" id="seg-steel">
     <button data-v="0" class="on">普通</button>
-    <button data-v="1">钢铁 +100</button>
+    <button data-v="1">钢铁</button>
   </div>
-  <button class="hbtn" id="btn-rank">排名</button>
-  <button class="hbtn" id="btn-riven">紫卡</button>
+  <div class="seg" id="seg-eximus">
+    <button data-v="0" class="on">普通敌人</button>
+    <button data-v="1">卓越者</button>
+  </div>
   <button class="hbtn" id="btn-note">口径</button>
 </header>
 
-<!-- 顶部：左选武器，右选敌人 -->
+<!-- 左上选武器，右上选敌人 -->
 <div class="top">
   <div class="pick" id="pick-w">
-    <div class="pickhd">
-      <span class="pt">武器</span><span class="sp"></span>
-      <span class="chip" id="wcount">—</span>
-    </div>
+    <div class="pickhd"><span class="pt">武器</span><span class="sp"></span><span class="chip" id="wcount">—</span></div>
     <div class="pinput">
       <input id="wsearch" placeholder="搜索或选择武器…" autocomplete="off" spellcheck="false">
       <span class="car">▾</span>
       <div class="plist" id="wlist"></div>
     </div>
-    <div class="pcard" id="wcard"></div>
+    <div class="pcard" id="wcard"><div class="empty">先选武器</div></div>
   </div>
 
   <div class="pick" id="pick-t">
-    <div class="pickhd">
-      <span class="pt">敌人</span><span class="sp"></span>
-      <span class="chip" id="ecount">—</span>
-    </div>
+    <div class="pickhd"><span class="pt">敌人</span><span class="sp"></span><span class="chip" id="ecount">—</span></div>
     <div class="pinput">
       <input id="esearch" placeholder="搜索或选择敌人…" autocomplete="off" spellcheck="false">
       <span class="car">▾</span>
@@ -62,41 +54,28 @@
           <input type="number" id="lvl-num" class="num" min="1" max="9999" value="100">
         </div>
         <div class="estat" id="estat"></div>
+        <div class="facres" id="facres"></div>
       </div>
-      <div class="facres" id="facres"></div>
     </div>
   </div>
 </div>
 
-<!-- 配置页 -->
-<div class="build" id="bwrap"><div class="empty">加载中…</div></div>
+<!-- 配卡 -->
+<div class="build" id="bwrap">
+  <div class="slots" id="slots"></div>
+  <div class="side" id="wside"></div>
+</div>
 
-<!-- 结果：左选项，右结果 -->
+<!-- 下：左条件，右结果 -->
 <div class="lower">
   <aside class="optpanel">
     <div class="opthd"><span>条件</span><b id="opt-n">0</b><span class="s">不计入武器本体</span></div>
     <div id="optgroups"></div>
   </aside>
   <section class="respanel">
-    <div class="rbar">
-      <div class="fbox">
-        <div class="lb">直伤 BURST · 不计状态</div>
-        <div class="big" id="r-burst">—</div>
-        <div class="cmp" id="r-burst-cmp"></div>
-      </div>
-      <div class="fbox">
-        <div class="lb" id="r-dps-lb">含状态 · 实战 DPS</div>
-        <div class="big s" id="r-dps">—</div>
-        <div class="cmp" id="r-dps-cmp"></div>
-      </div>
-      <div class="fbox">
-        <div class="lb">击杀时间 TTK</div>
-        <div class="big s" id="r-ttk">—</div>
-        <div class="cmp" id="r-ttk-cmp"></div>
-      </div>
-    </div>
+    <div class="rbar" id="rbar"></div>
     <div id="brk"></div>
-    <div class="sec" id="simpane"></div>
+    <div class="attacks" id="attacks"></div>
   </section>
 </div>
 
@@ -113,7 +92,6 @@
 </div>
 
 <div id="banner"></div>
-<div id="busy"></div>
 <script src="app.js"></script>
 </body>
 </html>

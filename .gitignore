@@ -40,3 +40,4 @@ WarframeWatch/Resources/ArbSchedule.json
 
 # 计算器数据产物：由 scripts/build_dpsapp.py 生成，含本机配卡，不进仓库
 server/data/payload.json
+node_modules/

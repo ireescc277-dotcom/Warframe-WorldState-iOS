@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+                <meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+                                
+                        <meta name="robots" content="index, follow">
+                        <link rel="canonical" href="https://warframe-damage.com/">
+        <link rel="alternate" hreflang="x-default" href="https://warframe-damage.com/">
+        <link rel="alternate" hreflang="en" href="https://warframe-damage.com/">
+        <link rel="alternate" hreflang="zh" href="https://warframe-damage.com/zh/">
+        <link rel="alternate" hreflang="ru" href="https://warframe-damage.com/ru/">
+        <link rel="alternate" hreflang="ja" href="https://warframe-damage.com/ja/">
+        <link rel="alternate" hreflang="ko" href="https://warframe-damage.com/ko/">
+        <link rel="alternate" hreflang="es" href="https://warframe-damage.com/es/">
+        <link rel="alternate" hreflang="fr" href="https://warframe-damage.com/fr/">
+        <title>Warframe damage calculator (DPS) online</title>
+        <meta name="description" content="Calculator of damage per second (dps) for Warframe game for different weapons against different enemies.">
+        <meta name="keywords" content="warframe,weapon,damage,calculator,dps,online,enemies,armor,defence,riven,incarnon">
+        <link rel="stylesheet" href="/style-min.css?v1.48" fetchpriority="high">
+                        <link rel="manifest" href="/site.json" crossorigin="use-credentials">
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#333d4c">
+        <meta name="apple-mobile-web-app-title" content="WF Damage">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="application-name" content="WF Damage">
+                                <link rel="preload" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@300;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" crossorigin="anonymous">
+                
+                <meta property="og:type" content="website">
+                <meta property="og:title" content="Warframe Damage Calculator | Calculate Weapon DPS ">
+                <meta property="og:description" content="You can calculate: | Real weapon dps | Efficiency of Riven mods | Enemy Armor">
+                <meta property="og:url" content="https://warframe-damage.com/">
+                <meta property="og:image" content="https://warframe-damage.com/data/simg/logo.png">
+                <meta property="og:site_name" content="Warframe Damage Calculator">
+                <meta property="og:locale" content="en">
+                    <style>
+                </style>
+        <script>
+            var lang, weapon_json, weapon_restore_name;
+            var Weapon = [{"name":"Acceltra"},{"name":"Acceltra Prime"},{"name":"Ack & Brunt"},{"name":"Acrid"},{"name":"Aegrit"},{"name":"Aeolak"},{"name":"AX-52"},{"name":"Afentis"},{"name":"Afentis Prime"},{"name":"Afuris"},{"name":"Afuris Prime"},{"name":"Akarius"},{"name":"Akarius Prime"},{"name":"Akbolto"},{"name":"Akbolto Prime"},{"name":"Akbronco"},{"name":"Akbronco Prime"},{"name":"Akjagara"},{"name":"Akjagara Prime"},{"name":"Aklato"},{"name":"Aklex"},{"name":"Aklex Prime"},{"name":"Akmagnus"},{"name":"Akmagnus Prime"},{"name":"Aksomati"},{"name":"Aksomati Prime"},{"name":"Aksondol"},{"name":"Akstiletto"},{"name":"Akstiletto Prime"},{"name":"Akvasto"},{"name":"Akvasto Prime"},{"name":"Akzani"},{"name":"Alternox"},{"name":"Alternox Prime"},{"name":"Amanata"},{"name":"Ambassador"},{"name":"Amphis"},{"name":"Amprex"},{"name":"Angstrum"},{"name":"Anku"},{"name":"Ankyros"},{"name":"Ankyros Prime"},{"name":"Arquebex"},{"name":"Arbucep (Arch-mode)"},{"name":"Arbucep (Atmo-mode)"},{"name":"Arca Plasmor"},{"name":"Arca Scisco"},{"name":"Arca Titron"},{"name":"Argonak"},{"name":"Argo & Vel"},{"name":"Artemis Bow (Ivara)"},{"name":"Arum Spinosa"},{"name":"Astilla"},{"name":"Astilla Prime"},{"name":"Athodai"},{"name":"Athodai Prime"},{"name":"Atomos"},{"name":"Atterax"},{"name":"Attica"},{"name":"Azima"},{"name":"Azothane"},{"name":"Balefire Charger (Hildryn)"},{"name":"Balla (Dagger)"},{"name":"Balla (Staff)"},{"name":"Ballistica"},{"name":"Ballistica Prime"},{"name":"Basmu"},{"name":"Battacor"},{"name":"Baza"},{"name":"Baza Prime"},{"name":"Bo"},{"name":"Bo Prime"},{"name":"Boar"},{"name":"Boar Prime"},{"name":"Boltace"},{"name":"Bolto"},{"name":"Boltor"},{"name":"Boltor Prime"},{"name":"Brakk"},{"name":"Braton"},{"name":"Braton Prime"},{"name":"Braton Vandal"},{"name":"Broken Scepter"},{"name":"Broken War"},{"name":"Bronco"},{"name":"Bronco Prime"},{"name":"Bubonico"},{"name":"Burston"},{"name":"Burston Prime"},{"name":"Buzlok"},{"name":"Cadus"},{"name":"Cantare"},{"name":"Carmine Penta"},{"name":"Cassowar"},{"name":"Castanas"},{"name":"Catabolyst"},{"name":"Catchmoon (Primary)"},{"name":"Catchmoon (Secondary)"},{"name":"Caustacyst"},{"name":"Cedo"},{"name":"Cedo Prime"},{"name":"Ceramic Dagger"},{"name":"Cerata"},{"name":"Cernos"},{"name":"Cernos Prime"},{"name":"Cestra"},{"name":"Ceti Lacera"},{"name":"Cinta"},{"name":"Cobra & Crane"},{"name":"Cobra & Crane Prime"},{"name":"Coda Bassocyst"},{"name":"Coda Bubonico"},{"name":"Coda Catabolyst"},{"name":"Coda Caustacyst"},{"name":"Coda Hema"},{"name":"Coda Hirudo"},{"name":"Coda Mire"},{"name":"Coda Motovore"},{"name":"Coda Pathocyst"},{"name":"Coda Pox"},{"name":"Coda Synapse"},{"name":"Coda Sporothrix"},{"name":"Coda Tysis"},{"name":"Convectrix"},{"name":"Corinth"},{"name":"Corinth Prime"},{"name":"Cortege (Arch-mode)"},{"name":"Cortege (Atmo-mode)"},{"name":"Corvas (Arch-mode)"},{"name":"Corvas (Atmo-mode)"},{"name":"Corvas Prime (Arch-mode)"},{"name":"Corvas Prime (Atmo-mode)"},{"name":"Corufell"},{"name":"Corufell Prime"},{"name":"Cronus"},{"name":"Cyanex"},{"name":"Cyath (Machete)"},{"name":"Cyath (Polearm)"},{"name":"Cycron"},{"name":"Cyngas (Arch-mode)"},{"name":"Cyngas (Atmo-mode)"},{"name":"Daikyu"},{"name":"Daikyu Prime"},{"name":"Dakra Prime"},{"name":"Dark Dagger"},{"name":"Dark Split-Sword (Dual Swords)"},{"name":"Dark Split-Sword (Heavy Blade)"},{"name":"Dark Sword"},{"name":"Dehtat (Polearm)"},{"name":"Dehtat (Rapier)"},{"name":"Dera"},{"name":"Dera Vandal"},{"name":"Desert Wind (Baruuk)"},{"name":"Despair"},{"name":"Destreza"},{"name":"Destreza Prime"},{"name":"Detron"},{"name":"Dex Dakra"},{"name":"Dex Furis"},{"name":"Dex Nikana"},{"name":"Dex Pixia (Titania)"},{"name":"Dex Sybaris"},{"name":"Diwata Prime (Titania)"},{"name":"Dokrahm (Heavy Blade)"},{"name":"Dokrahm (Scythe)"},{"name":"Dorrclave"},{"name":"Dragon Nikana"},{"name":"Drakgoon"},{"name":"Dread"},{"name":"Dual Cestra"},{"name":"Dual Cleavers"},{"name":"Dual Coda Torxica"},{"name":"Dual Decurion (Arch-mode)"},{"name":"Dual Decurion (Atmo-mode)"},{"name":"Dual Ether"},{"name":"Dual Heat Swords"},{"name":"Dual Ichor"},{"name":"Dual Kamas"},{"name":"Dual Kamas Prime"},{"name":"Dual Keres"},{"name":"Dual Keres Prime"},{"name":"Dual Raza"},{"name":"Dual Skana"},{"name":"Dual Toxocyst"},{"name":"Dual Viciss"},{"name":"Dual Zoren"},{"name":"Dual Zoren Prime"},{"name":"Edun"},{"name":"EFV-5 Jupiter"},{"name":"EFV-8 Mars"},{"name":"Ekhein"},{"name":"Embolist"},{"name":"Endura"},{"name":"Enkaus"},{"name":"Epitaph"},{"name":"Epitaph Prime"},{"name":"Ether Daggers"},{"name":"Ether Reaper"},{"name":"Ether Sword"},{"name":"Evensong"},{"name":"Euphona Prime"},{"name":"Exalted Blade (Excalibur)"},{"name":"Exergis"},{"name":"Falcor"},{"name":"Fang"},{"name":"Fang Prime"},{"name":"Felarx"},{"name":"Ferrox"},{"name":"Fluctus (Arch-mode)"},{"name":"Fluctus (Atmo-mode)"},{"name":"Flux Rifle"},{"name":"Fragor"},{"name":"Fragor Prime"},{"name":"Fulmin"},{"name":"Fulmin Prime"},{"name":"Furax"},{"name":"Furax Wraith"},{"name":"Furis"},{"name":"Fusilai"},{"name":"Galariak Prime"},{"name":"Galatine"},{"name":"Galatine Prime"},{"name":"Galvacord"},{"name":"Gammacor"},{"name":"Garuda Prime Talons"},{"name":"Garuda Talons"},{"name":"Gazal Machete"},{"name":"Gaze (Primary)"},{"name":"Gaze (Secondary)"},{"name":"Ghoulsaw"},{"name":"Glaive"},{"name":"Glaive Prime"},{"name":"Glaxion"},{"name":"Glaxion Vandal"},{"name":"Glory (Jade)"},{"name":"Gorgon"},{"name":"Gorgon Wraith"},{"name":"Gotva Prime"},{"name":"Grakata"},{"name":"Grattler (Arch-mode)"},{"name":"Grattler (Atmo-mode)"},{"name":"Gram"},{"name":"Gram Prime"},{"name":"Grimoire"},{"name":"Grinlok"},{"name":"Guandao"},{"name":"Guandao Prime"},{"name":"Gunsen"},{"name":"Gunsen Prime"},{"name":"Haalvu"},{"name":"Halikar"},{"name":"Halikar Wraith"},{"name":"Harmony"},{"name":"Harpak"},{"name":"Hate"},{"name":"Heat Dagger"},{"name":"Heat Sword"},{"name":"Hek"},{"name":"Heliocor"},{"name":"Hema"},{"name":"Hespar"},{"name":"Higasa"},{"name":"Hikou"},{"name":"Hikou Prime"},{"name":"Hind"},{"name":"Hirudo"},{"name":"Hystrix"},{"name":"Hystrix Prime"},{"name":"Ignis"},{"name":"Ignis Wraith"},{"name":"Imperator (Arch-mode)"},{"name":"Imperator (Atmo-mode)"},{"name":"Imperator Vandal (Atmo-mode)"},{"name":"Imperator Vandal (Arch-mode)"},{"name":"Innodem"},{"name":"Iron Staff (Wukong)"},{"name":"Jat Kittag"},{"name":"Jat Kusar"},{"name":"Javlok"},{"name":"Jaw Sword"},{"name":"Kama"},{"name":"Karak"},{"name":"Karak Wraith"},{"name":"Karyst"},{"name":"Karyst Prime"},{"name":"Keratinos"},{"name":"Kesheg"},{"name":"Kestrel"},{"name":"Kestrel Prime"},{"name":"Whipclaw (Khora)"},{"name":"Knell"},{"name":"Knell Prime"},{"name":"Kogake"},{"name":"Kogake Prime"},{"name":"Kohm"},{"name":"Kohmak"},{"name":"Komorex"},{"name":"Kompressa"},{"name":"Kompressa Prime"},{"name":"Korrudo"},{"name":"Korumm"},{"name":"Kraken"},{"name":"Kreska"},{"name":"Krohkur"},{"name":"Kronen"},{"name":"Kronen Prime"},{"name":"Kronsh (Machete)"},{"name":"Kronsh (Polearm)"},{"name":"Kulstar"},{"name":"Kunai"},{"name":"Kuva Brakk"},{"name":"Kuva Bramma"},{"name":"Kuva Chakkhurr"},{"name":"Kuva Drakgoon"},{"name":"Kuva Hek"},{"name":"Kuva Hind"},{"name":"Kuva Karak"},{"name":"Kuva Ayanga (Arch-mode)"},{"name":"Kuva Ayanga (Atmo-mode)"},{"name":"Kuva Ghoulsaw"},{"name":"Kuva Grattler (Atmo-mode)"},{"name":"Kuva Grattler (Arch-mode)"},{"name":"Kuva Kohm"},{"name":"Kuva Kraken"},{"name":"Kuva Nukor"},{"name":"Kuva Ogris"},{"name":"Kuva Quartakk"},{"name":"Kuva Seer"},{"name":"Kuva Shildeg"},{"name":"Kuva Sobek"},{"name":"Kuva Tonkor"},{"name":"Kuva Twin Stubbas"},{"name":"Kuva Zarr"},{"name":"Lacera"},{"name":"Laetum"},{"name":"Landslide Fists (Atlas)"},{"name":"Lanka"},{"name":"Larkspur (Arch-mode)"},{"name":"Larkspur (Atmo-mode)"},{"name":"Larkspur Prime (Arch-mode)"},{"name":"Larkspur Prime (Atmo-mode)"},{"name":"Lato"},{"name":"Lato Prime"},{"name":"Lato Vandal"},{"name":"Latron"},{"name":"Latron Prime"},{"name":"Latron Wraith"},{"name":"Lecta"},{"name":"Lenz"},{"name":"Lesion"},{"name":"Lex"},{"name":"Lex Prime"},{"name":"Lizzie (Temple)"},{"name":"Machete"},{"name":"Machete Wraith"},{"name":"Magistar"},{"name":"Magnus"},{"name":"Mandonel (Arch-mode)"},{"name":"Mandonel (Atmo-mode)"},{"name":"Magnus Prime"},{"name":"Mara Detron"},{"name":"Marelok"},{"name":"Masseter"},{"name":"Masseter Prime"},{"name":"Mewan (Polearm)"},{"name":"Mewan (Sword)"},{"name":"Mios"},{"name":"Mire"},{"name":"Miter"},{"name":"Mk1-Bo"},{"name":"Mk1-Braton"},{"name":"Mk1-Furax"},{"name":"Mk1-Furis"},{"name":"Mk1-Kunai"},{"name":"Mk1-Paris"},{"name":"Mk1-Strun"},{"name":"Mausolon (Arch-mode)"},{"name":"Mausolon (Atmo-mode)"},{"name":"Morgha (Arch-mode)"},{"name":"Morgha (Atmo-mode)"},{"name":"Mutalist Cernos"},{"name":"Mutalist Quanta"},{"name":"Nagantaka"},{"name":"Nagantaka Prime"},{"name":"Nami Skyla"},{"name":"Nami Skyla Prime"},{"name":"Nami Solo"},{"name":"Nataruk"},{"name":"Nepheri"},{"name":"Neutralizer  (Cyte-09)"},{"name":"Nikana"},{"name":"Nikana Prime"},{"name":"Ninkondi"},{"name":"Ninkondi Prime"},{"name":"Noctua (Dante)"},{"name":"Nukor"},{"name":"Nunchasa"},{"name":"Obex"},{"name":"Ocucor"},{"name":"Ogris"},{"name":"Ohma"},{"name":"Okina"},{"name":"Okina Prime"},{"name":"Onos"},{"name":"Ooltha (Staff)"},{"name":"Ooltha (Sword)"},{"name":"Opticor"},{"name":"Opticor Vandal"},{"name":"Orthos"},{"name":"Orthos Prime"},{"name":"Orvius"},{"name":"Pandero"},{"name":"Pandero Prime"},{"name":"Pangolin Prime"},{"name":"Pangolin Sword"},{"name":"Panthera"},{"name":"Panthera Prime"},{"name":"Paracesis"},{"name":"Paracyst"},{"name":"Paris"},{"name":"Paris Prime"},{"name":"Pathocyst"},{"name":"Pennant"},{"name":"Penta"},{"name":"Perigale"},{"name":"Perigale Prime"},{"name":"Phaedra (Arch-mode)"},{"name":"Phaedra (Atmo-mode)"},{"name":"Phage"},{"name":"Phantasma"},{"name":"Phantasma Prime"},{"name":"Phenmor"},{"name":"Plague Keewar (Scythe)"},{"name":"Plague Keewar (Staff)"},{"name":"Plague Kripath (Polearm)"},{"name":"Plague Kripath (Rapier)"},{"name":"Plasma Sword"},{"name":"Plinx"},{"name":"Pox"},{"name":"Praedos"},{"name":"Pride"},{"name":"Prisma Angstrum"},{"name":"Prisma Dual Cleavers"},{"name":"Prisma Dual Decurions (Arch-mode)"},{"name":"Prisma Dual Decurions (Atmo-mode)"},{"name":"Prisma Gorgon"},{"name":"Prisma Grakata"},{"name":"Prisma Grinlok"},{"name":"Prisma Lenz"},{"name":"Prisma Machete"},{"name":"Prisma Obex"},{"name":"Prisma Ohma"},{"name":"Prisma Skana"},{"name":"Prisma Tetra"},{"name":"Prisma Twin Gremlins"},{"name":"Proboscis Cernos"},{"name":"Prova"},{"name":"Prova Vandal"},{"name":"Pulmonars"},{"name":"Pupacyst"},{"name":"Purgator 1"},{"name":"Pyrana"},{"name":"Pyrana Prime"},{"name":"Quanta"},{"name":"Quanta Vandal"},{"name":"Quartakk"},{"name":"Quassus"},{"name":"Quassus Prime"},{"name":"Quatz"},{"name":"Quellor"},{"name":"Rabvee (Hammer)"},{"name":"Rabvee (Machete)"},{"name":"Rakta Ballistica"},{"name":"Rakta Cernos"},{"name":"Rakta Dark Dagger"},{"name":"Rattleguts (Primary)"},{"name":"Rattleguts (Secondary)"},{"name":"Rauta"},{"name":"Reaper Prime"},{"name":"Reconifex"},{"name":"Redeemer"},{"name":"Redeemer Prime"},{"name":"Regulators (Mesa)"},{"name":"Riot-848"},{"name":"Ripkas"},{"name":"Rubico"},{"name":"Rubico Prime"},{"name":"Rumblejack"},{"name":"Ruvox"},{"name":"Sagek Prime"},{"name":"Sampotes"},{"name":"Sancti Castanas"},{"name":"Sancti Magistar"},{"name":"Sancti Tigris"},{"name":"Sarofang"},{"name":"Sarofang Prime"},{"name":"Sarpa"},{"name":"Scindo"},{"name":"Scindo Prime"},{"name":"Scoliac"},{"name":"Scourge"},{"name":"Scourge Prime"},{"name":"Scyotid"},{"name":"Secura Dual Cestra"},{"name":"Secura Lecta"},{"name":"Secura Penta"},{"name":"Seer"},{"name":"Sepfahn (Nikana)"},{"name":"Sepfahn (Staff)"},{"name":"Sepulcrum"},{"name":"Serro"},{"name":"Shadow Claws (Sevagoth)"},{"name":"Shaku"},{"name":"Shedu"},{"name":"Sheev"},{"name":"Sibear"},{"name":"Sicarus"},{"name":"Sicarus Prime"},{"name":"Sigma & Octantis"},{"name":"Silva & Aegis"},{"name":"Silva & Aegis Prime"},{"name":"Simulor"},{"name":"Shadow Clones (Ash)"},{"name":"Shattered Lash (Gara)"},{"name":"Skana"},{"name":"Skana Prime"},{"name":"Skiajati"},{"name":"Slaytra"},{"name":"Snipetron"},{"name":"Snipetron Vandal"},{"name":"Sobek"},{"name":"Soma"},{"name":"Soma Prime"},{"name":"Sonicor"},{"name":"Spectra"},{"name":"Spectra Vandal"},{"name":"Spinnerex"},{"name":"Spira"},{"name":"Spira Prime"},{"name":"Sporelacer (Primary)"},{"name":"Sporelacer (Secondary)"},{"name":"Sporothrix"},{"name":"Stahlta"},{"name":"Staticor"},{"name":"Steflos"},{"name":"Steflos Prime"},{"name":"Stradavar"},{"name":"Stradavar Prime"},{"name":"Stropha"},{"name":"Strun"},{"name":"Strun Prime"},{"name":"Strun Wraith"},{"name":"Stubba"},{"name":"Stug"},{"name":"Sun & Moon"},{"name":"Supra"},{"name":"Supra Vandal"},{"name":"Syam"},{"name":"Sybaris"},{"name":"Sybaris Prime"},{"name":"Sydon"},{"name":"Synapse"},{"name":"Synoid Gammacor"},{"name":"Synoid Heliocor"},{"name":"Synoid Simulor"},{"name":"Tak & Lug"},{"name":"Thalys"},{"name":"Talons"},{"name":"Tatsu"},{"name":"Tatsu Prime"},{"name":"Tekko"},{"name":"Tekko Prime"},{"name":"Telos Akbolto"},{"name":"Telos Boltace"},{"name":"Telos Boltor"},{"name":"Tenet Agendus"},{"name":"Tenet Arca Plasmor"},{"name":"Tenet Cycron"},{"name":"Tenet Detron"},{"name":"Tenet Diplos"},{"name":"Tenet Envoy"},{"name":"Tenet Exec"},{"name":"Tenet Glaxion"},{"name":"Tenet Ferrox"},{"name":"Tenet Flux Rifle"},{"name":"Tenet Grigori"},{"name":"Tenet Livia"},{"name":"Tenet Quanta"},{"name":"Tenet Plinx"},{"name":"Tenet Spirex"},{"name":"Tenet Tetra"},{"name":"Tenora"},{"name":"Tenora Prime"},{"name":"Tetra"},{"name":"Thornbak"},{"name":"Tiberon"},{"name":"Tiberon Prime"},{"name":"Tigris"},{"name":"Tigris Prime"},{"name":"Tipedo"},{"name":"Tipedo Prime"},{"name":"Tombfinger (Primary)"},{"name":"Tombfinger (Secondary)"},{"name":"Tonbo"},{"name":"Tonkkatt"},{"name":"Tonkor"},{"name":"Torid"},{"name":"Trumna"},{"name":"Trumna Prime"},{"name":"Twin Basolk"},{"name":"Twin Grakatas"},{"name":"Twin Gremlins"},{"name":"Twin Kohmak"},{"name":"Twin Krohkur"},{"name":"Twin Rogga"},{"name":"Twin Vipers"},{"name":"Twin Vipers Wraith"},{"name":"Tysis"},{"name":"Wrath"},{"name":"Vadarya Prime"},{"name":"Valkyr Talons (Valkyr)"},{"name":"Vastilok"},{"name":"Vasto"},{"name":"Vasto Prime"},{"name":"Vaykor Hek"},{"name":"Vaykor Marelok"},{"name":"Vaykor Sydon"},{"name":"Vectis"},{"name":"Vectis Prime"},{"name":"Veldt"},{"name":"Velox"},{"name":"Velox Prime"},{"name":"Velocitus (Arch-mode)"},{"name":"Velocitus (Atmo-mode)"},{"name":"Venato"},{"name":"Venato Prime"},{"name":"Venka"},{"name":"Venka Prime"},{"name":"Verdilac"},{"name":"Vericres"},{"name":"Vermisplicer (Primary)"},{"name":"Vermisplicer (Secondary)"},{"name":"Viper"},{"name":"Viper Wraith"},{"name":"Vesper 77"},{"name":"Vinquibus (Rifle)"},{"name":"Vinquibus (Melee)"},{"name":"Vitrica"},{"name":"Volnus"},{"name":"Volnus Prime"},{"name":"Vulkar"},{"name":"Vulkar Wraith"},{"name":"War"},{"name":"War Prime"},{"name":"Wolf Sledge"},{"name":"Xoris"},{"name":"Zakti"},{"name":"Zakti Prime"},{"name":"Zarr"},{"name":"Zenistar"},{"name":"Zenith"},{"name":"Zhuge"},{"name":"Zhuge Prime"},{"name":"Zylok"},{"name":"Zylok Prime"},{"name":"Zymos"}];
+            lang = "en";
+            weapon_json = [];
+            weapon_restore_name = "";
+        </script>
+        <script defer src="jquery-min.js"></script>
+        <script>var localeLang = {};</script>        <script defer src="min.js"></script>             </head>
+    <body>
+                <header class="header">
+                        <h1><a class="logo" href="/">
+            <svg class="logoSVG" version="1.1" width="20" height="20" viewBox="0 0 128 128">
+                <g><path style="stroke:#fff;stroke-width:12;stroke-dasharray:none" d="m 2.9474499,9.0533765 c 42.7258741,0 88.2586501,0 122.1774101,0" />
+                <path style="stroke:#fff;stroke-width:12;stroke-dasharray:none" d="M 64.736762,7.5677324 64.079961,125.71498" />
+                <path style="fill:none;fill-opacity:1;stroke:#fff;stroke-width:12;stroke-dasharray:none" d="m 10.222398,42.66945 c 0,0 -1,18.6 0.12,29.8 0.3,2 0.96,4 1.75,6 0.58,1.4 2.1,4.06 2.19,4 0,0 2.438748,1.637864 3.721864,2.354384 1.416964,0.791267 2.835158,1.622608 4.378663,2.140349 2.111841,0.708377 1.937908,1.283162 4.159731,1.498243 2.2513,0.217922 5.619285,1.070172 7.881595,1.070172 2.408264,0 6.184711,-0.785784 8.538392,-1.284207 1.723614,-0.364986 3.27825,-1.297137 4.816531,-2.140349 2.383435,-1.306487 3.9773,-3.67762 5.911194,-5.564909 1.561463,-1.523835 2.956952,-3.756677 4.15973,-5.564905 4.824415,-7.252916 8.560441,-14.303638 14.449592,-20.76138 1.797549,-1.971101 3.317855,-3.973385 5.473327,-5.564909 2.294924,-1.694488 5.281941,-3.078306 7.881597,-4.280697 3.072273,-1.420986 6.473073,-2.209953 9.851994,-2.568418 3.268054,-0.346705 6.701711,-0.489923 9.851991,0.42807 2.19495,0.639611 1.34442,-0.1 4,1 0.8,0.8 1,0.9 2.63394,1.8 1.4995,1.200281 4.24679,3.727079 4.80979,4.597526 1.30818,2.022564 1.89736,3.922881 2.6272,6.207015 0.76931,2.407687 1.15935,6.253798 1.09466,8.77543 -0.0671,2.615697 -0.78348,5.193292 -1.53253,7.705253 -0.72441,2.42936 -1.55281,4.871194 -2.84613,7.063152 -1.58315,2.683168 -3.82657,4.944488 -5.91119,7.277186 -1.66396,1.861978 -5.2544,5.35087 -5.2544,5.35 l -5.47,4.7 -3.9,2.6" /></g>
+            </svg>
+            WARFRAME WEAPON BUILDS CALCULATOR            </a></h1>
+            <div class="tPRight">
+                <div class="guideB"><a href="/en/guide/" target="_blank" title="Will help you learn how to make weapon builds">Building Guide</a></div>
+                <div class="topUsed">TOP 20 Monthly Weapon</div>
+                <div class="tPRightD">
+                                        <a href="#" rel="nofollow" class="tgLink" title="Copy build to clipboard">
+                        <svg alt="copyClipboard" fill="#fff" xmlns="http://www.w3.org/2000/svg" class="copyClipboardSvg" viewBox="0 0 24 24" width="20px" height="20px"><path d="M 18 2 C 16.35499 2 15 3.3549904 15 5 C 15 5.1909529 15.021791 5.3771224 15.056641 5.5585938 L 7.921875 9.7207031 C 7.3985399 9.2778539 6.7320771 9 6 9 C 4.3549904 9 3 10.35499 3 12 C 3 13.64501 4.3549904 15 6 15 C 6.7320771 15 7.3985399 14.722146 7.921875 14.279297 L 15.056641 18.439453 C 15.021555 18.621514 15 18.808386 15 19 C 15 20.64501 16.35499 22 18 22 C 19.64501 22 21 20.64501 21 19 C 21 17.35499 19.64501 16 18 16 C 17.26748 16 16.601593 16.279328 16.078125 16.722656 L 8.9433594 12.558594 C 8.9782095 12.377122 9 12.190953 9 12 C 9 11.809047 8.9782095 11.622878 8.9433594 11.441406 L 16.078125 7.2792969 C 16.60146 7.7221461 17.267923 8 18 8 C 19.64501 8 21 6.6450096 21 5 C 21 3.3549904 19.64501 2 18 2 z M 18 4 C 18.564129 4 19 4.4358706 19 5 C 19 5.5641294 18.564129 6 18 6 C 17.435871 6 17 5.5641294 17 5 C 17 4.4358706 17.435871 4 18 4 z M 6 11 C 6.5641294 11 7 11.435871 7 12 C 7 12.564129 6.5641294 13 6 13 C 5.4358706 13 5 12.564129 5 12 C 5 11.435871 5.4358706 11 6 11 z M 18 18 C 18.564129 18 19 18.435871 19 19 C 19 19.564129 18.564129 20 18 20 C 17.435871 20 17 19.564129 17 19 C 17 18.435871 17.435871 18 18 18 z"/></svg>
+                    </a>
+                    <a href="https://t.me/warframe_damage" rel="nofollow" class="tgLink" target="_blank" title="Welcome to ours support channel in Telegram">
+                        <svg viewBox="0 0 32 32" width="20" height="20" class="tgLinkSvg">
+                        <path d="M 30.938342,0.80069862 A 2.173295,2.4114074 0 0 0 28.712374,0.61237506 C 27.803257,1.0171625 3.0015517,12.820937 1.9851362,13.301487 1.8017523,13.372923 0.20397079,14.041792 0.36199313,15.52457 a 2.411304,2.6754932 0 0 0 1.59387977,1.948175 l 6.3072379,2.396254 c 0.4194419,1.543389 1.9508932,7.247211 2.3020532,8.461573 0.222403,0.757625 0.559907,1.757687 1.170536,1.961163 a 1.4495137,1.6083264 0 0 0 1.400742,-0.283568 l 3.854965,-3.967783 6.223349,5.385621 0.148268,0.09958 a 2.996572,3.3248849 0 0 0 1.213456,0.311707 2.2474291,2.4936637 0 0 0 0.860343,-0.186158 2.6005407,2.8854631 0 0 0 1.336363,-1.515248 L 31.429968,3.3311611 A 2.1459825,2.3811024 0 0 0 30.938342,0.80069862 Z M 13.823157,20.814947 11.696683,27.107551 9.5702093,19.241255 25.877727,5.8746115 Z"
+                            class="tgLinkPth" />
+                        </svg>
+                    </a>
+                </div>
+                <div class="tPRightR">
+                    <div class="customDropdown slangChange">
+                        <div class="customDropdownWrapper">
+                            <div class="customDropdownSelect">
+                                <div class="customDropdownInput">English</div>
+                                <div class="customDropdownIco"></div>
+                            </div>
+                            <div class="customDropdownList">
+                                <a class="customDropdownItem" data-l="" href="/">English</a>
+                                <a class="customDropdownItem" data-l="zh" href="/zh/">简体中文</a>
+                                <a class="customDropdownItem" data-l="ru" href="/ru/">Русский</a>
+                                <a class="customDropdownItem" data-l="ja" href="/ja/">日本語</a>
+                                <a class="customDropdownItem" data-l="ko" href="/ko/">한국어</a>
+                                <a class="customDropdownItem" data-l="es" href="/es/">Español</a>
+                                <a class="customDropdownItem" data-l="fr" href="/fr/">Français</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="helpB" tabindex="0">
+                        <div class="helpBTxt">How does this work</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+                <div class="topPanel">
+            <div class="weaponC">
+                <div class="weaponCBlock">
+                    <div class="inputsC">
+                        <input autocomplete="off" type="text" id="weaponSearch" disabled="disabled" placeholder="Type or select weapon name">
+                        <svg class="loadingData" width="25px" height="25px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: rgba(0, 0, 0, 0) none repeat scroll 0% 0%;"><circle cx="50" cy="50" fill="none" stroke="#00AEEF" stroke-width="10" r="30" stroke-dasharray="141.37166941154067 49.12388980384689"></circle></svg>
+                    </div>
+                                    </div>
+                <div class="selectionAlerts">Select a weapon first</div>
+                <ul id="resultsWeapon"></ul>
+                <div class="weaponInfo">
+                    <div class="infoAlert">
+                        <div class="alertITitle">No data</div>
+                        <div>Select a weapon for DPS calculation.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="enemyC">
+                <div class="inputsC">
+                    <input autocomplete="off" type="text" id="enemies" disabled="disabled" placeholder="Type or select enemy name">
+                    <svg class="loadingData" width="25px" height="25px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: rgba(0, 0, 0, 0) none repeat scroll 0% 0%;"><circle cx="50" cy="50" fill="none" stroke="#00AEEF" stroke-width="10" r="30" stroke-dasharray="141.37166941154067 49.12388980384689"></circle></svg>
+                </div>
+                <div class="selectionAlerts">And select an enemy</div>
+                <ul id="resultsEnemy"></ul>
+                <div class="enemyInfo">
+                    <div class="infoAlert">
+                        <div class="alertITitle">No data</div>
+                        <div>Select an enemy for DPS calculation.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modsBlock">
+            <div class="modsContainer">
+                <div class="modsSide">
+                    <div class="createRiven" tabindex="0">Create<br>riven mod</div>
+                    <div class="modsContainerM">
+                        <div class="modsContainerRow">
+                            <div class="mod" tabindex="0" draggable="true" data-id="0" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="1" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="2" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="3" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                        </div>
+                        <div class="modsContainerRow">
+                            <div class="mod" tabindex="0" draggable="true" data-id="4" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="5" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="6" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            <div class="mod" tabindex="0" draggable="true" data-id="7" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="meleeMist">
+                            <div class="mod mistMod" tabindex="0" data-id="10" data-alt="arcane" oncontextmenu="return disableMenu(event);">arcane</div>
+                            <div class="mistName"></div>
+                        </div>
+                        <div class="archMistBlock">
+                            <div class="archMist">
+                                <div class="mod mistMod" tabindex="0" data-id="28" data-alt="arcane" oncontextmenu="return disableMenu(event);">arcane</div>
+                                <div class="mistName"></div>
+                            </div>
+                            <div class="archMist">
+                                <div class="mod mistMod" tabindex="0" data-id="29" data-alt="arcane" oncontextmenu="return disableMenu(event);">arcane</div>
+                                <div class="mistName"></div>
+                            </div>
+                        </div>
+                        <div class="mod" tabindex="0" data-id="8" data-alt="exilus" oncontextmenu="return disableMenu(event);">exilus</div>
+                        <div class="stancePanel">
+                            <div class="mod" tabindex="0" data-id="9" data-alt="stance" oncontextmenu="return disableMenu(event);">stance</div>
+                            <select id="stanceAttackList"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="buttonShowAddtMods" tabindex="0">Set warframe mods, aura, shards, warframe arcanes<div class="bShowAddtModsArr"></div></div>
+                <div class="addtMods">
+                    <div class="addtModsF">
+                        <div class="modsContainerM">
+                            <div class="modAuraSlot">
+                                <div class="mod" tabindex="0" data-id="17" data-alt="aura" oncontextmenu="return disableMenu(event);">aura</div>
+                            </div>
+                            <div class="modsContainerRow">
+                                <div class="mod" tabindex="0" data-id="13" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                                <div class="mod" tabindex="0" data-id="14" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                                <div class="mod" tabindex="0" data-id="15" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                                <div class="mod" tabindex="0" data-id="16" data-alt="add mod" oncontextmenu="return disableMenu(event);">add mod</div>
+                            </div>
+                        </div>
+                        <div class="frameMistBlock">
+                            <div class="frameMist">
+                                <div class="mod mistMod" tabindex="0" data-id="11" data-alt="arcane" oncontextmenu="return disableMenu(event);">arcane</div>
+                                <div class="mistName"></div>
+                            </div>
+                            <div class="frameMist">
+                                <div class="mod mistMod" tabindex="0" data-id="12" data-alt="arcane" oncontextmenu="return disableMenu(event);">arcane</div>
+                                <div class="mistName"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="archonShardsBlock">
+                        <div class="shardMod mod" tabindex="0" data-id="23" oncontextmenu="return disableMenu(event);"></div>
+                        <div class="shardMod mod" tabindex="0" data-id="24" oncontextmenu="return disableMenu(event);"></div>
+                        <div class="shardMod mod" tabindex="0" data-id="25" oncontextmenu="return disableMenu(event);"></div>
+                        <div class="shardMod mod" tabindex="0" data-id="26" oncontextmenu="return disableMenu(event);"></div>
+                        <div class="shardMod mod" tabindex="0" data-id="27" oncontextmenu="return disableMenu(event);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="resultInfo">
+            <div class="resultInfoWrapper">
+                <div class="optionsPanel">
+                    <div class="optionsPanelTitle">Select additional options</div>
+                    <div class="rndAlarm">
+                        Any change starts a new random queue.                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optVirus" name="optVirus">
+                            <label for="optVirus">External Virus</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="10" min="1" max="10" id="optVirusStacks" name="optVirusStacks">
+                            <label for="optVirusStacks">count stacks</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <input class="optVal" type="number" id="strengthInput" value="0" min="0" max="1000" placeholder="100">
+                        <label for="strengthInput">Strength (for weapons and mods that dependent on it)</label>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optHeadshot" name="optHeadshot">
+                            <label for="optHeadshot">Headshot/Weak Point bonus active</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optDecreaseArmor" name="optDecreaseArmor">
+                            <label for="optDecreaseArmor">External Decrease Armor</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="0" min="0" max="99" id="optDecreaseArmorVal" name="optDecreaseArmorVal">
+                            <label for="optDecreaseArmorVal">%</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optStealth" name="optStealth">
+                            <label for="optStealth">Stealth bonus (for melee)</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                        <input class="optSel" type="checkbox" id="optHeavy" name="optHeavy">
+                            <label for="optHeavy">Heavy attack (for melee)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="12" min="1" max="13" id="optHeavyStartCounter" name="optHeavyStartCounter">
+                            <label for="optHeavyStartCounter">start from</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                        <input class="optSel" type="checkbox" id="optMeleeCombo" name="optMeleeCombo">
+                            <label for="optMeleeCombo">Light attacks combo multiplier (for melee)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="12" min="1" max="13" id="optMeleeComboVal" name="optMeleeComboVal">
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                        <input class="optSel" type="checkbox" id="optAbilityCombo" name="optAbilityCombo">
+                            <label for="optAbilityCombo">Combo Ability Multiplier</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="12" min="1" max="12" id="optAbilityComboVal" name="optAbilityComboVal">
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                        <input class="optSel" type="checkbox" id="optSniperCombo" name="optSniperCombo">
+                            <label for="optSniperCombo">Sniper combo multiplier (for sniper rifle)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="1.5" min="1.5" max="100" id="optSniperComboVal" name="optSniperComboVal">
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optRhino" name="optRhino">
+                            <label for="optRhino">Roar (Rhino)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="30" min="1" max="9999" id="optRhinoPc" name="optRhinoPc">
+                            <label for="optRhinoPc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optMirage" name="optMirage">
+                            <label for="optMirage">Eclipse (Mirage)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="30" min="1" max="9999" id="optMiragePc" name="optMiragePc">
+                            <label for="optMiragePc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optXata" name="optXata">
+                            <label for="optXata">Xata's Whisper (Xaku)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="26" min="1" max="9999" id="optXataPc" name="optXataPc">
+                            <label for="optXataPc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optTLash" name="optTLash" />
+                            <label for="optTLash">Toxic Lash (Saryn)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="30" min="1" max="9999" id="optTLashPc" name="optTLashPc" />
+                            <label for="optTLashPc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optNourish" name="optNourish">
+                            <label for="optNourish">Nourish (Grendel)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="45" min="1" max="9999" id="optNourishPc" name="optNourishPc">
+                            <label for="optNourishPc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optCrit" name="optCrit" />
+                            <label for="optCrit">Flat crit. chance (~Kullervo, Harrow)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="50" min="1" max="9999" id="optCritPc" name="optCritPc" />
+                            <label for="optCritPc">% buff</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optCountStatusOnEnemy" name="optCountStatusOnEnemy">
+                            <label for="optCountStatusOnEnemy">Manual selection of the total number of statuses on the enemy (default = total current)</label>
+                        </div>
+                        <div class="optBlock">
+                            <input class="optVal" type="number" value="1" min="1" max="50" id="optCountStatusOnEnemyPc" name="optCountStatusOnEnemyPc">
+                            <label for="optCountStatusOnEnemyPc">count</label>
+                        </div>
+                    </div>
+                    <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optMultiplicativeBasePerStatus" name="optMultiplicativeBasePerStatus">
+                            <label for="optMultiplicativeBasePerStatus">Property "damage per status" calculated as multiplicative (~Condition Overload)</label>
+                        </div>
+                    </div>
+                                        <div class="option">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optMadurai" name="optMadurai">
+                            <label for="optMadurai">Madurai (physical damage increased by 30%)</label>
+                        </div>
+                    </div>
+                    <div class="mergeCustomBlock">
+                        <div class="showAddCustomStat" tabindex="0">
+                            Add custom stat value                        </div>
+                    </div>
+                    <div class="mergeESBlock">
+                        <div class="showEnemyMergeStatuses" tabindex="0">
+                            Combine attack effects                        </div>
+                    </div>
+                    <div class="option mainApplyOpt">
+                        <div class="optB">
+                            <input class="optSel" type="checkbox" id="optAllModsConds" name="optAllModsConds" checked="checked">
+                            <label for="optAllModsConds">Trigger all conditions for mods with conditions</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="resultQueuePanel">
+                    <div class="queueBlock">
+                        <div class="butNewQueue" tabindex="0">Calculate average values over several full firing/attack cycles</div>
+                    </div>
+                    <div class="qRange">
+                            <input id="queueLen" name="queueLen" type="range" min="1" max="60" step="1" value="20">
+                            <span class="qRageVal">20</span>
+                            <label for="queueLen">Continuous firing / attack durationh (sec)</label>
+                    </div>
+                                        <div class="resultWeaponArmor">
+                        <div class="rWAItem armor" data-type="armor">
+                            <div class="rWAItemName resistArmor">
+                                Armor                                <div class="expand-btn" data-target="armor">Expand</div>
+                            </div>                            <div class="rWAItemTypes">
+                            <div class="alertWandE">To see the dps, select both the <span class="enemySelect">enemy</span> and the weapon.</div>
+                            </div>
+                        </div>
+                        <div class="rWAItem health" data-type="health">
+                            <div class="rWAItemName resistHP">
+                                Health                                <div class="expand-btn" data-target="health">Expand</div>
+                            </div>
+                            <div class="rWAItemTypes"></div>
+                        </div>
+                        <div class="rWAItem shield" data-type="shield">
+                            <div class="rWAItemName resistShield">
+                                Shield                                <div class="expand-btn" data-target="shield">Expand</div>
+                            </div>
+                            <div class="rWAItemTypes"></div>
+                        </div>
+                        <div class="rWAItem overguard" data-type="overguard">
+                            <div class="rWAItemName resistOverguard">
+                                Overguard                                <div class="expand-btn" data-target="overguard">Expand</div>
+                            </div>
+                            <div class="rWAItemTypes"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modsSearchPopup" data-id="">
+            <div class="modsSPIBlock">
+                <input autocomplete="off" type="text" placeholder="Mods/stats name" id="modsSearchInput">
+                <ul id="resultsModsPopup"></ul>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footerLeft">
+                <div class="updatedB" tabindex="0">Change log 2026.11.10</div>
+            </div>
+        </footer>
+
+        <div class="popUp" id="rivenSettings">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <div class="popUpHead">Create riven</div>
+                <div class="popUpContent cSecondary">
+                    <div class="previewSide">
+                        <img src="/data/simg/riven.webp" alt="warframe riven mod preview" loading="lazy">
+                        <div class="rivenTitle"></div>
+                        <div class="rivenProps">
+                            <div class="rivenProp1"></div>
+                            <div class="rivenProp2"></div>
+                            <div class="rivenProp3"></div>
+                            <div class="rivenProp4"></div>
+                        </div>
+                    </div>
+                    <div class="rivenSettingsRS">
+                    <div class="rivenSettingsInputBlock">
+                            <div class="customDropdown rivenAttr" data-link="1">
+                                <div class="customDropdownWrapper">
+                                    <div class="customDropdownSelect">
+                                        <label class="customDropdownInput" for="rProp1" data-type="" data-addt="">Select property</label>
+                                        <div class="customDropdownIco"></div>
+                                    </div>
+                                    <div class="customDropdownList"></div>
+                                </div>
+                            </div>
+                            <input class="rivenSettingsIAVal" id="rProp1" type="number" step="0.1" min="-9999" max="9999" placeholder="0">
+                        </div>
+                        <div class="rivenSettingsInputBlock">
+                            <div class="customDropdown rivenAttr" data-link="2">
+                                <div class="customDropdownWrapper">
+                                    <div class="customDropdownSelect">
+                                        <label class="customDropdownInput" for="rProp2" data-type="" data-addt="">Select property</label>
+                                        <div class="customDropdownIco"></div>
+                                    </div>
+                                    <div class="customDropdownList"></div>
+                                </div>
+                            </div>
+                            <input class="rivenSettingsIAVal" id="rProp2" type="number" step="0.1" min="-9999" max="9999" placeholder="0">
+                        </div>
+                        <div class="rivenSettingsInputBlock">
+                            <div class="customDropdown rivenAttr" data-link="3">
+                                <div class="customDropdownWrapper">
+                                    <div class="customDropdownSelect">
+                                        <label class="customDropdownInput" for="rProp3" data-type="" data-addt="">Select property</label>
+                                        <div class="customDropdownIco"></div>
+                                    </div>
+                                    <div class="customDropdownList"></div>
+                                </div>
+                            </div>
+                            <input class="rivenSettingsIAVal" id="rProp3" type="number" step="0.1" min="-9999" max="9999" placeholder="0">
+                        </div>
+                        <div class="rivenSettingsInputBlock">
+                            <div class="customDropdown rivenAttr" data-link="4">
+                                <div class="customDropdownWrapper">
+                                    <div class="customDropdownSelect">
+                                        <label class="customDropdownInput" for="rProp4" data-type="" data-addt="">Select property</label>
+                                        <div class="customDropdownIco"></div>
+                                    </div>
+                                    <div class="customDropdownList"></div>
+                                </div>
+                            </div>
+                            <input class="rivenSettingsIAVal" id="rProp4" type="number" step="0.1" min="-9999" max="9999" placeholder="0">
+                        </div>
+                        <div class="popUpButtons">
+                            <div class="addRiven">Add riven</div>
+                            <div class="rivenMsg"></div>
+                        </div>
+                        <div class="alertRivenInfo">
+                            Build full builds to test your riven mod. The effect of mod dependent on the rest of your build.                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="popUp" id="queueInfo">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <div class="popUpHead">How does this work?</div>
+                <div class="popUpContent textScroll">
+                    <h2>This is a fan-made dps calculator for Warframe game.</h2>
+                    
+                    <p>
+                        It uses publicly available information from the game (such as Wikipedia). This site has nothing to do with the developers of the game. All rights to the information used belong to the game developers. After game changes there is no guarantee that the information and mechanics will be updated in the near future.
+                    </p>
+                    <p>I hope this calculator will help you understand how to better build your weapon.</p>
+                    <p class="fBold">Random dps queue works as:</p>
+                    <p>1. calculate how many shots/hits the weapon does in 20 (default) seconds (for melee with stance attack time)<br>
+                    2. make a queue from the received number of shots/hits<br>
+                    3. calculate the chance of a multi-shot and increase the number of fired shots in the queue by this amount<br>
+                    4. calculate for each hit the chance of a critical hit<br>
+                    5. calculate the critical multiplier for each hit, with tier of the triggered chance<br>
+                    6. calculate for each hit the chance of status triggering<br>
+                    7. calculate specific type of status triggering, with chance of the ratio of statuses among themselves<br>
+                    8. for melee weapons, we add a type of status from stance attack, also add fading combo counter with efficiency combo<br>
+                    9. add Hunter Munitions/Internal Bleeding procs to the queue <br>
+                    10. add statuses of force procs to the queue <br>
+                    11. build a time-bound queue of statuses to determine the time of their activity (for example, to determine later for each hit whether the removal of armor from corrosion or heat was active) with the number of ticks each active status<br>
+                    12. calculate the actual damage from shots/hits and the statuses active at that timeline<br>
+                    13. The damage queue for the number of seconds you select is divided into one-second intervals, and the damage per second is calculated. Then, the median damage value is selected from the array of these second-by-second values.<br>
+                    <span class="fBold">When you change any parameter in the settings, a new random queue is built each time.</span>
+                    <p class="fBold">Calculation damage nuances</p>
+                    <p>Please note that the displayed damage per second is an ideal scenario where no bullets miss, all additional conditions are activated (if selected), and so on. In reality, your actual damage will be lower.</p>
+                    <p>The DPS of the weapon is shown separately for each type of attack, and different attacks are not aware of each other's existence. For example, if direct hit deals impact stacks and explosion damage deals viral stacks, the direct hit will not be aware of the existence of viral stacks.</p>
+                    <p>At the moment, some unique properties of weapons are not taken into account.</p>
+                    <p>Xata's Whisper for some weapons does not always work correctly. For example, some types of weapons have different damage values when shooting in the head, etc. In the calculator, they are calculated the same for all types. It should be understood that the status of the abyss is capable of attracting bullets and inflicting passive damage many times over. As a result, the actual damage will be several times greater than the calculated damage.</p>
+                    <p>Do not take into account some nuances of increasing the type of damage for some hits in stances.</p>
+                    <p>Using mod like Galvanized Savvy do not take into account for all AOE type attacks. For projectile attacks, the mod work similarly to the Serration.</p>
+                    <p>The use of a tick of fire is simplified to a state where the armor is removed not gradually over 3 ticks, but immediately from the first tick by 50%.</p>
+                    <p>The game has a large number of different mods and if the desired mod is not currently available, it may be added later.</p>
+                    <p>Same enemies with unique damage reduction mechanics are currently considered as normal enemies.</p>
+                    <p>Mods that sometimes work both additively and multiplicatively on different weapons are calculated as written in the description of the mod and on wikipedia.</p>
+                    <p>Weapon force procs are taken into account when firing / hitting a stance.</p>
+                    <p>Syndicate radial weapon effect on mods disabled.</p>
+                    <p>Nightwatch Napalm does not create a separate instance of damage for Xata's Whisper and completely ignores the unique damage reduction of enemies.</p>
+                    <p>Headshot mult disabled for AOE attacks.</p>
+                    <p>Some weapons use multiple attacks at the same time and you need to stack their dps. Like hit and AOE effect of hit.</p>
+                    <p>Heavy melee attack dps with combo seems like averige. Becouse offten for 10sec they has too quick fall of combo. It looks like the first hits start at x12, and the next ones come with a quick combo drop to x1.</p>
+                    <p class="fBold">Many things taking account in dps number, but not all displayed for user.</p>
+                    <p>You can use the dps calculator to calculate the real effectiveness riven mods - just add them to your build and see how your damage changes.</p>                </div>
+            </div>
+        </div>
+        <div class="popUp" id="topUsedInfo">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <h3 class="popUpHead">TOP 20 Monthly Rating of Most Popular Weapons</h3>
+                <div class="popUpContent textScroll">
+                    <div class="topUsedInfoB">Information is loading</div>
+                    <div class="topUsedInfoD">*information is updated once a day</div>
+                </div>
+            </div>
+        </div>
+        <div class="popUp" id="dntInfo">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <div class="popUpHead">Support us by donating</div>
+                <div class="popUpContent textScroll">
+                                        <div><span class="donateTitle">Telegram GRAM:</span> UQCAyGJ6mRPAVFuiZZVhPXuRwZHrlgG5EuDw1v88_hDTe-cW</div>
+                    <div class="donateImg">
+                        <img src="/data/simg/ton.webp" loading="lazy" alt="donate GRAM">
+                    </div>
+
+                    <div><span class="donateTitle">Bitcoin:</span> 1CentxBLePmNhmQfvhNNBKZ67D7ob2ppRv</div>
+                    <div class="donateImg">
+                        <img src="/data/simg/bitcoin.webp" loading="lazy" alt="donate Bitcoin">
+                    </div>
+
+                    <div><span class="donateTitle">Etherium:</span> 0x36537FCC53A015Fb64332455418044239EEF84b9</div>
+                    <div class="donateImg">
+                        <img src="/data/simg/etherium.webp" loading="lazy" alt="donate Etherium">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="popUp" id="changeLogInfo">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <div class="popUpHead">Change log</div>
+                <div class="popUpContent textScroll">
+                    
+                <span class="logDate">2026.10.30</span>
+                <span class="logT">An automatic builder for the best builds has been released.</span>
+                <span class="logDate">2026.10.23</span>
+                <span class="logT">Apply Ammo Efficiency Changes (Hotfix 44.1.3).</span>
+                <span class="logDate">2026.10.20</span>
+                <span class="logT">Added Corrosive damage for Riven mods.</span>
+                <span class="logDate">2026.10.08</span>
+                <span class="logT">Additional stats have been added to Riven mods.</span>
+                <span class="logDate">2026.10.05</span>
+                <span class="logT">Fixed bug when mods adding phys types of damage works not correctly with Incarnon +base damage slot.</span>
+                <span class="logDate">2026.09.29</span>
+                <span class="logT">Added Steflos Prime, Corufell Prime, Aksondol, Nunchasa.</span>
+                <span class="logDate">2026.08.27</span>
+                <span class="logT">Added Primed Polar Magazine.</span>
+                <span class="logDate">2026.07.16</span>
+                <span class="logT">Added Thermal Transfer as blast mod.</span>
+                <span class="logDate">2026.07.15</span>
+                <span class="logT">Added mod Sentient Incision. Added several Anarch-type enemies. Added Haalvu. Deep reorganization of some repetitive, high-load code sections using AI. As a result, the calculation speed of one queue has increased severalfold (I haven't noticed any calculation errors yet).</span>
+                <span class="logDate">2026.06.29</span>
+                <span class="logT">Added War Prime and new Incarnon adapters.</span>
+                <span class="logDate">2026.06.19</span>
+                <span class="logT">Added Afentis Prime, Athodai Prime, Wrath, Pride.</span>
+                <span class="logDate">2026.05.21</span>
+                <span class="logT">Added and changed some descriptions in the user interface.</span>
+                <span class="logDate">2026.05.18</span>
+                <span class="logT">Added Primed Combustion Rounds.</span>
+                <span class="logDate">2026.04.09</span>
+                <span class="logT">Added Perigale Prime, Sarofang Prime.</span>
+                <span class="logDate">2026.03.26</span>
+                <span class="logT">Added Enkaus, Tenet Quanta, Kuva Ghoulsaw, Coda Bubonico. (not all attacks full added).</span>
+                <span class="logDate">2026.03.21</span>
+                <span class="logT">Added possibility set frame and aura mods for archgun weapon (in-game not all works correctly).</span>
+                <span class="logDate">2026.03.03</span>
+                <span class="logT">Added visual show current time of each shot and reloads in the extended queue description.</span>
+                <span class="logDate">2026.02.03</span>
+                <span class="logT">Added visual show count of statuses on enemy in the extended queue description.</span>
+                <span class="logDate">2026.01.28</span>
+                <span class="logT">Fixed an issue where rate of fire mods would not apply to the burst delay on burst-fire weapons.</span>
+                <span class="logDate">2026.01.24</span>
+                <span class="logT">Bug that arose due to the previous reasons, in the added progenitor element, has been fixed.</span>
+                <span class="logDate">2026.01.23</span>
+                <span class="logT">Fixed a bug from yesterday's fix that prevented DPS calculations from working for the Exalted Blade and Desert Wind.</span>
+                <span class="logDate">2026.01.22</span>
+                <span class="logT">Fixed a bug in the shot count for some weapons with a single-round magazine. Added the possibility to increase the base damage value by +X in the additional settings.</span>
+                <span class="logDate">2026.01.20</span>
+                <span class="logT">Added Necrophagic Vigor mod.</span>
+                <span class="logDate">2026.01.18</span>
+                <span class="logT">Fixed Primary Debilitate. Now, if a weapon has more than one combined status effects, it will only randomly work one of them.</span>
+                <span class="logDate">2026.01.17</span>
+                <span class="logT">Added Primary Debilitate arcane.</span>
+                <span class="logDate">2026.01.09</span>
+                <span class="logT">Fixed a bug where faction bonus ("Grineer" and "Infested") from Riven mod not applied to "Kuva Grineer" and "Infested Deimos" factions.</span>
+                <span class="logDate">2026.01.08</span>
+                <span class="logT">Fixed a bug where a negative faction multiplier from a Riven mod would not reduce damage.</span>
+                <span class="logDate">2025.12.29</span>
+                <span class="logT">Added Primed Venomous Clip. Added Arbucep, Cortege, Morgha.</span>
+                <span class="logDate">2025.12.26</span>
+                <span class="logT">Added Phaedra.</span>
+                <span class="logDate">2025.12.25</span>
+                <span class="logT">Added Corvas, Cyngas, Mandonel. Arcane "Melee Careen".</span>
+                <span class="logDate">2025.12.24</span>
+                <span class="logT">Added Larkspur and Larkspur Prime.</span>
+                <span class="logDate">2025.12.23</span>
+                <span class="logT">Added Vinquibus, Grattler, Imperor, Imperor Vandal, Primary Overcharge, Primary Bulwark, Secondary Irradiate.</span>
+                <span class="logDate">2025.12.22</span>
+                <span class="logT">Added possibility to install Primary and Secondary Arcanes into archwing weapons. Added Sagek Prime.</span>
+                <span class="logDate">2025.12.16</span>
+                <span class="logT">Added Galariak Prime, Alternox Prime, Kestrel Prime.</span>
+                <span class="logDate">2025.10.31</span>
+                <span class="logT">Added Dreadful Killshot.</span>
+                <span class="logDate">2025.10.18</span>
+                <span class="logT">Unique damage reduction modifiers for enemies have been disabled.</span>
+                <span class="logDate">2025.10.17</span>
+                <span class="logT">Enabled old damage reduction for unique enemies.</span>
+                <span class="logDate">2025.10.15</span>
+                <span class="logT">ALL unique damage reduction modifiers for enemies have been disabled. Enemy health/shield values ​​listed in the patch notes have been adjusted to reflect these values. Added Thornbak.</span>
+                <span class="logDate">2025.10.06</span>
+                <span class="logT">Fixed a bug where if an enemy had basic overguard, it would be reset to the default value when the "eximus" setting was enabled for that enemy. Minor adjustments have also been made to the formula for calculating the amount of overguard, increasing it.</span>
+                <span class="logDate">2025.09.29</span>
+                <span class="logT">Added Primed Bane of The Murmur.</span>
+                <span class="logDate">2025.08.27</span>
+                <span class="logT">Added Vadarya Prime and Venato Prime.</span>
+                <span class="logDate">2025.08.14</span>
+                <span class="logT">Fixed a bug where in some cases incorrect damage bonus values would be generated with combined elements and Lich elements.</span>
+                <span class="logDate">2025.08.05</span>
+                <span class="logT">Minor changes to DPS calculation. Fixed bug with low queue time and low attackspeed weapon.</span>
+                <span class="logDate">2025.08.04</span>
+                <span class="logT">Minor changes to TTK calculation. Added a second Combo Ability Multiplier switch to the sidebar.</span>
+                <span class="logDate">2025.07.30</span>
+                <span class="logT">Mesa Regulators multiplier has been Changed. Fixed a bug where the viral status effect multiplier was affecting overguard.</span>
+                <span class="logDate">2025.07.29</span>
+                <span class="logT">The method for calculating the total DPS has been changed - previously it was the arithmetic mean. Now it is the median.</span>
+                <span class="logDate">2025.07.25</span>
+                <span class="logT">Added Primed Expel The Murmur.</span>
+                <span class="logDate">2025.07.23</span>
+                <span class="logT">Added Archon Vitality.</span>
+                <span class="logDate">2025.07.15</span>
+                <span class="logT">Added Toxic Lash.</span>
+                <span class="logDate">2025.07.14</span>
+                <span class="logT">The method for calculating the number of gas status ticks currently affecting the target has been changed.</span>
+                <span class="logDate">2025.07.11</span>
+                <span class="logT">Information about the magazine size of the Incarnon Form is displayed. Enabled Secondary Fortifier damage bonus to overguard. Improved calculation of TTK taking into account the toxin bypassing shields. Xata's Whisper now deals 50% more damage to Overguard.</span>
+                <span class="logDate">2025.07.10</span>
+                <span class="logT">Added Primed Smite The Murmur.</span>
+                <span class="logDate">2025.06.26</span>
+                <span class="logT">Added Scyotid, Spinnerex, Thalys. Changed Valkyr Talons attacks. Changed Nira's set values. Other changes from Update 39. Added damage calculation by Overguard. Added the Pain Points mod. Added experimental Time To Kill (TTK) calculation.</span>
+                <span class="logDate">2025.06.10</span>
+                <span class="logT">Improved method for calculating the number of shots in x seconds. Previously, there were problems when it was impossible to make a shot if the queue time exceeded the time of one shot with the reloading time. Now the shot is always made first, and then the time is then calculated from it. Modifiers for the first bullet in the magazine are now shifted by 1, previously the first bullet in the magazine was always not taken into account, and only the following ones were.</span>
+                <span class="logDate">2025.06.09</span>
+                <span class="logT">Added a queued damage median value per bullet.</span>
+                <span class="logDate">2025.06.08</span>
+                <span class="logT">Fixed health scaling for Grineer Kuva, Infested Deimos, Murmur, Sentient and Narmer.</span>
+                <span class="logDate">2025.06.07</span>
+                <span class="logT">Fixed a bug where overguard was always calculated as for Eximuses, and did not take into account its base value for the enemy.</span>
+                <span class="logDate">2025.05.29</span>
+                <span class="logT">Now the damage from the Whisper of the Xata is reduced by the unique DR of the Demolishers.</span>
+                <span class="logDate">2025.05.23</span>
+                <span class="logT">Fixed the Longbow Sharpshot who giving incorrect values ​​for AoE attacks. Also attacks of Ivara bow with augment, received adjustment of values ​​according to patch.</span>
+                <span class="logDate">2025.05.19</span>
+                <span class="logT">Fixed an issue with combining elements that was related to the 2025.04.28 hotfix. Added Kompressa Prime and Daikyu Prime. Deleted status damage effect from elemental augments for warframes.</span>
+                <span class="logDate">2025.05.19</span>
+                <span class="logT">Added Shattered Lash and Whipclaw.</span>
+                <span class="logDate">2025.05.16</span>
+                <span class="logT">Added Hysteria damage buff to Valkyr Talons.</span>
+                <span class="logDate">2025.05.14</span>
+                <span class="logT">Fixed bug when absolute critical multiplier from Arcane Crepuscular not applied for calculation.</span>
+                <span class="logDate">2025.05.07</span>
+                <span class="logT">Grineer and Infested faction mods now also affect the Kuva Grineer and Deimos Infested faction. Added compatibility check for some mods that could previously be installed on crossbows, not just bows. Added Tak & Lug.</span>
+                <span class="logDate">2025.05.06</span>
+                <span class="logT">Returned modified augments for Ember, Volt and Frost. Added a passive ability for Tonkkatt.</span>
+                <span class="logDate">2025.05.05</span>
+                <span class="logT">Added Tonkkatt.</span>
+                <span class="logDate">2025.04.29</span>
+                <span class="logT">Made some fixes to how Atomos Incarnon perks works, added a notification about the unique damage reduction for Scaldra Dedicant.</span>
+                <span class="logDate">2025.04.28</span>
+                <span class="logT">Fixed a bug where damage values were calculated incorrectly when combining elements, in cases where a weapon contained a base combined element and mods included elements required to create the same base combined element, even if they were arranged in an order that would normally form other element combinations (the element combination itself was determined correctly, but the values were calculated incorrectly in this case). Added Diwata (Titania).</span>
+                <span class="logDate">2025.04.27</span>
+                <span class="logT">Fixed one incorrect weakness on Kuva enemies. Added several Kuva enemies.</span>
+                <span class="logDate">2025.04.16</span>
+                <span class="logT">Fixed the possibility to increase the magazine size on bows and fixed rounding of magazine size to the correct value on others weapon. Added the possebility to set inheritance for the heat status effect.</span>
+                <span class="logDate">2025.04.15</span>
+                <span class="logT">Added custom prop. values for saving via url of build. Added Landslide Fists (Atlas).</span>
+                <span class="logDate">2025.04.14</span>
+                <span class="logT">Fixed damage of Ash's Shadow Clones with some mods. Added tooltips for Archon Shards. Changed Archon DR - added first part of damage reduction independent of time.</span>
+                <span class="logDate">2025.04.11</span>
+                <span class="logT">Added Violet Archon Shard for Ability Damage (exalted weapon) on enemies affected by Electricity Status.</span>
+                <span class="logDate">2025.04.10</span>
+                <span class="logT">Added some mods.</span>
+                <span class="logDate">2025.04.09</span>
+                <span class="logT">Added Sniper Combo multiplier in settings. Added Shadow Clones with finisher dmg.</span>
+                <span class="logDate">2025.03.31</span>
+                <span class="logT">Added Lizzie (Temple).</span>
+                <span class="logDate">2025.03.27</span>
+                <span class="logT">Added Coda Motovore passive ability.</span>
+                <span class="logDate">2025.03.24</span>
+                <span class="logT">Added/changed some new weapon.</span>
+                <span class="logDate">2025.03.21</span>
+                <span class="logT">Added Arcane Hot Shot arcane.</span>
+                <span class="logDate">2025.03.20</span>
+                <span class="logT">Allowed arcane slots and added mods previously unavailable for exalted weapons. Disabled the bug simulation where mods with critical chance on weak points multiplied their critical chance on certain weapons. Changed the critical chance value for Baruuk's weapon. Added some new weapons.</span>
+                <span class="logDate">2025.03.19</span>
+                <span class="logT">Changed the behavior of the Longbow Sharpshot (with GunCO) and Spring-Loaded Broadhead (Daikyu). Some changes to the calculation of damage reduction of unique enemies (not completely finished yet). Fixed incorrect calculation of stealth bonus. Changed how the limitation of status stacks works on enemies, which was not taken into account with damaging status effects (it's was works on statuses without damage).</span>
+                <span class="logDate">2025.03.18</span>
+                <span class="logT">Added Kuva Grattler and Kuva Ayanga.</span>
+                <span class="logDate">2025.03.12</span>
+                <span class="logT">Added a hidden bug simulation where the Incarnon perk "increase Damage by +x" when used with mods like "GunCO" does not fully work with them on some attacks.</span>
+                <span class="logDate">2025.03.12</span>
+                <span class="logT">Added Biotic Rounds mod.</span>
+                <span class="logDate">2025.03.08</span>
+                <span class="logT">Added violet archon shard +30% (+45%) Primary Electricity Damage.</span>
+                <span class="logDate">2025.02.27</span>
+                <span class="logT">Changed calculation behavior for mods that depend on the melee combo counter. Added a setting to allow changing the combo counter for light attacks. For heavy attacks, the current combo is calculated automatically. Added Leaded Gas mod.</span>
+                <span class="logDate">2025.02.24</span>
+                <span class="logT">Fixed formula of reload rate if weapon have also charge time (before this, it reduced the total number of shots, when an increase in reload speed).</span>
+                <span class="logDate">2025.02.20</span>
+                <span class="logT">Changed the rate of fire buff type for Dual Toxocysts to multiplicative.</span>
+                <span class="logDate">2025.02.19</span>
+                <span class="logT">Added Melee Duplicate Arcane. Added hidden automatic activation of "Weakpoint Critical Chance calculated as multiplicative" option when available for the selected weapon.</span>
+                <span class="logDate">2025.02.18</span>
+                <span class="logT">Added options for custom characteristic values - Damage Vulnerability and Critical Multiplier (mult after all sources).</span>
+                <span class="logDate">2025.02.15</span>
+                <span class="logT">Fixed Basmu at "Held" attack - multishot changed from 1 to 2. Fixed Cedo Prime disk attack which did not impose random statuses.</span>
+                <span class="logDate">2025.02.14</span>
+                <span class="logT">Added the possibility to apply custom characteristic values in the settings. Added hidden automatic activation of "damage per status multiplier" option when available for the selected weapon.</span>
+                <span class="logDate">2025.02.13</span>
+                <span class="logT">Added Cedo Prime and Dual Zoren Prime.</span>
+                <span class="logDate">2025.02.12</span>
+                <span class="logT">The behavior of Hunter Munition and Internal Bleeding has been changed, now if both are equipped, only one works.</span>
+                <span class="logDate">2025.02.11</span>
+                <span class="logT">Added Cascadia Empowered and melee exilus mods.</span>
+                <span class="logDate">2025.02.03</span>
+                <span class="logT">Added Tenacious Bond and Reinforced Bond.</span>
+                <span class="logDate">2025.01.28</span>
+                <span class="logT">Added dependence of the Cyte-09 "Neutralizer" on ability strength.</span>
+                <span class="logDate">2025.01.27</span>
+                <span class="logT">Added possibility to change the % value for the Kuva/Tenet weapon progenitor element. The Secondary Shiver Arcane has been moved to the "Condition Overload" damage type category.</span>
+                <span class="logDate">2025.01.24</span>
+                <span class="logT">Added a magazine size multiplier for Alt-fire Tenet Plinx. Disabled the use of "Condition Overload" mod in the calculation for Slam Attacks with melee weapons. Added the possibility to select an option to multiply the critical hit chance for mods on Weak Points.</span>
+                <span class="logDate">2025.01.22</span>
+                <span class="logT">Fixed a bug where x2 critical chance for Heavy Attacks from the Sacrifice Set and Riven mod was not applied to Heavy Attacks.</span>
+                <span class="logDate">2025.01.21</span>
+                <span class="logT">Added Magnetic Might, Secondary Shiver, Secondary Fortifier, Conjunction Voltage, Secondary Kinship (as for 20 buffs), Secondary Surge.</span>
+                <span class="logDate">2025.01.16</span>
+                <span class="logT">Added Primary Plated Round.</span>
+                <span class="logDate">2025.01.13</span>
+                <span class="logT">Fixed a bug where the combo multiplier for heavy melee attacks was applied twice when calculating status damage. The current combo counter has been displayed in the extended queue information.</span>
+                <span class="logDate">2025.01.12</span>
+                <span class="logT">Fixed a bug where previously in Incarnon perks if +x to the base critical damage multiplier was selected, it would visually increase in the characteristics, but in fact it would not be taken into account in the calculations.</span>
+                <span class="logDate">2025.01.10</span>
+                <span class="logT">Added slam attacks for melee weapons and several mods for them. Added the possibility specify the number of players in a group for the health multiplier for demolishers. Also minor changes.</span>
+                <span class="logDate">2024.12.28</span>
+                <span class="logT">Added a tooltip about its damage types when hovering over the attack name in the DPS panel.</span>
+                <span class="logDate">2024.12.27</span>
+                <span class="logT">Fixed interaction of critical chance mods on vulnerable points that were active even when the "headshot" mode was disabled. Added Slam and Heavy Slam info.</span>
+                <span class="logDate">2024.12.26</span>
+                <span class="logT">Added overguard stat not only for eximus enemies.</span>
+                <span class="logDate">2024.12.25</span>
+                <span class="logT">Added enemies for two new factions.</span>
+                <span class="logDate">2024.12.20</span>
+                <span class="logT">Fix formula for Melee Doughty.</span>
+                <span class="logDate">2024.12.19</span>
+                <span class="logT">Added several new magnetic mods and arcanes. Melee Doughty added with experimental formula.</span>
+                <span class="logDate">2024.12.17</span>
+                <span class="logT">Added Neutralizer, Reconifex, Vesper 77. Mods Primary Acuity, Pistol Acuity, Worthy Comradery.</span>
+                <span class="logDate">2024.11.14</span>
+                <span class="logT">Added Quassus Prime and Trumna Prime.</span>
+                <span class="logDate">2024.10.23</span>
+                <span class="logT">Added Archon Continuity (for Power Weapon).</span>
+                <span class="logDate">2024.10.22</span>
+                <span class="logT">Changed the characteristics of Incarnon perks related to adding a chance of status to all Boltors.</span>
+                <span class="logDate">2024.10.21</span>
+                <span class="logT">Change damage Balefire Charger from 1000 to 1500.</span>
+                <span class="logDate">2024.10.11</span>
+                <span class="logT">Corrections made for Hotfix 37.0.4. Added x0 multiplier to body for Sicarus Incarnon perk.</span>
+                <span class="logDate">2024.10.08</span>
+                <span class="logT">Added logic for "Increase Base Critical Chance by +x% of current Status Chance, up to +x%" and "Increase Base Status Chance by +x% of current Critical Chance, up to +x%".</span>
+                <span class="logDate">2024.10.07</span>
+                <span class="logT">Added Incarnon Form for Okina.</span>
+                <span class="logDate">2024.10.03</span>
+                <span class="logT">Added Higasa and Amanata, Galvanized Reflex, Galvanized Elementalist, Galvanized Steel.</span>
+                <span class="logDate">2024.09.30</span>
+                <span class="logT">Burning Hate now works as on wiki - "Damage increase is multiplicative with Melee Elementalist and Faction Damage Bonus."</span>
+                <span class="logDate">2024.09.27</span>
+                <span class="logT">Changed the values ​​of the Incarnon Form Vasto Prime perks to the correct values (previously there were values ​​from the Vasto).</span>
+                <span class="logDate">2024.09.26</span>
+                <span class="logT">Added "Copy build url to clipboard" button.</span>
+                <span class="logDate">2024.09.20</span>
+                <span class="logT">Enabled filter for "Semi" mods only for "Semi" weapons. Also enabled speed lock for these mods. Not sure if all weapons have the "Semi" parameter correctly, so if something is missing, contact me to add it.</span>
+                <span class="logDate">2024.09.18</span>
+                <span class="logT">The ability to make status effects that influence damage common for multiple attacks with direct and secondary effects has been added.</span>
+                <span class="logDate">2024.09.16</span>
+                <span class="logT">Fixed a rare bug that occurred when the crit chance was 100%. Fixed a bug where some mods that added a new element to a weapon depended on the ability's strength, while they should not have depended.</span>
+                <span class="logDate">2024.09.09</span>
+                <span class="logT">Added blast status damage effect (ticking status damage, not an AoE effect). Added Burning Hate, Burning Hate. Some minor changes.</span>
+                <span class="logDate">2024.08.22</span>
+                <span class="logT">Added Epitaph Prime.</span>
+                <span class="logDate">2024.08.14</span>
+                <span class="logT">Added section "Weapon builds guide".</span>
+                <span class="logDate">2024.08.04</span>
+                <span class="logT">Corrected the action of the mod (like elementalist) "status damage" and green shards to toxic damage. Previously they multiplied each other, now they add up.</span>
+                <span class="logDate">2024.08.01</span>
+                <span class="logT">Added madurai option (physical damage increased by 30%).</span>
+                <span class="logDate">2024.07.29</span>
+                <span class="logT">Fixed unintentional increase in critical headshot damage.</span>
+                <span class="logDate">2024.07.26</span>
+                <span class="logT">AX-52: changed headshot critical chance from +100% to 400% after patch.</span>
+                <span class="logDate">2024.07.21</span>
+                <span class="logT">Added AX-52.</span>
+                <span class="logDate">2024.07.18</span>
+                <span class="logT">Added Primed Deadly Efficiency. Fixed visual bug when enemy without armor has damage reduction number. Also set minimal armor as 200.</span>
+                <span class="logDate">2024.07.12</span>
+                <span class="logT">The error related to the extra (+1) multiplier of heavy attack has been fixed.</span>
+                <span class="logDate">2024.07.09</span>
+                <span class="logT">Fixed error with decrease armor option when armor equal 2700.</span>
+                <span class="logDate">2024.07.04</span>
+                <span class="logT">Added 5th shard. Added Primed Dual Rounds mod. Critical chance of Puncture status now not affected area of effect damage. DR formula now is sqrt(3*armor). Critical Multiplier from Cold status now increased as flat value. Changed formula for scaling Health, Shield and Eximus Health/Shield.</span>
+                <span class="logDate">2024.06.26</span>
+                <span class="logT">We are aware of some inaccuracies related to double critical damage with 10 stacks of cold, we will correct it later.</span>
+                <span class="logDate">2024.06.21</span>
+                <span class="logT">Corrected the error that was causing an extra 100% damage (+1) to be added to faction mods (the error appeared after the fix on 2024.05.08). Added approximate values of health scaling multipliers compared to old values.</span>
+                <span class="logDate">2024.06.20</span>
+                <span class="logT">New weapons and mods have been added. Frozen enemies now receive double critical damage. Health/armor/shield types have been removed. Resistances/Vulnerabilities have been transferred to the faction. The resistance formula is currently unknown, as well as the scaling of health/armor with enemy level growth; at the moment, the old one is in effect.</span>
+                <span class="logDate">2024.06.11</span>
+                <span class="logT">Added flat critical chance option.</span>
+                <span class="logDate">2024.05.21</span>
+                <span class="logT">Added French language.</span>
+                <span class="logDate">2024.05.20</span>
+                <span class="logT">The bug related to loading and displaying the top 20 weapons of the month has been fixed. Adjusted the critical hit chance for the Gotva Prime passive. The error related to calculating the application of status effects for a weapon that has the same statuses as those to which the enemy is immune has been fixed.</span>
+                <span class="logDate">2024.05.17</span>
+                <span class="logT">Fixed bug with Viral + Viral from Nourish.</span>
+                <span class="logDate">2024.05.16</span>
+                <span class="logT">Added Tenet Glaxion and Sobek Kuva, Clip Delegation and Photon Overcharge.</span>
+                <span class="logDate">2024.05.14</span>
+                <span class="logT">Fixed a bug where a Riven mod couldn't be added to an Archwing weapon. Also added the Dual Decurions and their Prisma version. Added unique Cedo forced procs.</span>
+                <span class="logDate">2024.05.08</span>
+                <span class="logT">Some changes have been made to the calculation of DR for Demolishers (their innate DR is now squared for status effects). Rhino's Roar is now considered a faction mod and is added to other faction mods.</span>
+                <span class="logDate">2024.05.06</span>
+                <span class="logT">Added TOP 20 Monthly Rating of Most Popular Weapons.</span>
+                <span class="logDate">2024.04.27</span>
+                <span class="logT">Added Okina Prime, Velox Prime. For Riven attributes added Weapon Recoil and Zoom.</span>
+                <span class="logDate">2024.04.25</span>
+                <span class="logT">Disable damage increase from Xata’s Whisper unintentionally applying twice on the Phenmor, Laetum and Felarx incarnon perk.</span>
+                <span class="logDate">2024.04.23</span>
+                <span class="logT">Added the possibility to change the starting point of the combo for heavy attacks.</span>
+                <span class="logDate">2024.04.19</span>
+                <span class="logT">Fixed bug with chance for Laetum Overwhelming Attrition incarnon property.</span>
+                <span class="logDate">2024.04.11</span>
+                <span class="logT">The calculation method for the multishot of the beam weapon has been changed (this increases the tick damage of the beam, increases the status chance instead of creating a separate instance of damage). Previously, the multishot of the beam weapons was calculated as for standard ones.</span>
+                <span class="logDate">2024.04.09</span>
+                <span class="logT">Added Spanish language (interface only).</span>
+                <span class="logDate">2024.04.08</span>
+                <span class="logT">Fixed new bug with armor. Added DR Demolisher Necramech (such as on wiki for 1 round).</span>
+                <span class="logDate">2024.04.03</span>
+                <span class="logT">Added Noctua.</span>
+                <span class="logDate">2024.01.29</span>
+                <span class="logT">Added Onos, Dex Nikana, Ruvox. Fixed some bugs with Hunter Munition (previously sometime it adds 2 procs instead of 1). Changed some conditions for Ichor's cloud.</span>
+                <span class="logDate">2024.01.25</span>
+                <span class="logT">Added extended queue information. Added experimental Archon's damage reduction by wiki.</span>
+                <span class="logDate">2024.01.21</span>
+                <span class="logT">Changes have been made to many things including design, calculation speed has been optimized, and some discovered bugs have been fixed.</span>
+                <span class="logDate">2024.02.20</span>
+                <span class="logT">Fixed some incorrect properties of mods and weapons. Added magazine size accounting for incarnon weapon form.</span>
+                <span class="logDate">2024.01.22</span>
+                <span class="logT">Added Acceltra Prime and Akarius Prime.</span>
+                <span class="logDate">2024.01.18</span>
+                <span class="logT">Added saving parameters for steel path and eximus. Fix reset enemy lvl to 100 after reload page.</span>
+                <span class="logDate">2023.12.21</span>
+                <span class="logT">Shard +count corrosion ticks now increased max count stacks on enemy who had it limited (~Acolytes).</span>
+                <span class="logDate">2023.12.19</span>
+                <span class="logT">Added hover tooltips for Arcanes.</span>
+                <span class="logDate">2023.12.18</span>
+                <span class="logT">Added new type of health "Indifferent Facade" and several The Murmur enemys +"The Fragmented Suzerain" (his DR for me unknown). Added
+                several melee arcanes. Added several new Archon Shards.</span>
+                <span class="logDate">2023.12.17</span>
+                <span class="logT">Added several new mods.</span>
+                <span class="logDate">2023.12.14</span>
+                <span class="logT">Changes Velocitus, Mausolon stats in atmo mode. For Profit-Taker Orb shield added 50% damage resistance. Added Grimoire, Ekhein.</span>
+                <span class="logDate">2023.12.12</span>
+                <span class="logT">The calculation of the chance of a specific status when the enemy is immune to this status has been changed. The chance of other statuses increases by removing the status with immunity.</span>
+                <span class="logDate">2023.12.10</span>
+                <span class="logT">Added Critical Mutation mod.</span>
+                <span class="logDate">2023.11.14</span>
+                <span class="logT">Added queue length option.</span>
+                <span class="logDate">2023.10.19</span>
+                <span class="logT">Added Dorrclave, Zylok Prime, Masseter Prime. Changed Secondary Outburst.</span>
+                <span class="logDate">2023.09.22</span>
+                <span class="logT">Changes status chance for Incarnon Strun and Boar as on wiki (Incarnon Form Status Chance increase is affected by base pellet count.).</span>
+                <span class="logDate">2023.09.18</span>
+                <span class="logT">Added Nourish (Grendel).</span>
+                <span class="logDate">2023.09.06</span>
+                <span class="logT">Fixed a bug where installed Hunter Munitions was not taken into account. Added Velocitus and Corvas Prime.</span>
+                <span class="logDate">2023.09.05</span>
+                <span class="logT">Added archwing (primary) mods. Added Arquebex and Mausolon.</span>
+                <span class="logDate">2023.08.28</span>
+                <span class="logT">Gotva Prime added. A small error has been fixed for certain types of weapons in the formula for calculating the number of shots fired in 10 seconds. Also, the calculation now includes the recharge rate of battery-powered weapons (previously it was fixed and independent of the magazine size).</span>
+                <span class="logDate">2023.08.24</span>
+                <span class="logT">Automatic activation of the "Heavy Attack" option has been added for melee weapons that have both normal and heavy attacks. Added Hawk Eye, Counterbalance.</span>
+                <span class="logDate">2023.08.22</span>
+                <span class="logT">Anku updated to match Hotfix 33.6.5. Added a dependency of mods adding elemental damage (such as Shock Trooper, etc.) on ability strength.</span>
+                <span class="logDate">2023.08.21</span>
+                <span class="logT">Added Empowered Blades, Mecha Empowered, Smite Infusion, Venom Dose, Shock Trooper, Freeze Force, Fireball Frenzy, Enraged, Merulina Guardian, Champion's Blessing mods.</span>
+                <span class="logDate">2023.08.16</span>
+                <span class="logT">Weapon stats updated to match Hotfix 33.6.4.</span>
+                <span class="logDate">2023.08.15</span>
+                <span class="logT">Synchronized last incarnon weapon parameters with wikipedia.</span>
+                <span class="logDate">2023.08.12</span>
+                <span class="logT">Added Prisma Ohma.</span>
+                <span class="logDate">2023.07.31</span>
+                <span class="logT">Added critical damage for cold procs and critical chance for puncture procs. Updated the maximum number of active statuses on the enemy (for cold, impact, and puncture). Added armor reduction calculation for puncture procs (Latron).</span>
+                <span class="logDate">2023.07.28</span>
+                <span class="logT">Some mods have been changed according to the current patch. Added Fulmin Prime, Gunsen Prime, Argo & Vel.</span>
+                <span class="logDate">2023.07.25</span>
+                <span class="logT">Added input syntax highlighting and some small changes.</span>
+                <span class="logDate">2023.07.20</span>
+                <span class="logT">Added Nightwatch Napalm for dps calculation.</span>
+                <span class="logDate">2023.07.19</span>
+                <span class="logT">Added dependence of the damage of Mesa Regulators on the strength. Added forceproc of Impact for Lex/Lex Prime Incarnon.</span>
+                <span class="logDate">2023.07.04</span>
+                <span class="logT">Fix error with create Zaw.</span>
+                <span class="logDate">2023.06.29</span>
+                <span class="logT">Fixed bugs from last refactoring - some weapons did not update elements correctly, they remained and overlapped each other. After enable Xata's Whisper DPS not showing.</span>
+                <span class="logDate">2023.06.28</span>
+                <span class="logT">Added keyboard support for most controls. At this moment exept create riven mod.</span>
+                <span class="logDate">2023.06.22</span>
+                <span class="logT">Changed some characteristics of incarnon perks related to the new patch. Added Rauta, Primary Blight, Akimbo Slip Shot, Secondary Outburst.</span>
+                <span class="logDate">2023.06.21</span>
+                <span class="logT">Some code refactoring has been done, which improves the overall performance of the page. I hope that it will not introduce any bugs.</span>
+                <span class="logDate">2023.06.11</span>
+                <span class="logT">The base level of the enemy has been set to more accurately calculate scaling of HP and armor for several dozen enemies. Perhaps some enemies were accidentally not taken into account. Before that, the base level of all enemies was considered to be 1.</span>
+                <span class="logDate">2023.06.07</span>
+                <span class="logT">Xata's Whisper added.</span>
+                <span class="logDate">2023.06.04</span>
+                <span class="logT">Fixed Longbow Sharpshot - before the fix, his damage was not applied to statuses.</span>
+                <span class="logDate">2023.06.03</span>
+                <span class="logT">Changed output of Eximus overguard value - previously this number showed a multiplier for base overguard. Now all base overguard set to 12.</span>
+                <span class="logDate">2023.05.31</span>
+                <span class="logT">Korean language added.</span>
+                <span class="logDate">2023.05.29</span>
+                <span class="logT">Japanese language added. Added new Incarnon Adapters.</span>
+                <span class="logDate">2023.05.26</span>
+                <span class="logT">Added "Primary Frostbite". Small visual improvements.</span>
+                <span class="logDate">2023.05.22</span>
+                <span class="logT">Added new Incarnon Adapters. "Proton Snap" added.</span>
+                <span class="logDate">2023.05.19</span>
+                <span class="logT">Prisma Lenz added.</span>
+                <span class="logDate">2023.05.18</span>
+                <span class="logT">Crimson Archon Shard added.</span>
+                <span class="logDate">2023.05.17</span>
+                <span class="logT">Fixed "add" crit/status chances (Incarnon weapon). Before that they were added in the wrong place in the formula.</span>
+                <span class="logDate">2023.05.16</span>
+                <span class="logT">Added mods for first/last bullet shoot: Synth Charge, Primed Chamber, Charged Chamber.</span>
+                <span class="logDate">2023.05.15</span>
+                <span class="logT">Added new Incarnon Adapters</span>
+                <span class="logDate">2023.05.10</span>
+                <span class="logT">Added extermnal decrease armor option. Added weapons with Incarnon adapters from current week. Fix minor bugs.</span>
+                <span class="logDate">2023.05.05</span>
+                <span class="logT">Gradual addition of weapons with Incarnon adapters. Fixing minor bugs. Adding new mechanics associated with new adapters.</span>
+                <span class="logDate">2023.05.03</span>
+                <span class="logT">Removed some unused "Enemies" for whom their characteristics were unknown. Fixed the error when headshot critical multiplier was increased for AOE weapons. Added Shotgun Vendetta, Longbow Sharpshot.</span>
+                <span class="logDate">2023.05.01</span>
+                <span class="logT">Added Mountain's Edge stance.</span>
+                <span class="logDate">2023.04.28</span>
+                <span class="logT">Added Chinese Language.</span>
+                <span class="logDate">2023.04.27</span>
+                <span class="logT">Added new duviri weapons (still not added stance for Sun & moon, waiting wiki). Repear bug with beam weapon.</span>
+                <span class="logDate">2023.04.26</span>
+                <span class="logT">Ammo efficiency is now taken into account. Minor changes.</span>
+                <span class="logDate">2023.04.21</span>
+                <span class="logT">Added First Test Language. Fix minor bugs.</span>
+                <span class="logDate">2023.04.17</span>
+                <span class="logT">Added some mods. Info that the weapon has forceproc is displayed for the user. Changed headshot multipliers who increases final damage (such as mod "Target Acquired" and sniper rifle zoom). 
+                    Previously all headshots calculated as x3 headshot mult + x from mods (now like Primary Deadhead).
+                    Added weapon filter.
+                </span>
+                <span class="logDate">2023.04.16</span>
+                <span class="logT">Added "Change log" list.</span>
+                <span class="logDate">2023.04.13</span>
+                <span class="logT">Added Excalibur "Chromatic Blade" and Baruuk "Reactive Storm", fix little bugs.</span>
+                <span class="logDate">2023.04.06</span>
+                <span class="logT">Exalted weapon added.</span>
+                <span class="logDate">2023.04.04</span>
+                <span class="logT">Unique enemy damage reduction added for demolishers, eidolons, acolytes, amalgams, empyrean corpus, jugulus, saxum, lephantis, orphix, bursa.</span>
+                <span class="logDate">2023.03.31</span>
+                <span class="logT">The Steel Path option added for enemy. Eximus added for enemy.</span>
+                <span class="logDate">2023.03.28</span>
+                <span class="logT">Kitguns with components added for calculation.</span>
+                <span class="logDate">2023.03.23</span>
+                <span class="logT">Added the possibility to copy and save a link to a specific build in the address bar.</span>
+                <span class="logDate">2023.03.22</span>
+                <span class="logT">Fix minor visual bugs. Added the possibility remove mods on touchpad phone devices.</span>
+                <span class="logDate">2023.03.20</span>
+                <span class="logT">Zaw with components added for calculation.</span>                </div>
+            </div>
+        </div>
+        <div class="popUp" id="mergeStatuses">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <h3 class="popUpHead">Combine attack effects</h3>
+                <div class="popUpContent textScroll">
+                    <div class="statusesPopupInfo">Combine the status effects affecting the damage from direct hit attacks and their side attacks.<br> This does not add the direct damage dealt and the damage from status effects to the DPS figure. It allows for the consideration of modifiers that affect damage, such as armor reduction from heat/corrosive status, increased critical damage from cold status, or increased damage from viral/magnetic status for both attacks.</div>
+                    <div class="statusesPopupBlock"></div>
+                </div>
+            </div>
+        </div>
+        <div class="popUp" id="dmgInfo">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <div class="popUpHead">Extended damage queue information</div>
+                <div class="popUpContent"></div>
+                <div>Legend:</div>
+                <div class="infoDmgLegend">
+                    <div class="infoDmgLegendItem">
+                        <div class="infoDmgProps infoDmgPropsCrit">
+                            <div class="infoNumShot">43 (hit number)</div>
+                            <div class="infoQDmg">1080 (hit damage)</div>
+                            <div class="infoCritMult">x5 (critical multiplier)</div>
+                            <div class="infoDecrArmor">-59% (armor reduction %)</div>
+                        </div>
+                        <div class="infoDmgProps">
+                            <div class="infoMeleeMult">x2 (stance multiplier)</div>
+                            <div class="infoXata">127 (Xata's Whisper damage)</div>
+                            <div class="infoStatusPic"><img src="/data/img/heat.webp" loading="lazy" alt="heat"><img src="/data/img/heat.webp" loading="lazy" alt="heat"> (superimposed statuses)</div>
+                            <div class="infoStatusDmg"><div class="infoQStatusDmg"><span>29980</span><img class="infoQImgSD" loading="lazy" src="/data/img/heat.webp" alt="heat">(1 tick damage of status)</div></div>
+                        </div>
+                        <div class="infoDmgProps">
+                            <div class="infoComboMult">x4 (heavy combo multiplier)</div>
+                            <div class="infoDmgOnStatusEff">750 (Cascadia Empowered)</div>
+                            <div class="infoToxicLashDH">300 (Toxic Lash direct hit)</div>
+                            <div class="infoToxicLashTD"><img src="/data/img/toxin.webp" loading="lazy" alt="toxin type damage">450 (Toxic Lash status dmg)</div>
+                        </div>
+                        <div class="infoDmgProps">
+                            <div class="infoDebilitateStatusDmg"><div class="infoQStatusDmg"><span>369</span><img class="infoQImgSD" loading="lazy" src="/data/img/heat.webp" alt="Heat">(Statuses of Primary Debilitate 1 tick dmg)</div></div>
+                            <div class="infoOnEnemyStatus">
+                                <div class="infoQStatusDmg">
+                                    <span>2</span>
+						            <img class="infoQImgE" src="/data/img/heat.webp" alt="heat">
+                                </div>
+                                <div class="infoQStatusDmg">
+                                    <span>15</span>
+						            <img class="infoQImgE" src="/data/img/puncture.webp" alt="puncture">
+                                </div>
+                                <span class="infoOnEnemyStatusTxt">(current number of negative effects on the enemy)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="popUp" id="addCustomStat">
+            <div class="popUpContainer">
+                <div class="popUpClose popup-cancel"></div>
+                <h3 class="popUpHead">Add custom stat values</h3>
+                <div class="popUpContent textScroll">
+                    <div class="addCustomStatCont">
+                        <div class="customStatResetBut">Reset all</div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="base" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Base Damage</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="base_per_status" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Base Damage per Status Effect</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="flat_change_dmg" data-d="0" type="number" value="0" min="0" max="9999">
+                            <div class="customStatItemName">Increase Base Damage by +X</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="abilityCombo" data-d="0" type="number" value="1" min="1" max="12">
+                            <div class="customStatItemName">Combo Ability Multiplier</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="crit_chance" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Chance</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="mult_crit_chance" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Chance (multiple with others)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="flat_crit_chance" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Chance (absolute bonus after mods)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="crit_chance_weakp" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Weak Point Increase Critical Chance</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="crit_mult" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Multiplier</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="crit_mult_add" data-d="0" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Multiplier (absolute bonus after mods)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="crit_mult_mult" data-d="0" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Critical Multiplier (multiple after all sources) (1 + x)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="status_chance" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Status Chance</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="status_chance_mult" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Vulnerable to Status Chance</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="absolute_status_chance" data-d="0" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Status Chance (absolute bonus after mods)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="status_damage" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Status Damage (as "Elementalist" mods)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="vuln_status_damage" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Vulnerability Status Damage (as "Burning Hate" mod)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="speed" type="number" data-d="1" value="0" min="0" max="999">
+                            <div class="customStatItemName">Fire Rate / Attack Speed</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="multishot" type="number" data-d="0" value="0" min="0" max="999">
+                            <div class="customStatItemName">Multishot</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="magazineSize" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Magazine Size Increase</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="reloadTime" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Reload Time Increase</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="mult_for_head" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Headshot Increase Damage (as "Deadhead" Arcane)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="headshot_mult" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Weak Point Increase Damage (as "Primary Acuity" mod)</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="initialCombo" data-d="0" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Initial Combo</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="dmgVulnerability" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Damage Vulnerability</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="heatInherit" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Heat Inherit</div>
+                        </div>
+                        <div class="customStatItem">
+                            <input class="customStatItemVal" data-type="heatAdd" data-d="1" type="number" value="0" min="0" max="999">
+                            <div class="customStatItemName">Add Heat Damage Instance (like Ember augment for 1st ability)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="donate-sticker">
+            <div class="sticker-icon"><img src="/data/simg/donate.svg" alt="donate"></div>
+            <div class="sticker-text">
+                
+                <p class="donateTitleTxt"><strong>For server rent for the site</strong></p>
+                <p>Support us with the price of just one bun.</p>
+                <button class="donateTop">Support the project!</button>
+                        </div>
+        </div>
+        
+        <div class="cookie-notification cookie-notification_hidden_yes">
+    <div class="cookie-notification__header">Website Visit Statistics Collection Notice</div>
+    <div class="cookie-notification__body">
+        <p>We use cookies to collect anonymous visit statistics.</p><a class="policyLink" href="/privacy-policy" target="_blank">Privacy Policy</a>    </div>
+    <div class="cookie-notification__buttons">
+        <button class="cookie-notification__button" id="yesMetric">I agree</button>
+        <button class="cookie-notification__button" id="noMetric">No</button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function getCookie(name) {
+        var matches = document.cookie.match(new RegExp(
+            "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+        ));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+    function setCookie(name, value, options = {}) {
+        options = {
+            path: '/',
+            ...options
+        };
+
+        if (options.expires && typeof options.expires === 'number') {
+            const d = new Date();
+            d.setTime(d.getTime() + options.expires * 24 * 60 * 60 * 1000);
+            options.expires = d.toUTCString();
+        }
+
+        if (options.expires instanceof Date) {
+            options.expires = options.expires.toUTCString();
+        }
+
+        let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+
+        for (let optionKey in options) {
+            updatedCookie += "; " + optionKey;
+            let optionValue = options[optionKey];
+            if (optionValue !== true) {
+                updatedCookie += "=" + optionValue;
+            }
+        }
+
+        document.cookie = updatedCookie;
+    }
+
+    var messageElement = document.querySelector('.cookie-notification');
+    var isCounterInitialized = false;
+
+    function addClass (o, c) {
+        var re = new RegExp("(^|\\s)" + c + "(\\s|$)", "g");
+        if (!o || re.test(o.className)) {
+            return;
+        }
+        o.className = (o.className + " " + c).replace(/\s+/g, " ").replace(/(^ | $)/g, "");
+    }
+
+    function removeClass (o, c) {
+        var re = new RegExp('(^|\\s)' + c + '(\\s|$)', 'g');
+        if (!o) {
+            return;
+        }
+        o.className = o.className.replace(re, '$1').replace(/\s+/g, ' ').replace(/(^ | $)/g, '');
+    }
+
+    function hideMessage () {
+        addClass(messageElement, 'cookie-notification_hidden_yes');
+    }
+
+    function showMessage () {
+        removeClass(messageElement, 'cookie-notification_hidden_yes');
+    }
+
+    function saveAnswer(val) {
+        hideMessage();
+        setCookie('agreement', val, { expires: 365 });
+    }
+
+    function initCounter () {
+        if (isCounterInitialized) return;
+
+        if (typeof ym !== 'undefined') {
+            ym(92449682, "init", {
+                clickmap: true,
+                trackLinks: true,
+                accurateTrackBounce: true,
+                webvisor: true
+            });
+            isCounterInitialized = true;
+        } else {
+            setTimeout(initCounter, 500);
+        }
+    }
+
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
+
+    if (!getCookie('agreement')) {
+        showMessage();
+    } else {
+        if (getCookie('agreement') === "1") {
+            initCounter();
+        }
+    }
+
+    document.querySelector('#yesMetric').addEventListener('click', function () {
+        saveAnswer("1");
+        setTimeout(initCounter, 50);
+    });
+
+    document.querySelector('#noMetric').addEventListener('click', function () {
+        saveAnswer("0");
+    });
+</script>
+                    </body>
+</html>

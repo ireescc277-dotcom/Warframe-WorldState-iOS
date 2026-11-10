@@ -1,251 +1,146 @@
 'use strict';
-// Warframe 伤害计算后端。
+// Warframe 伤害计算后端（v2）。
 //
-// 数据：data/payload.json（由 scripts/build_dpsapp.py 生成）
-// 计算：engine.js（与页面内联版逐值对拍过，见 scripts/dps_parity.js）
-// 前端：web/ 下的静态文件，同源提供，省掉 CORS 和一整套构建工具。
+// 计算不在这里做：server/kernel.js 把 warframe-damage.com 自己的 min.js 装进
+// jsdom 里跑，mod 特例、逐发队列、状态时间轴、四套抗性都由它算。
+// 这一层只负责数据索引、mod 槽位过滤、把 HTTP 请求翻译成内核入参。
 //
-//   node api.js              # 127.0.0.1:8793
+//   node api.js                  # 127.0.0.1:8793
 //   WF_DPS_PORT=9000 node api.js
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const {makeEngine} = require('./engine.js');
+const K = require('./kernel.js');
 
 const PORT = Number(process.env.WF_DPS_PORT || 8793);
 const HOST = process.env.WF_DPS_HOST || '127.0.0.1';
-const DATA = process.env.WF_DPS_DATA || path.join(__dirname, 'data', 'payload.json');
 const WEB = process.env.WF_DPS_WEB || path.join(__dirname, '..', 'web', 'app');
+const SITE = path.join(__dirname, 'site');
 
-// ---------------------------------------------------------------- 数据装载
-let DB = null, ENG = null, LOADED_AT = 0, DATA_MTIME = 0;
-let index = null;
+// ---------------------------------------------------------------- 武器索引
 
-const CAT_NAME = {LongGuns: 'PRIMARY', Pistols: 'SECONDARY', Melee: 'MELEE',
-  SentinelWeapons: 'SENTINEL', SpaceGuns: 'ARCH-GUN', SpaceMelee: 'ARCH-MELEE'};
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(SITE, 'weapons.json'), 'utf8'));
+const WEAPONS = {};          // name -> 精简索引
+const RAW = new Map();       // name -> 完整 JSON（懒读）
 
-function load() {
-  const st = fs.statSync(DATA);
-  DB = JSON.parse(fs.readFileSync(DATA, 'utf8'));
-  ENG = makeEngine(DB);
-  DATA_MTIME = st.mtimeMs;
-  LOADED_AT = Date.now();
-  index = buildIndex();
-  console.log(`[load] 武器 ${Object.keys(DB.w).length} · mod ${Object.keys(DB.m).length} · ` +
-    `配卡 ${DB.b.length} · 敌人 ${DB.e.length} · 灵化 ${Object.keys(DB.i || {}).length} · ` +
-    `紫卡 ${(DB.rv || []).length}`);
-}
-
-// 只在 mtime 变了才重载，省得每次请求都 stat 大文件之外还解析。
-function maybeReload() {
-  try {
-    const st = fs.statSync(DATA);
-    if (st.mtimeMs !== DATA_MTIME) {
-      console.log('[reload] payload 变了');
-      load();
-    }
-  } catch (e) {
-    console.error('[reload] ' + e.message);
-  }
+function weaponJson(name) {
+  if (RAW.has(name)) return RAW.get(name);
+  const f = MANIFEST[name];
+  if (!f) return null;
+  const j = JSON.parse(fs.readFileSync(path.join(SITE, 'weapons', f), 'utf8'));
+  j.name = name;
+  RAW.set(name, j);
+  return j;
 }
 
 function buildIndex() {
-  const W = DB.w;
-  const builds = DB.b.filter(b => W[b.w]);
-  // 按中文名排序，和页面里的顺讯一致（localeCompare zh）
-  const coll = new Intl.Collator('zh-Hans-CN');
-  builds.sort((a, b) => coll.compare(W[a.w].z || W[a.w].n, W[b.w].z || W[b.w].n));
-  const byUid = new Map();
-  builds.forEach((b, i) => byUid.set(b.w, i));
-
-  // mod 按槽位类型分桶，选卡器只拉需要的那一桶
-  const modsByCat = {};
-  for (const uid in DB.m) {
-    const m = DB.m[uid];
-    if (m.rv) continue;            // 紫卡是武器专属的，不进通用选卡器
-    const t = m.t || '---';
-    (modsByCat[t] || (modsByCat[t] = [])).push(uid);
+  for (const name of Object.keys(MANIFEST)) {
+    try {
+      const j = weaponJson(name);
+      if (!j || !j.attacks || !j.attacks.length) continue;
+      WEAPONS[name] = {
+        name,
+        category: j.category || '',
+        categories: j.categories || [],
+        compTags: j.compTags || [],
+        tags: j.tags || [],
+        type: j.type || '',
+        masteryReq: j.masteryReq || 0,
+        imageName: j.imageName || '',
+        attacks: j.attacks.map(a => a.name),
+        incarnon: !!(j.incarnon && j.incarnon.length),
+        mag: j.magazineSize,
+        reload: j.reloadTime,
+        trigger: j.trigger || '',
+      };
+    } catch (e) {
+      console.error('[idx] ' + name + ' ' + e.message);
+    }
   }
-  for (const t in modsByCat) {
-    modsByCat[t].sort((x, y) => coll.compare(DB.m[x].z || DB.m[x].n, DB.m[y].z || DB.m[y].n));
-  }
-  return {builds, byUid, modsByCat};
 }
 
-// ---------------------------------------------------------------- 结果缓存
-const RANK_CACHE = new Map();
-const RANK_MAX = 24;
+// ---------------------------------------------------------------- mod 槽位
 
-function padSlots(a) {
-  // 配卡最多 11 槽（8 普通 + 特殊功能槽 + 紫卡槽 + 赋能 …），不能截断：
-  // 截到 8 会让 43 套配卡少算后面几张卡。
-  const x = (a || []).slice(0, 11);
-  while (x.length < 8) x.push(null);
-  return x.map(s => (s && s.m ? {m: s.m, lv: s.lv | 0} : null));
-}
-
-const num = (v, lo, hi, dflt) => {
-  const n = Number(v);
-  if (!isFinite(n)) return dflt;
-  return Math.max(lo, Math.min(hi, n));
+// 站点的槽位语义（data-id）：
+//   0-7   八个主槽
+//   8     exilus
+//   9     stance（近战）
+//   10    武器赋能
+//   11-12 战甲赋能
+//   13-16 战甲 mod
+//   17    aura
+//   23-27 执政官碎片
+const SLOT_KIND = {
+  0: 'main', 1: 'main', 2: 'main', 3: 'main', 4: 'main', 5: 'main', 6: 'main', 7: 'main',
+  8: 'exilus', 9: 'stance', 10: 'arcane',
+  11: 'frameArcane', 12: 'frameArcane',
+  13: 'frame', 14: 'frame', 15: 'frame', 16: 'frame',
+  17: 'aura',
+  23: 'shard', 24: 'shard', 25: 'shard', 26: 'shard', 27: 'shard',
 };
 
-// 选项口径对齐 warframe-damage.com：0 表示该项关闭（战甲 buff 用 0 代表未勾选）
-function readOpt(raw) {
-  const o = raw || {};
-  return {
-    steel: !!o.steel,
-    status: o.status !== false,
-    // 外部病毒层数：1-10，勾选才生效
-    extViral: num(o.extViral, 0, 10, 0),
-    // 外部削甲：0-99%
-    armorStrip: num(o.armorStrip, 0, 99, 0),
-    // 队列时长（秒）：那一站叫「连续射击/攻击时间」，1-60，默认 20
-    window: num(o.window, 1, 60, 20),
-    // 技能强度：100 = 100%，缩放依赖强度的加成
-    strength: num(o.strength, 0, 1000, 100),
-    headshot: !!o.headshot,
-    // 近战偷袭（暴击倍率 +7）
-    stealth: !!o.stealth,
-    // 轻攻击连击倍率：0 关闭，1-13
-    meleeCombo: num(o.meleeCombo, 0, 13, 0),
-    // 狙击连击倍率：0 关闭，1.5-100
-    sniperCombo: num(o.sniperCombo, 0, 100, 0),
-    // 战甲 buff：0 关闭，否则为百分比
-    rhino: num(o.rhino, 0, 9999, 0),
-    mirage: num(o.mirage, 0, 9999, 0),
-    xata: num(o.xata, 0, 9999, 0),
-    tlash: num(o.tlash, 0, 9999, 0),
-    nourish: num(o.nourish, 0, 9999, 0),
-    // 绝对增加暴击几率（Kullervo / Harrow）
-    ccBuff: num(o.ccBuff, 0, 200, 0),
-    // 物理伤害 +30%（Madurai）
-    madurai: !!o.madurai,
-    crit: o.crit !== false,
-    incarnon: !!o.incarnon,
-    dmgBuff: num(o.dmgBuff, 0, 500, 0),
-  };
-}
+const has = (arr, v) => Array.isArray(arr) && arr.includes(v);
+const hasAny = (arr, vs) => Array.isArray(arr) && vs.some(v => arr.includes(v));
 
-const fmtStat = (k, v) => ({k, v});
-
-// 单次计算
-function calcOne(uid, slots, enemy, level, opt) {
-  const w = DB.w[uid];
-  if (!w) return null;
-  const t0 = process.hrtime.bigint();
-  const r = ENG.compute(w, slots, enemy, level, opt, uid);
-  const A = r.A, d = r.d, s = r.s;
-
-  // 每张卡在「当前等级」下的实际数值，供左栏明细用
-  const contrib = [];
-  const bad = [];
-  for (const sl of slots) {
-    if (!sl) continue;
-    const m = DB.m[sl.m];
-    if (!m) { bad.push((sl.m.split('/').pop() || '')); continue; }
-    const row = m.lv[Math.min(sl.lv, m.lv.length - 1)] || {};
-    contrib.push({
-      n: (m.z && m.z !== m.n) ? m.z : m.n,
-      lv: sl.lv, mx: m.mx,
-      st: Object.keys(row).map(k => fmtStat(k, row[k])),
-    });
+function modsFor(weaponName, slot) {
+  const w = WEAPONS[weaponName];
+  if (!w) return [];
+  const kind = SLOT_KIND[slot] || 'main';
+  const all = K.mods();
+  const out = [];
+  for (const m of all) {
+    const t = m.type || '';
+    let ok = false;
+    if (kind === 'main') {
+      ok = !['exilus', 'stance', 'weapon_mist', 'frame_mist', 'aura', 'shard'].includes(t) &&
+           hasAny(w.categories, m.tags);
+    } else if (kind === 'exilus') {
+      ok = t === 'exilus' && hasAny(w.categories, m.tags);
+    } else if (kind === 'stance') {
+      ok = t === 'stance' && hasAny(w.compTags, m.tags);
+    } else if (kind === 'arcane') {
+      ok = t === 'weapon_mist' && hasAny(w.categories, m.tags);
+    } else if (kind === 'frameArcane') {
+      ok = t === 'frame_mist';
+    } else if (kind === 'frame' || kind === 'aura') {
+      ok = kind === 'aura' ? t === 'aura' : !t;
+    } else if (kind === 'shard') {
+      ok = t === 'shard';
+    }
+    if (ok) out.push(m);
   }
-
-  const w2 = r.wp2;
-  const payload = {
-    uid,
-    weapon: {
-      n: w2.n, z: w2.z || w2.n, tr: w2.tr || '', cat: w2.cat || '',
-      td: w2.td || 0, cc: w2.cc || 0, cm: w2.cm || 1, sc: w2.sc || 0,
-      fr: w2.fr || 0, mag: w2.mag || 0, rl: w2.rl || 0, ms: w2.ms || 1,
-      incarnon: !!opt.incarnon && !!(DB.i && DB.i[uid]),
-    },
-    target: {
-      n: enemy.n, f: enemy.f || '', fk: A.fk, lv: A.lv,
-      hp: A.hp, ar: A.ar0, sh: A.sh, og: A.og, dr: A.dr0,
-      base: {hp: enemy.hp, ar: enemy.ar, sh: enemy.sh},
-    },
-    raw: {perShot: A.perShotShield, shotBase: A.shotBase},
-    direct: {
-      burst: d.burst, sust: d.sust, perShot: d.toHealth,
-      retain: A.perShotShield ? d.toHealth / A.perShotShield : 0,
-      rows: d.rows.map(x => ({t: x.t, base: x.base, f: x.f, dr: x.dr,
-                             vH: x.vH, share: x.share})),
-    },
-    contrib, bad,
-    bane: A.banePct,
-  };
-  if (s) {
-    payload.sim = {
-      dps: s.dps, directDps: s.directDps, dotDps: s.dotDps, kill: s.kill,
-      viral: s.viralAtEnd, corr: s.corrAtEnd, strip: s.stripAtEnd,
-      dur: s.dur, window: opt.window,
-    };
-  } else payload.sim = null;
-
-  payload.ms = Number(process.hrtime.bigint() - t0) / 1e6;
-  return payload;
-}
-
-// ---------------------------------------------------------------- 排名
-// 直接序列化整个 opt：以后加选项不会漏进缓存键
-const rankKey = (ei, level, opt) => ei + '|' + level + '|' + JSON.stringify(opt);
-
-function rankCached(ei, level, opt) {
-  const k = rankKey(ei, level, opt);
-  const hit = RANK_CACHE.get(k);
-  if (hit) { RANK_CACHE.delete(k); RANK_CACHE.set(k, hit); }
-  return hit || null;
-}
-
-function rankCompute(ei, level, opt) {
-  const k = rankKey(ei, level, opt);
-  const enemy = DB.e[ei];
-  const t0 = process.hrtime.bigint();
-  const rows = index.builds.map((b, i) => {
-    const r = ENG.compute(DB.w[b.w], padSlots(b.slots[0]), enemy, level, opt, b.w);
-    const val = opt.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
-    return {i, uid: b.w, n: DB.w[b.w].z || DB.w[b.w].n, val};
-  });
-  rows.sort((a, b) => b.val - a.val);
-  const out = {rows, ms: Number(process.hrtime.bigint() - t0) / 1e6};
-  RANK_CACHE.set(k, out);
-  if (RANK_CACHE.size > RANK_MAX) RANK_CACHE.delete(RANK_CACHE.keys().next().value);
   return out;
 }
 
-// 1 核小机器上第一次跑要付 JIT 的钱（~1.2s）。开机先按最可能的那组参数跑一遍，
-// 用户第一次点「排名」就是热的。
-function warmup() {
-  const ei = DB.e.findIndex(e => e.n === 'Heavy Gunner');
-  const level = 100;
-  const opt = readOpt({});
-  const t0 = Date.now();
-  rankCompute(ei < 0 ? 0 : ei, level, opt);
-  console.log(`[warm] 排名预热 ${Date.now() - t0}ms`);
+// ---------------------------------------------------------------- 串行化
+// jsdom 里只有一份全局状态，并发 calc 会互相踩。排队。
+let chain = Promise.resolve();
+function serial(fn) {
+  const p = chain.then(fn, fn);
+  chain = p.catch(() => {});
+  return p;
 }
 
 // ---------------------------------------------------------------- HTTP
+
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
+  '.webp': 'image/webp', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8',
 };
 
-function sendJSON(res, code, obj, gzipOK) {
+function sendJSON(res, code, obj, ae) {
   const body = Buffer.from(JSON.stringify(obj), 'utf8');
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
   };
-  const ae = gzipOK || '';
-  if (body.length > 1024 && ae.includes('gzip')) {
-    const z = zlib.gzipSync(body, {level: 6});
+  if (body.length > 1024 && String(ae || '').includes('gzip')) {
+    const z = zlib.gzipSync(body, { level: 6 });
     headers['Content-Encoding'] = 'gzip';
     headers['Content-Length'] = z.length;
     res.writeHead(code, headers);
@@ -275,7 +170,6 @@ function readBody(req) {
   });
 }
 
-// 静态文件：只允许 web/ 之内的路径
 function serveStatic(req, res, urlPath) {
   let rel = decodeURIComponent(urlPath.replace(/^\/+/, ''));
   if (!rel || rel.endsWith('/')) rel += 'index.html';
@@ -300,28 +194,7 @@ function serveStatic(req, res, urlPath) {
   });
 }
 
-function metaPayload() {
-  const W = DB.w;
-  const weapons = index.builds.map((b, i) => {
-    const w = W[b.w];
-    return {
-      uid: b.w, i, n: w.z || w.n, e: w.n,
-      cat: CAT_NAME[w.cat] || w.cat || '',
-      ncfg: b.slots.length,
-      inc: !!(DB.i && DB.i[b.w]),
-      riven: b.slots.some(c => c.some(s => s && s.m.startsWith('RIVEN:'))),
-    };
-  });
-  const facSet = new Set(DB.e.map(e => e.f));
-  return {
-    meta: DB.meta,
-    loadedAt: LOADED_AT,
-    weapons,
-    enemies: DB.e.map((e, i) => ({i, n: e.n, f: e.f || '', fk: e.fk || ''})),
-    factions: [...facSet],
-    rivens: DB.rv || [],
-  };
-}
+// ---------------------------------------------------------------- 路由
 
 async function route(req, res) {
   const u = new URL(req.url, 'http://x');
@@ -329,76 +202,66 @@ async function route(req, res) {
   const ae = req.headers['accept-encoding'] || '';
 
   if (p === '/api/health') {
-    return sendJSON(res, 200, {ok: true, loadedAt: LOADED_AT,
-      counts: {weapons: Object.keys(DB.w).length, mods: Object.keys(DB.m).length,
-               builds: DB.b.length, enemies: DB.e.length}}, ae);
+    return sendJSON(res, 200, {
+      ok: true,
+      weapons: Object.keys(WEAPONS).length,
+      mods: K.W ? K.mods().length : 0,
+      bootMs: K.W ? K.W.__bootMs : null,
+      rss: Math.round(process.memoryUsage().rss / 1048576),
+    }, ae);
   }
-  if (p === '/api/meta') return sendJSON(res, 200, metaPayload(), ae);
+
+  if (p === '/api/meta') {
+    return sendJSON(res, 200, {
+      weapons: Object.values(WEAPONS).map(w => ({
+        n: w.name, cat: w.category, atk: w.attacks, tags: w.tags,
+        inc: w.incarnon, mr: w.masteryReq, img: w.imageName,
+      })),
+      enemies: K.enemies(),
+      modCount: K.W ? K.mods().length : 0,
+    }, ae);
+  }
 
   if (p === '/api/weapon') {
-    const uid = u.searchParams.get('uid') || '';
-    const i = index.byUid.get(uid);
-    if (i == null) return sendJSON(res, 404, {error: 'unknown weapon'}, ae);
-    const b = index.builds[i];
-    const w = DB.w[uid];
-    const slots = b.slots.map(cfg => padSlots(cfg).map(s => {
-      if (!s) return null;
-      const m = DB.m[s.m];
-      return m ? {m: s.m, n: m.n, z: m.z || m.n, mx: m.mx, lv: s.lv,
-                  t: m.t || '', d: m.d || 0, pol: m.pol || ''}
-               : {m: s.m, n: s.m.split('/').pop(), z: '', mx: 0, lv: 0, t: '', d: 0, pol: '', bad: 1};
-    }));
-    let inc = null;
-    if (DB.i && DB.i[uid]) {
-      const x = DB.i[uid];
-      inc = {name: x.name, tree: x.tree, picked: x.picked,
-             forms: (x.forms || []).map(f => ({n: f.n}))};
-    }
-    return sendJSON(res, 200, {uid, weapon: w, slots, inc,
-      riven: (DB.rv || []).filter(r => r.compat === uid)}, ae);
+    const name = u.searchParams.get('name') || '';
+    const j = weaponJson(name);
+    if (!j) return sendJSON(res, 404, { error: 'unknown weapon' }, ae);
+    return sendJSON(res, 200, { ...j, index: WEAPONS[name] }, ae);
   }
 
   if (p === '/api/mods') {
-    const cat = u.searchParams.get('cat') || '';
-    // '---' 桶是通用 mod（任何武器都能装），每次都要带上
-    const list = [...(index.modsByCat[cat] || []), ...(index.modsByCat['---'] || [])];
-    const raw = new Set((u.searchParams.get('used') || '').split(',').filter(Boolean));
-    const out = [];
-    for (const uid of list) {
-      if (raw.has(uid)) continue;
-      const m = DB.m[uid];
-      const last = m.lv[m.lv.length - 1] || {};
-      out.push({u: uid, n: m.n, z: m.z || m.n, mx: m.mx, d: m.d, t: m.t,
-                pol: m.pol || '', st: Object.keys(last).map(k => fmtStat(k, last[k]))});
-    }
-    return sendJSON(res, 200, {cat, mods: out}, ae);
+    const name = u.searchParams.get('weapon') || '';
+    const slot = Number(u.searchParams.get('slot'));
+    if (!WEAPONS[name]) return sendJSON(res, 404, { error: 'unknown weapon' }, ae);
+    if (!Number.isFinite(slot)) return sendJSON(res, 400, { error: 'slot?' }, ae);
+    const list = modsFor(name, slot);
+    return sendJSON(res, 200, {
+      slot, kind: SLOT_KIND[slot] || 'main',
+      mods: list.map(m => ({ n: m.name, t: m.type, tags: m.tags, info: m.info,
+                             set: m.set, act: m.action })),
+    }, ae);
   }
 
   if (p === '/api/calc' && req.method === 'POST') {
     const body = await readBody(req);
-    const uid = String(body.uid || '');
-    if (!index.byUid.has(uid)) return sendJSON(res, 404, {error: 'unknown weapon'}, ae);
-    const ei = num(body.ei, 0, DB.e.length - 1, 0);
-    const enemy = DB.e[ei | 0];
-    const level = num(body.level, 1, 9999, 100);
-    const opt = readOpt(body.opt);
-    const slots = Array.isArray(body.slots) ? padSlots(body.slots) : padSlots(index.builds[index.byUid.get(uid)].slots[0]);
-    const r = calcOne(uid, slots, enemy, level, opt);
-    if (!r) return sendJSON(res, 400, {error: 'calc failed'}, ae);
-    return sendJSON(res, 200, r, ae);
+    if (!WEAPONS[body.weapon]) return sendJSON(res, 404, { error: 'unknown weapon' }, ae);
+    try {
+      const r = await serial(() => K.calc({
+        weapon: body.weapon,
+        enemy: body.enemy,
+        level: body.level,
+        steel: body.steel,
+        eximus: body.eximus,
+        mods: body.mods,
+        opts: body.opts,
+      }));
+      return sendJSON(res, 200, r, ae);
+    } catch (e) {
+      return sendJSON(res, 400, { error: e.message }, ae);
+    }
   }
 
-  if (p === '/api/rank' && req.method === 'POST') {
-    const body = await readBody(req);
-    const ei = num(body.ei, 0, DB.e.length - 1, 0) | 0;
-    const level = num(body.level, 1, 9999, 100);
-    const opt = readOpt(body.opt);
-    const hit = rankCached(ei, level, opt);
-    if (hit) return sendJSON(res, 200, {...hit, cached: true}, ae);
-    return sendJSON(res, 200, {...rankCompute(ei, level, opt), cached: false}, ae);
-  }
-
-  if (p.startsWith('/api/')) return sendJSON(res, 404, {error: 'not found'}, ae);
+  if (p.startsWith('/api/')) return sendJSON(res, 404, { error: 'not found' }, ae);
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405); res.end('method not allowed'); return;
@@ -406,22 +269,33 @@ async function route(req, res) {
   return serveStatic(req, res, p);
 }
 
-function main() {
-  load();
+// ---------------------------------------------------------------- 启动
+
+async function main() {
+  const t0 = Date.now();
+  buildIndex();
+  console.log(`[idx] 武器 ${Object.keys(WEAPONS).length} / ${Object.keys(MANIFEST).length}`);
+  await K.boot();
+  console.log(`[boot] 站点内核 ${K.W.__bootMs}ms，mod ${K.mods().length}`);
+  console.log(`[idx] 总计 ${Date.now() - t0}ms`);
+
   const server = http.createServer((req, res) => {
-    if (req.url !== '/api/health') maybeReload();
     route(req, res).catch(e => {
       console.error(`[err] ${req.url} ${e.message}`);
-      if (!res.headersSent) sendJSON(res, 500, {error: e.message});
+      if (!res.headersSent) sendJSON(res, 500, { error: e.message });
       else res.end();
     });
   });
   server.keepAliveTimeout = 5000;
   server.listen(PORT, HOST, () => {
     console.log(`wf-dps listening on http://${HOST}:${PORT}  web=${WEB}`);
-    console.log(`payload mtime=${new Date(DATA_MTIME).toISOString()}`);
-    setTimeout(() => { try { warmup(); } catch (e) { console.error('[warm] ' + e.message); } }, 200);
   });
+
+  // 预热一次，别让第一个用户等 JIT
+  serial(() => K.calc({ weapon: 'Torid', enemy: 'Heavy Gunner', level: 100 }))
+    .then(() => console.log('[warm] ok'))
+    .catch(e => console.error('[warm] ' + e.message));
+
   const bye = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 800); };
   process.on('SIGTERM', bye);
   process.on('SIGINT', bye);
