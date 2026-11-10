@@ -96,15 +96,26 @@ main{flex:1;display:grid;grid-template-columns:264px minmax(420px,1fr) 292px;min
 .contrib .cl{flex:none;width:52px;color:var(--gold2);font-variant-numeric:tabular-nums}
 .contrib .cv{color:var(--mute)}
 .contrib .cr:nth-child(odd){background:#12151a}
-.incbox{margin-top:10px;border:1px solid #2a3240;border-radius:6px;overflow:hidden}
-.inchd{display:flex;justify-content:space-between;align-items:baseline;
-  padding:7px 10px;background:#1a2029;font-size:12px;color:var(--gold)}
-.incst{font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums}
-.incbox .contrib .cn{flex:none;width:26px;color:var(--gold);font-size:10px}
-.incbox .contrib .cl{flex:none;width:158px;color:#c8d0da;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.incbox .contrib .cv{flex:1;min-width:0}
-.incft{padding:6px 10px;font-size:10px;color:var(--mute);background:#12151a;
-  border-top:1px solid #1e242e}
+.incpane{margin-top:14px;max-width:640px;border-top:1px solid var(--line);padding-top:9px}
+.incpane .ihd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.incpane .ihl{font-size:11.5px;color:var(--mute)}
+.incpane .ihl b{color:#9d8ae0;font-weight:500}
+.incpane .incseg button{font-size:11px;padding:3px 10px}
+.incpane .ir{display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:11.5px}
+.incpane .ir:nth-child(odd){background:#12151a}
+.incpane .it{flex:none;width:26px;color:#7c6fb0;font-variant-numeric:tabular-nums}
+.incpane .in{flex:none;width:150px;color:#c9c3e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.incpane .iv{color:var(--mute);font-variant-numeric:tabular-nums}
+.incpane .ifoot{margin-top:7px;font-size:10.5px;color:#5a636e;line-height:1.6}
+.rvlist{display:grid;grid-template-columns:1fr 1fr;gap:1px 16px;padding:6px 12px 14px}
+.rvr{padding:6px 0;border-bottom:1px solid var(--line)}
+.rvh{display:flex;gap:8px;align-items:baseline;font-size:12px}
+.rvh b{color:#b9a06a;font-weight:500}
+.rvh .rw{color:var(--mute);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rvh .rvt{color:#5a636e;font-size:10px;flex:none}
+.rvs{margin-top:3px;display:flex;flex-wrap:wrap;gap:3px 10px;font-size:11px}
+.rvs .st{color:#8ec7a0;font-variant-numeric:tabular-nums}
+.rvs .st.cur{color:#c98a8a}
 .simpane{margin-top:16px;max-width:640px;border-top:1px solid var(--line);padding-top:10px}
 .simpane .hd{font-size:11px;letter-spacing:1px;color:var(--mute);margin-bottom:8px}
 .simpane .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -128,8 +139,7 @@ main{flex:1;display:grid;grid-template-columns:264px minmax(420px,1fr) 292px;min
 .estat div{background:#1d222a;border-radius:4px;padding:4px 7px}
 .estat span{display:block;color:var(--mute);font-size:10px}
 .estat b{font-variant-numeric:tabular-nums;font-size:12px}
-.extq{padding:8px 12px}
-.extq .exh{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--gold);margin-bottom:6px}
+.extq{padding:8px 12px}.extq .exh{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--gold);margin-bottom:6px}
 .extq .exh span{color:var(--mute);font-size:10px}
 .extq .row{gap:8px;margin-bottom:5px}
 .extq .lb2{font-size:11px;color:var(--mute);width:56px;flex:none}
@@ -190,6 +200,7 @@ code{background:#1d222a;padding:0 4px;border-radius:3px;font-size:11px;color:#b9
     <button data-v="0" class="on">普通</button>
     <button data-v="1">钢铁 +100</button>
   </div>
+  <button class="hbtn" id="btnriven">紫卡</button>
   <button class="hbtn" id="btnnote">口径</button>
 </header>
 
@@ -233,6 +244,14 @@ code{background:#1d222a;padding:0 4px;border-radius:3px;font-size:11px;color:#b9
         <input type="number" id="xwin" class="num" min="3" max="60" value="10"><span class="pc">秒</span></div>
       <div class="row chk"><label><input type="checkbox" id="xhd"> 爆头 ×2</label>
         <label><input type="checkbox" id="xcrit" checked> 计入暴击</label></div>
+      <div class="row"><span class="lb2">伤害加成</span>
+        <input type="range" id="xbufR" min="0" max="500" value="0">
+        <input type="number" id="xbuf" class="num" min="0" max="500" value="0"><span class="pc">%</span></div>
+      <div class="row"><span class="lb2">暴击加成</span>
+        <input type="range" id="xccR" min="0" max="200" value="0">
+        <input type="number" id="xcc" class="num" min="0" max="200" value="0"><span class="pc">%</span></div>
+      <div class="row" style="margin-top:2px"><span style="font-size:10px;color:#5a636e;line-height:1.5">
+        伤害加成对应 Roar / Eclipse / Xata's Whisper 一类外部增伤；暴击加成对应 Covenant / Wrathful Advance。</span></div>
     </div>
     <div class="facres" id="facres"></div>
     <div style="padding:6px 8px 0"><input id="esearch" placeholder="搜索敌人…" style="width:100%"></div>
@@ -324,25 +343,6 @@ function statVal(m, lv, k){
   const row = L[i]; if(!row) return 0;
   return row[k] || 0;
 }
-// 灵化：SkillTree 每一位 = 那一层选了哪个 slot
-function incStats(inc, skillTree){
-  const s = {}, picked = [];
-  if(!inc || skillTree == null) return {s, picked};
-  const st = String(skillTree).split("");
-  for(const e of inc.ev){
-    const c = st[e.t-1];
-    if(c === undefined) continue;
-    if(+c === e.s) picked.push(e);
-  }
-  for(const e of picked){
-    for(const k in (e.c||{})){
-      if(k === "criticalMultiplierSet" || k === "ammoMaxSet" || k === "heavyAttackEfficiencySet") continue;
-      s[k] = (s[k]||0) + e.c[k];
-    }
-  }
-  return {s, picked};
-}
-
 function aggregate(slots){
   const a = {dmg:0,cc:0,cd:0,ms:0,fr:0,sc:0,mag:0,rl:0,
              phys:{},elem:{},fac:{},bad:[]};
@@ -372,25 +372,22 @@ function aggregate(slots){
 }
 
 // 元素合流：先天元素排最前，之后按槽位顺序
-function buildComponents(wp, a, slotOrder, flat, addPct){
-  const raw0 = DT.reduce((s,t)=>s+(wp.dmg[DT.indexOf(t)]||0),0) || wp.td || 1;
-  // 灵化把基础伤害抬高之后，所有百分比都作用在抬高后的值上
-  const baseTotal0 = (raw0 + (flat||0)) * (1 + (addPct||0));
-  const scale0 = baseTotal0 / raw0;
+function buildComponents(wp, a, slotOrder){
+  const baseTotal0 = DT.reduce((s,t)=>s+(wp.dmg[DT.indexOf(t)]||0),0) || wp.td || 1;
   const dMul = 1 + a.dmg/100;
   const phys = [];
   for(const t of PHYS){
-    let v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
+    let v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
     if(a.phys[t]) v *= (1 + a.phys[t]/100);
     if(v > 0) phys.push({t,v,innate:true});
   }
   const q = [];
   for(const t of ELEM_ORDER){
-    const v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
+    const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
     if(v > 0) q.push({t,v,innate:true});
   }
   for(const t of ["blast","radiation","magnetic","viral","corrosive","gas"]){
-    const v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
+    const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
     if(v > 0) q.push({t,v,innate:true,combo:true});
   }
   for(const t of slotOrder){
@@ -458,29 +455,80 @@ function drOf(A){
   return A/(A+300);
 }
 
+// ---------------------------------------------------------------- 灵化
+// 节点数值加在「基础值」上（Wiki 描述均为 Increase Base X by N），
+// 所以先叠加到武器基础属性，再走 mod 的乘算。
+// flatBaseDamage / additiveBaseDamage 只在灵化形态生效——它们描述的就是
+// 灵化形态的基础伤害（Torid 的 +51 正好等于其灵化形态的 51 点基础伤害）。
+function effWeapon(wp, inc, on){
+  if(!inc) return wp;
+  const b = Object.assign({}, wp);
+  b.dmg = (wp.dmg || []).slice();
+  if(on && inc.forms[1]){
+    const f = inc.forms[1];
+    b.td = f.td; b.cc = f.cc; b.cm = f.cm; b.sc = f.sc; b.fr = f.fr;
+    if(f.mag != null && f.mag > 0) b.mag = f.mag;
+    if(f.rl != null && f.rl > 0) b.rl = f.rl;
+    if(f.ms != null && f.ms > 0) b.ms = f.ms;
+    let sum = 0;
+    const d = new Array(DT.length).fill(0);
+    for(let i=0;i<DT.length;i++){ const v = f.dmg[DT[i]] || 0; d[i] = v; sum += v; }
+    if(sum > 0) b.dmg = d;
+  }
+  let flat = 0, add = 0, ccA = 0, cmA = 0, scA = 0, frM = 0, rlM = 0, magM = 0,
+      flatMag = 0, msA = 0;
+  for(const p of inc.picked || []){
+    const s = p.sc || {};
+    if(on && s.flatBaseDamage) flat += s.flatBaseDamage;
+    if(on && s.additiveBaseDamage) add += s.additiveBaseDamage;
+    if(s.criticalChance) ccA += s.criticalChance;
+    if(s.criticalMultiplier) cmA += s.criticalMultiplier;
+    if(s.criticalMultiplierSet) b.cm = s.criticalMultiplierSet;
+    if(s.critMultFlat) cmA += s.critMultFlat;
+    if(s.statusChance) scA += s.statusChance;
+    if(s.fireRate) frM += s.fireRate;
+    if(s.reloadSpeed) rlM += s.reloadSpeed;
+    if(s.magazine) magM += s.magazine;
+    if(s.flatMagazine) flatMag += s.flatMagazine;
+    if(s.multishot) msA += s.multishot;
+  }
+  if(flat || add){
+    const old = b.td || 1;
+    b.td = (old + flat) * (1 + add);
+    const k = b.td / old;
+    b.dmg = b.dmg.map(v => v * k);
+  }
+  b.cc = (b.cc || 0) + ccA;
+  b.cm = (b.cm || 1) + cmA;
+  b.sc = (b.sc || 0) + scA;
+  b.fr = (b.fr || 1) * (1 + frM);
+  b.rl = (b.rl || 0) / (1 + rlM);
+  b.mag = Math.round(((b.mag || 1) + flatMag) * (1 + magM));
+  b.ms = (b.ms || 1) + msA;
+  return b;
+}
+
 // ---------------------------------------------------------------- 组装
 const BANE_KEY = {Grineer:"grineer","Kuva Grineer":"grineer",Corpus:"corpus",
   "Corpus Amalgam":"corpus",Infested:"infested","Infested Deimos":"infested",
   Orokin:"corrupted",Sentient:"sentient",Narmer:"narmer",Murmur:"murmur"};
 
-function assemble(wp, slots, enemy, level, opt, inc, skillTree){
+function assemble(wp, slots, enemy, level, opt){
   const a = aggregate(slots);
-  const IS = incStats(inc, skillTree).s;
   const order = slots.filter(Boolean).map(s=>{
     const m=M[s.m]; if(!m) return null;
     return ALLELEM.filter(t=>statVal(m,s.lv,t)>0);
   }).filter(Boolean).flat();
-  const comps = buildComponents(wp, a, order, IS.flatBaseDamage||0, IS.additiveBaseDamage||0);
+  const comps = buildComponents(wp, a, order);
 
-  // 灵化里 +X% Base Critical Chance 是加到基础值上，再被 mod 乘
-  const cc = ((wp.cc||0) + (IS.criticalChance||0)) * 100 * (1 + a.cc/100);
-  const cm = ((wp.cm||1) + (IS.criticalMultiplier||0)) * (1 + a.cd/100);
+  const cc = (wp.cc||0)*100 * (1 + a.cc/100) + (opt.ccBuff || 0);
+  const cm = (wp.cm||1) * (1 + a.cd/100);
   const critMul = (opt.crit === false) ? 1 : 1 + (cc/100)*(cm-1);
-  const ms = (wp.ms||1) * (1 + a.ms/100 + (IS.multishot||0));
-  const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100 + (IS.fireRate||0)));
-  const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100) + (IS.flatMagazine||0)));
-  const rl  = Math.max(0,(wp.rl||0) / (1 + a.rl/100 + (IS.reloadSpeed||0)));
-  const sc  = Math.max(0,((wp.sc||0) + (IS.statusChance||0)) * (1 + a.sc/100));
+  const ms = (wp.ms||1) * (1 + a.ms/100);
+  const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100));
+  const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100)));
+  const rl  = Math.max(0,(wp.rl||0) / (1 + a.rl/100));
+  const sc  = Math.max(0,(wp.sc||0) * (1 + a.sc/100));
 
   const lv = level + (opt.steel ? 100 : 0);
   const fk = enemy.fk || "";
@@ -490,10 +538,11 @@ function assemble(wp, slots, enemy, level, opt, inc, skillTree){
   const sh = scaleShield(enemy.sh, lv, enemy.bl, fk);
   const banePct = (a.fac[BANE_KEY[fk]] || 0)/100;
   const headMul = opt.headshot ? 2 : 1;
+  const buffMul = 1 + (opt.dmgBuff || 0)/100;
 
   const compsF = comps.map(c=>{
     const f = facMult(fk, c.t);
-    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)*headMul};
+    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)*headMul*buffMul};
   });
   const perShotShield = compsF.reduce((s,c)=>s+c.vCrit,0);
   const shotBase = comps.reduce((s,c)=>s+c.v,0) * ms;   // 不含暴击、不含加成
@@ -641,17 +690,20 @@ function simulate(A, opt){
   };
 }
 
-function compute(wp, slots, enemy, level, opt, inc, skillTree){
-  const A = assemble(wp, slots, enemy, level, opt, inc, skillTree);
+function compute(wp, slots, enemy, level, opt, uid){
+  const inc = (WF.i && uid) ? WF.i[uid] : null;
+  const wp2 = inc ? effWeapon(wp, inc, opt.incarnon) : wp;
+  const A = assemble(wp2, slots, enemy, level, opt);
   const d = direct(A);
   const s = opt.status ? simulate(A, opt) : null;
-  return {A, d, s};
+  return {A, d, s, inc, wp2};
 }
 
 // ---------------------------------------------------------------- 状态
 const state = {wi:-1, ci:0, slots:[], enemy:null, level:100, steel:false,
                status:true, fac:"全部", mode:"weapon", ranking:null, rankingKey:"",
-               extViral:0, armorStrip:0, window:10, headshot:false, crit:true};
+               extViral:0, armorStrip:0, window:10, headshot:false, crit:true,
+               incarnon:false, dmgBuff:0, ccBuff:0};
 
 // ---------------------------------------------------------------- 武器列表
 const wlistEl = document.getElementById("wlist");
@@ -695,12 +747,11 @@ function renderWeapons(){
 document.getElementById("wsearch").oninput = renderWeapons;
 
 function selectWeapon(i){
-  state.wi = i; state.ci = 0;
-  state.slots = padN(builds[i].slots[0]);
+  state.wi = i; state.ci = 0; state.incarnon = false;
+  state.slots = pad8(builds[i].slots[0]);
   renderWeapons(); renderBuild();
 }
-// 槽位数不固定：8 个普通槽 + 特殊功能槽 + 紫卡槽，实测有 7~11 个，不能截断
-function padN(a){ const x = a.slice(); while(x.length<8) x.push(null); return JSON.parse(JSON.stringify(x)); }
+function pad8(a){ const x = a.slice(0,8); while(x.length<8) x.push(null); return JSON.parse(JSON.stringify(x)); }
 
 // ---------------------------------------------------------------- 配卡
 const bwrap = document.getElementById("bwrap");
@@ -708,10 +759,26 @@ const LABEL = {dmg:"伤害",cc:"暴击",cd:"暴伤",ms:"多重",fr:"射速",sc:"
   mag:"弹匣",rl:"装填",impact:"冲击",puncture:"穿刺",slash:"切割",heat:"火焰",
   cold:"冰冻",electricity:"电击",toxin:"毒素",blast:"爆炸",radiation:"辐射",
   magnetic:"磁力",viral:"病毒",corrosive:"腐蚀",gas:"毒气"};
+// 灵化节点 statChanges 的中文标签（只标注本单位能识别的键）
+const INCLBL = {flatBaseDamage:"基础伤害+", additiveBaseDamage:"基础伤害×",
+  criticalChance:"基础暴击", criticalMultiplier:"基础暴伤", criticalMultiplierSet:"暴伤设",
+  critMultFlat:"暴伤+", statusChance:"基础触发", fireRate:"射速", reloadSpeed:"装填",
+  magazine:"弹匣", flatMagazine:"弹匣+", multishot:"多重", projectileSpeed:"弹丸速度",
+  range:"范围", recoil:"后坐", accuracy:"精度", punchThrough:"穿透",
+  heavyAttackEfficiency:"重击效率", heavyAttackWindUp:"重击蓄力", comboDuration:"连击持续",
+  initialCombo:"初始连击", headshotDamageBonus:"爆头伤害", devouringAttrition:"吞噬消耗",
+  lastShotBaseMultishot:"末发多重", capacityMsDamageMult:"弹匣多重伤害"};
+function num(v){
+  if(typeof v !== "number") return v;
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/,"").replace(/\.$/,"");
+}
 function renderBuild(){
   if(state.wi<0){ bwrap.innerHTML = '<div style="color:var(--mute)">左侧选一把武器。</div>'; return; }
-  const b = builds[state.wi], w = W[b.w];
+  const b = builds[state.wi];
+  const inc0 = WF.i && WF.i[b.w];
+  const w = inc0 ? effWeapon(W[b.w], inc0, state.incarnon) : W[b.w];
   let html = `<div class="wtitle"><h2>${w.z||w.n}</h2><span class="en">${w.n}</span>`;
+  if(inc0 && state.incarnon) html += `<span class="trig" style="color:#9d8ae0;border-color:#3d3560">灵化形态</span>`;
   if(TRIG_NOTE[w.tr]) html += `<span class="trig">${TRIG_NOTE[w.tr]}</span>`;
   html += `</div>`;
   html += `<div class="wstats">
@@ -743,45 +810,7 @@ function renderBuild(){
       <span class="cv">${parts.join(" · ")||'<i style="color:#5a636e">无数值（行为型）</i>'}</span></div>`);
   });
   if(contrib.length) html += `<div class="contrib">${contrib.join("")}</div>`;
-
-  // 灵化：把 SkillTree 还原成选中的节点
-  const incData = WF.i[b.w];
-  if(incData && b.sk){
-    const {s: IS, picked} = incStats(incData, b.sk);
-    const INC_L = {flatBaseDamage:"基础伤害", additiveBaseDamage:"基础伤害", criticalChance:"暴击率",
-      criticalMultiplier:"暴击倍率", statusChance:"触发", fireRate:"射速", multishot:"多重",
-      reloadSpeed:"装填", flatMagazine:"弹匣", range:"范围", accuracy:"精度", recoil:"后坐",
-      projectileSpeed:"弹速", punchThrough:"穿透", initialCombo:"初始连击",
-      heavyAttackWindUp:"重击蓄力", heavyAttackEfficiency:"重击效率", ammoEfficiency:"弹药效率",
-      headshotDamageBonus:"爆头伤害", zoom:"瞄准倍率", comboDuration:"连击持续"};
-    const MODELLED = new Set(["flatBaseDamage","additiveBaseDamage","criticalChance",
-      "criticalMultiplier","statusChance","fireRate","multishot","reloadSpeed","flatMagazine"]);
-    const fmtV = (k, v)=>{
-      if(k === "flatBaseDamage" || k === "flatMagazine") return (v>0?"+":"")+v;
-      if(k === "criticalMultiplier") return (v>0?"+":"")+v.toFixed(2)+"×";
-      return (v>0?"+":"")+(v*100).toFixed(0)+"%";
-    };
-    let rows = "", dim = 0;
-    for(const e of picked){
-      const kv = Object.entries(e.c||{});
-      const shown = kv.filter(([k])=>MODELLED.has(k)).map(([k,v])=>`<b>${INC_L[k]||k} ${fmtV(k,v)}</b>`);
-      const rest = kv.filter(([k])=>!MODELLED.has(k));
-      if(rest.length) dim++;
-      const cell = shown.length ? shown.join(" · ")
-        : (rest.length ? `<i style="color:#5a636e">未建模：${rest.map(([k])=>INC_L[k]||k).join("、")}</i>`
-                       : `<i style="color:#5a636e">无直伤改动</i>`);
-      rows += `<div class="cr"><span class="cn">T${e.t}</span>
-        <span class="cl">${e.n}</span>
-        <span class="cv">${cell}</span></div>`;
-    }
-    html += `<div class="incbox">
-      <div class="inchd"><span>灵化进化</span>
-        <span class="incst">${picked.length} 个节点 · SkillTree ${b.sk}</span></div>
-      <div class="contrib">${rows}</div>
-      ${dim?`<div class="incft">另外 ${dim} 个节点带未建模的效果（弹药、后坐、连击等），不计入计算。</div>`:""}
-    </div>`;
-  }
-
+  html += `<div class="incpane" id="incpane"></div>`;
   const a = aggregate(state.slots);
   if(a.bad.length){
     html += `<div class="note warn">未解析 ${a.bad.length} 个槽位：${a.bad.slice(0,4).join("、")}${a.bad.length>4?"…":""}
@@ -813,17 +842,43 @@ function renderBuild(){
     }
     slotsEl.appendChild(d);
   });
-  const minSlots = Math.max(8, state.slots.length);
-  while(slotsEl.children.length<minSlots){
+  while(slotsEl.children.length<8){
     const d=document.createElement("div"); d.className="slot empty"; d.textContent="+";
     const idx = slotsEl.children.length;
     d.onclick = ()=> openPicker(idx);
     slotsEl.appendChild(d);
   }
+  // 灵化面板
+  const inc = WF.i && WF.i[builds[state.wi].w];
+  const incEl = document.getElementById("incpane");
+  if(inc && incEl){
+    const LBL = INCLBL;
+    const rows = inc.picked.map(p=>{
+      const parts = Object.keys(p.sc || {}).map(k=>{
+        const v = p.sc[k];
+        return `${LBL[k] || k} ${v > 0 ? "+" : ""}${num(v)}`;
+      });
+      return `<div class="ir"><span class="it">T${p.t}</span>
+        <span class="in" title="${p.d.replace(/"/g,"&quot;")}">${p.n}</span>
+        <span class="iv">${parts.join(" · ") || '<i style="color:#5a636e">行为型</i>'}</span></div>`;
+    }).join("");
+    incEl.innerHTML = `<div class="ihd"><span class="ihl">灵化 <b>${inc.name}</b></span>
+      <div class="seg incseg">
+        <button data-v="0" class="${state.incarnon?"":"on"}">普通形态</button>
+        <button data-v="1" class="${state.incarnon?"on":""}">灵化形态</button>
+      </div></div>
+      <div class="ilist">${rows || '<div class="ir"><span class="iv">无已选节点</span></div>'}</div>
+      <div class="ifoot">节点数值加在基础值上，再走 mod 乘算；基础伤害类只在灵化形态生效。</div>`;
+    incEl.querySelectorAll(".incseg button").forEach(b=>{
+      b.onclick = ()=>{ state.incarnon = b.dataset.v === "1"; renderBuild(); };
+    });
+  } else if(incEl){
+    incEl.innerHTML = "";
+  }
   bwrap.querySelectorAll(".tabs button").forEach(btn=>{
     btn.onclick = ()=>{
       state.ci = +btn.dataset.ci;
-      state.slots = padN(builds[state.wi].slots[state.ci]);
+      state.slots = pad8(builds[state.wi].slots[state.ci]);
       renderBuild();
     };
   });
@@ -937,6 +992,8 @@ function bindNum(rid, nid, key, lo, hi){
 bindNum("xvirR","xvir","extViral",0,10);
 bindNum("xarmR","xarm","armorStrip",0,100);
 bindNum("xwinR","xwin","window",3,60);
+bindNum("xbufR","xbuf","dmgBuff",0,500);
+bindNum("xccR","xcc","ccBuff",0,200);
 document.getElementById("xhd").onchange = e=>{ state.headshot = e.target.checked; recompute(); };
 document.getElementById("xcrit").onchange = e=>{ state.crit = e.target.checked; recompute(); };
 document.getElementById("btnmode").onclick = ()=>{
@@ -946,6 +1003,7 @@ document.getElementById("btnmode").onclick = ()=>{
   renderWeapons();
 };
 document.getElementById("btnnote").onclick = showNote;
+document.getElementById("btnriven").onclick = showRivens;
 
 // ---------------------------------------------------------------- 结果
 function fmt(n){
@@ -956,14 +1014,15 @@ function fmt(n){
 }
 const opt = ()=>({steel:state.steel, status:state.status, extViral:state.extViral,
                   armorStrip:state.armorStrip, window:state.window,
-                  headshot:state.headshot, crit:state.crit});
+                  headshot:state.headshot, crit:state.crit, incarnon:state.incarnon,
+                  dmgBuff:state.dmgBuff, ccBuff:state.ccBuff});
 
 function buildRanking(){
   const key = JSON.stringify([state.level, state.enemy.n, opt()]);
   if(state.rankingKey === key && state.ranking) return;
   const rows = builds.map((b,i)=>{
     const w = W[b.w];
-    const r = compute(w, padCache2(b,0), state.enemy, state.level, opt(), WF.i[b.w], b.sk);
+    const r = compute(w, pad8Cache(b,0), state.enemy, state.level, opt(), b.w);
     const val = state.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
     return {idx:i, name:w.z||w.n, val};
   });
@@ -971,17 +1030,16 @@ function buildRanking(){
   state.ranking = rows; state.rankingKey = key;
 }
 const padCache = new Map();
-function padCache2(b, ci){
+function pad8Cache(b, ci){
   const k = b.w+"|"+ci;
-  if(!padCache.has(k)) padCache.set(k, padN(b.slots[ci]||[]));
+  if(!padCache.has(k)) padCache.set(k, pad8(b.slots[ci]||[]));
   return padCache.get(k);
 }
 
 function recompute(){
   if(state.wi<0 || !state.enemy){ return; }
   const w = W[builds[state.wi].w];
-  const bd = builds[state.wi];
-  const r = compute(w, state.slots, state.enemy, state.level, opt(), WF.i[bd.w], bd.sk);
+  const r = compute(w, state.slots, state.enemy, state.level, opt(), builds[state.wi].w);
   const A = r.A, d = r.d, s = r.s;
 
   document.getElementById("rburst").textContent = fmt(d.burst);
@@ -1090,8 +1148,10 @@ function showNote(){
   <p><b>等级缩放</b>：Wiki 的双端点曲线 + smoothstep（L=70, U=80）。血量 q^2.12 / q^0.72，护甲 q^1.75 / q^0.75，护盾 q^1.76 / q^0.76。</p>
   <p><b>暴击</b>：按期望算 <code>1 + cc·(cm−1)</code>，超过 100% 时等效暴击阶层，公式仍成立。</p>
   <p><b>状态</b>：病毒首层 +100%、每层 +25%（10 层 +325%）；腐蚀 26%/层、上限 80%、8 秒；燃烧剥甲 50% 并 50% 火焰伤/秒；流血 35% 总伤/秒无视护甲；中毒 50% 毒素伤/秒无视护盾。触发按伤害占比分配。</p>
-  <p><b>未建模</b>：连发/蓄力节奏、范围伤害、穿透多目标、磁力对护盾的加伤、冰缓的暴伤加成、赋能与战甲增益、镀层类条件叠层。</p>
-  <p><b>数据</b>：武器与 mod 数值来自 DE PublicExport；敌人 497 条来自 warframe-damage.com；配卡来自本机 lastData。</p>
+  <p><b>未建模</b>：连发/蓄力节奏、范围伤害、穿透多目标、磁力对护盾的加伤、冰缓的暴伤加成、镀层类条件叠层、紫卡以外的赋能与战甲技能公式。</p>
+  <p><b>灵化</b>：形态数值取自 Voidforge 的 <code>incarnon.ts</code>（53 把武器），进化节点数值取自其 wiki 解析版。节点选择来自本机 <code>SkillTree</code> 字段（每一位是那一层选中的 slot）。<code>flatBaseDamage</code> / <code>additiveBaseDamage</code> 只在灵化形态生效；暴击、触发、射速等节点两形态都吃。近战灵化不换形态数值，只叠节点。</p>
+  <p><b>紫卡</b>：公式来自 <code>calamity-inc/warframe-riven-info</code>：<code>基准值 × (1.5 × 倾向 × 10) × 1.25^负词条 × lerp(0.9,1.1,Value/0x3FFFFFFF) × 词条数衰减 × (等级+1)</code>。倾向系数用 DE 导出的 <code>omegaAttenuation</code>（674/839 是 1.2），<b>不是</b>游戏内每期调整后的实时 disposition，热门武器会偏乐观。装在配卡里的紫卡已经参与计算。</p>
+  <p><b>数据</b>：武器与 mod 数值来自 DE PublicExport；敌人 497 条来自 warframe-damage.com；配卡与紫卡来自本机 lastData。</p>
   </div>`;
   document.getElementById("mlist").onclick = closeModal;
 }
@@ -1101,6 +1161,34 @@ function closeModal(){
   document.getElementById("mttl").style.display="none";
   document.getElementById("msearch").oninput = renderPicker;
   document.getElementById("mlist").onclick = null;
+}
+function showRivens(){
+  const R = WF.rv || [];
+  const el = document.getElementById("modal");
+  el.classList.add("on");
+  document.getElementById("msearch").style.display="none";
+  document.getElementById("mttl").style.display="";
+  document.getElementById("mttl").textContent = `紫卡 ${R.length} 张（${R.filter(r=>r.lvl>=8).length} 张满级）`;
+  document.getElementById("mfoot").textContent = "点击任意处关闭";
+  const withW = R.filter(r=>r.compat).length;
+  const head = `<div class="note" style="padding:9px 14px;font-size:11px;line-height:1.6">
+    数值按 RivenParser 的公式在本地算：<code>基准值 × (1.5 × 倾向 × 10) × 1.25^负词条 × 0.9~1.1 随机 × 词条数衰减 × (等级+1)</code>。
+    倾向系数取 DE 导出的 <code>omegaAttenuation</code>（多数武器 1.2），不是游戏内每期调整后的实时 disposition，
+    热门武器会偏乐观。<b>${withW}</b> 张已开卡，<b>${R.length-withW}</b> 张未开。</div>`;
+  const rows = R.map(r=>{
+    const stats = r.s.length ? r.s.map(x=>{
+      const v = (x.v == null) ? "—"
+        : x.abs ? (x.v >= 0 ? "+" : "") + (x.v * 10).toFixed(1)
+        : (x.v >= 0 ? "+" : "") + (x.v * 100).toFixed(1) + "%";
+      return `<span class="st${x.c?" cur":""}">${v} ${x.n}</span>`;
+    }).join("") : '<span class="st">未开卡</span>';
+    return `<div class="rvr">
+      <div class="rvh"><b>${r.nm}</b><span class="rw">${r.w}</span>
+      <span class="rvt">Lv${r.lvl}/8 · 洗练 ${r.rr} · 倾向 ${r.disp}</span></div>
+      <div class="rvs">${stats}</div></div>`;
+  }).join("");
+  document.getElementById("mlist").innerHTML = head + `<div class="rvlist">${rows}</div>`;
+  document.getElementById("mlist").onclick = closeModal;
 }
 
 renderWeapons(); renderEnemies();
