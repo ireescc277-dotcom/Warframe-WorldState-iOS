@@ -12,12 +12,40 @@
 import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "server" / "site"
 DST = ROOT / "web" / "app" / "site"
+NODE = shutil.which("node") or "node"
+
+
+CAT_ORDER = {"Primary": 0, "Secondary": 1, "Melee": 2, "Archgun": 3, "Exalted Weapon": 4}
+
+
+def read_locale(path: Path) -> dict:
+    """zh.js 是 `var localeLang = {...}`，值是单引号字符串且内含 HTML，不是 JSON。
+
+    交给 node 执行一次最省事：这份表本来就只在 JS 里用，自己写解析器只会跑偏。
+    node 不可用时退回空表，武器名显示英文，不影响计算。
+    """
+    if not path.exists():
+        return {}
+    src = path.read_text(encoding="utf-8") + "\nprocess.stdout.write(JSON.stringify(localeLang));"
+    try:
+        # 走 stdin：这份表 130KB，作为 -e 参数会超过 Windows 命令行上限
+        r = subprocess.run([NODE, "-"], input=src.encode("utf-8"),
+                           capture_output=True, timeout=60)
+        if r.returncode != 0:
+            print(f"[!] node 执行 {path.name} 失败: {r.stderr.decode('utf-8', 'replace')[:200]}",
+                  file=sys.stderr)
+            return {}
+        return json.loads(r.stdout.decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"[!] 解析 {path.name} 失败: {e}", file=sys.stderr)
+        return {}
 
 
 def build_weapon_index(manifest: dict) -> dict:
@@ -103,6 +131,37 @@ def main() -> int:
         + ";",
         encoding="utf-8",
     )
+
+    # 武器清单（给 iOS 武器列表用）：名字、中文名、分类、缩略图、攻击段数。
+    # 中文名来自站点自带的 localeLang，和计算器界面显示的是同一份。
+    zh = read_locale(SRC / "zh.js")
+    catalog = []
+    for name, w in index.items():
+        catalog.append({
+            "n": name,
+            "z": zh.get(name, name),
+            "c": w["category"],
+            "t": w["type"],
+            "img": w["imageName"],
+            "mr": w["masteryReq"],
+            "atk": w["attacks"],
+            "inc": w["incarnon"],
+        })
+    catalog.sort(key=lambda x: (CAT_ORDER.get(x["c"], 9), x["z"]))
+    (DST / "weapons-list.json").write_text(
+        json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    # iOS App 用同一份资源：project.yml 把它当 folder reference 打进 bundle，
+    # 所以这里同步一份过去（构建产物，不入库）。放在 WarframeWatch 之外，
+    # 免得和那个 target 的普通 sources 重复收录。
+    ios = ROOT / "ios" / "DamageCalc"
+    if ios.exists():
+        shutil.rmtree(ios)
+    ios.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(ROOT / "web" / "app", ios)
+    print(f"[ios] {ios}")
 
     size = sum(p.stat().st_size for p in DST.rglob("*") if p.is_file())
     print(f"[ok] {DST}  {size/1048576:.2f} MB  索引 {len(index)}  shim={n1} zh={n2}")

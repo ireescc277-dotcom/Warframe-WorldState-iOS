@@ -84,6 +84,9 @@ jobs:
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
+          # 计算器离线包：web/app/site（站点内核 + 武器数据）并同步到
+          # WarframeWatch/Resources/DamageCalc，作为 folder reference 打进 App
+          python3 scripts/build_web_site.py
           xcodegen generate
 
       - name: Boot Simulator & Build App
@@ -164,7 +167,10 @@ jobs:
           capture screen_assets_relics -startTab 2 -assetTab relics
           capture screen_assets_aya -startTab 2 -assetTab aya
           capture screen_assets_detail -startTab 2 -assetSet "Hildryn Prime"
-          capture screen_cycle -startTab 3
+          capture screen_arsenal -startTab 3
+          capture screen_arsenal_melee -startTab 3 -arsenalCat melee
+          # 从武器列表点进计算器的那一跳：simctl 点不了屏，用启动参数直接做掉
+          capture screen_calc -startTab 3 -calcWeapon Torid
           capture screen_more -startTab 4
 
       - name: Run Automated Visual Quality Gate
@@ -172,7 +178,8 @@ jobs:
           python scripts/verify_screenshots.py \
             dashboard_preview.png screen_watch.png screen_watch_targets.png \
             screen_assets.png screen_assets_relics.png screen_assets_aya.png \
-            screen_assets_detail.png screen_cycle.png screen_more.png
+            screen_assets_detail.png screen_arsenal.png screen_arsenal_melee.png \
+            screen_more.png
 
       - name: Upload Screenshot Artifact
         uses: actions/upload-artifact@v4
@@ -186,7 +193,9 @@ jobs:
             screen_assets_relics.png
             screen_assets_aya.png
             screen_assets_detail.png
-            screen_cycle.png
+            screen_arsenal.png
+            screen_arsenal_melee.png
+            screen_calc.png
             screen_more.png
           retention-days: 14
 
@@ -231,6 +240,9 @@ jobs:
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
+          # 计算器离线包：web/app/site（站点内核 + 武器数据）并同步到
+          # WarframeWatch/Resources/DamageCalc，作为 folder reference 打进 App
+          python3 scripts/build_web_site.py
           xcodegen generate
 
       - name: Build & Archive (Unsigned)
@@ -286,6 +298,8 @@ jobs:
           test -d "$APP/LaunchScreen.storyboardc" && echo "✅ LaunchScreen.storyboardc present" || exit 1
           test -f "$APP/DefaultSnapshot.json" && echo "✅ DefaultSnapshot.json present" || exit 1
           test -f "$APP/DefaultDict.json" && echo "✅ DefaultDict.json present" || exit 1
+          test -f "$APP/DamageCalc/index.html" && echo "✅ DamageCalc/index.html present" || exit 1
+          test -f "$APP/DamageCalc/site/min.js" && echo "✅ DamageCalc/site/min.js present" || exit 1
 
       - name: Package Unsigned IPA
         run: |

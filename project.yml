@@ -20,6 +20,11 @@ targets:
       - path: WarframeWatch
         excludes:
           - "Info.plist"
+      # 计算器离线包：scripts/build_web_site.py 从 web/app 复制到 ios/DamageCalc，
+      # 以 folder reference 整体打进 bundle（保持目录结构，不走逐文件资源处理）。
+      - path: ios/DamageCalc
+        type: folder
+        buildPhase: resources
     info:
       path: WarframeWatch/Info.plist
       properties:

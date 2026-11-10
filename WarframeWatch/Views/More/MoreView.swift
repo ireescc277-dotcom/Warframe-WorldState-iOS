@@ -21,6 +21,13 @@ public struct MoreView: View {
 
                         WFSurface {
                             entry(
+                                icon: "calendar",
+                                title: "周期",
+                                subtitle: "地球 · 金星 · 火卫二 · 扎里曼",
+                                isLast: false
+                            ) { sheet = .cycle }
+
+                            entry(
                                 icon: "globe.asia.australia",
                                 title: "社区与枢纽",
                                 subtitle: "集团任务 · 午夜电波 · 公告",
@@ -52,6 +59,21 @@ public struct MoreView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $sheet) { item in
                 switch item {
+                case .cycle:
+                    // 周期从一级 tab 挪进来，它自己的导航栏是隐藏的，补一个关闭
+                    CycleView()
+                        .overlay(alignment: .topTrailing) {
+                            Button { sheet = nil } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(WFTheme.textSecondary)
+                                    .frame(width: 28, height: 28)
+                                    .background(Circle().fill(WFTheme.panelElevated))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 6)
+                            .padding(.trailing, 16)
+                        }
                 case .hub:
                     HubEventsView()
                 case .reference:
@@ -133,6 +155,7 @@ public struct MoreView: View {
 }
 
 private enum MoreSheet: String, Identifiable {
+    case cycle
     case hub
     case reference
     case debug

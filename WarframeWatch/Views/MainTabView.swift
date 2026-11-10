@@ -40,9 +40,9 @@ public struct MainTabView: View {
                 }
                 .tag(2)
 
-            CycleView()
+            ArsenalView()
                 .tabItem {
-                    Label("周期", systemImage: "calendar")
+                    Label("武器", systemImage: "scope")
                 }
                 .tag(3)
 

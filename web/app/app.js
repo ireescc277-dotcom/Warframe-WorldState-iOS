@@ -66,7 +66,12 @@ async function boot() {
   bindFrame();
   bindHeader();
 
-  const first = META.weapons.find(w => w.n === 'Torid') || META.weapons[0];
+  // 从外部带进来的武器：iOS App 的武器列表点进来时用 ?weapon=Torid。
+  // 没有参数就回到默认那把，用户自己从头配。
+  const q = new URLSearchParams(location.search);
+  const want = q.get('weapon');
+  const first = (want && META.weapons.find(w => w.n === want))
+    || META.weapons.find(w => w.n === 'Torid') || META.weapons[0];
   await setWeapon(first.n);
   setEnemy(META.enemies.find(e => e.name === 'Heavy Gunner') || META.enemies[0]);
 }
