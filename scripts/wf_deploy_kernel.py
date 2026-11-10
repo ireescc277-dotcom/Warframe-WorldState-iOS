@@ -64,18 +64,17 @@ Nice=5
 WantedBy=multi-user.target
 """
 
-NGINX = """# 伤害计算：静态页和 /api 都走同一个 Node 进程，nginx 只做反代。
+NGINX = """# 伤害计算：内核在浏览器里跑（web/app/site 是站点脚本的离线包），
+# nginx 只发静态文件，不再反代 Node。旧的 jsdom 服务端模式见 git 历史。
 location = /dps {{ return 301 /dps/; }}
 location /dps/ {{
-    proxy_pass http://127.0.0.1:{port}/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Connection "";
-    proxy_read_timeout 60s;
-    proxy_buffering off;
-    client_max_body_size 256k;
+    alias {remote}/web/app/;
+    index index.html;
+    try_files $uri $uri/ =404;
+    charset utf-8;
+    # 每次计算要重建内核 iframe，资源必须命中浏览器缓存，否则每次都要等一轮网络。
+    # 5 分钟过期，改版后最多滞后这么久。
+    add_header Cache-Control "public, max-age=300";
 }}
 """
 
@@ -99,13 +98,31 @@ def make_bundle():
     return os.path.getsize(BUNDLE)
 
 
+WEB_BUNDLE = os.path.join(ROOT, "build", "dps_web.tar.gz")
+
+
+def make_web_bundle():
+    """只打 web/app，含 site/ 离线包（站点脚本 + 666 把武器 + 敌人 + 中文表）。"""
+    if not os.path.exists(os.path.join(ROOT, "web", "app", "site", "min.js")):
+        raise SystemExit("web/app/site 缺失，先跑 python scripts/build_web_site.py")
+    os.makedirs(os.path.dirname(WEB_BUNDLE), exist_ok=True)
+    if os.path.exists(WEB_BUNDLE):
+        os.remove(WEB_BUNDLE)
+    subprocess.run(["tar", "-czf", WEB_BUNDLE, "web/app"], cwd=ROOT, check=True)
+    return os.path.getsize(WEB_BUNDLE)
+
+
 def main() -> int:
     if not HOST or not PASS:
         print("WF_VPS_HOST / WF_VPS_PASS must be set", file=sys.stderr)
         return 2
 
     web_only = "--web-only" in sys.argv
-    size = make_bundle()
+    if web_only:
+        # 前端已自带内核（web/app/site），只需要静态文件，不需要 Node。
+        size = make_web_bundle()
+    else:
+        size = make_bundle()
     print("bundle %.1f MB" % (size / 1048576))
 
     client = paramiko.SSHClient()
@@ -115,15 +132,29 @@ def main() -> int:
                    look_for_keys=False, allow_agent=False)
     try:
         if web_only:
+            run(client, "mkdir -p %s" % REMOTE)
             sftp = client.open_sftp()
             try:
-                for f in ("index.html", "app.css", "app.js"):
-                    sftp.put(os.path.join(ROOT, "web/app", f), "%s/web/app/%s" % (REMOTE, f))
-                    print("put web/app/" + f)
+                sftp.put(WEB_BUNDLE, "/tmp/dps_web.tar.gz")
             finally:
                 sftp.close()
-            print("https /dps/:", run(client, "curl -s -o /dev/null -w '%{http_code} %{size_download}' "
-                                              "https://data.ireescc.com/dps/app.js", check=False)[0].strip())
+            # 覆盖式解压：保留 server/（对拍用），web/app 全量替换
+            run(client, "tar xzf /tmp/dps_web.tar.gz -C %s" % REMOTE)
+            print("web/app 已更新")
+
+            with client.open_sftp() as sftp:
+                with sftp.file("/tmp/wf-dps.conf", "w") as fh:
+                    fh.write(NGINX.format(remote=REMOTE, port=PORT))
+            run(client, "mv /tmp/wf-dps.conf %s && chmod 644 %s" % (SNIPPET, SNIPPET))
+            # 计算已移入前端，Node 服务停掉，省下 jsdom 的常驻内存
+            run(client, "systemctl stop wf-dps 2>/dev/null; systemctl disable wf-dps 2>/dev/null; true")
+            run(client, "nginx -t && systemctl reload nginx")
+
+            for probe in ("", "index.html", "app.js", "site/min.js", "site/weapons/Torid.json"):
+                url = "https://data.ireescc.com/dps/" + probe
+                print("  %-32s %s" % (probe or "(root)",
+                                     run(client, "curl -s -o /dev/null -w '%%{http_code} %%{size_download}' %s"
+                                         % url, check=False)[0].strip()))
             return 0
 
         print("node:", run(client, "test -x %s && %s -v" % (NODE, NODE))[0].strip())

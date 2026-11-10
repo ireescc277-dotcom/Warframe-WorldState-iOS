@@ -55,8 +55,7 @@ const modName = n => n === 'Riven' ? '紫卡' : (MOD_LOC[n] || n);
 // ---------------------------------------------------------------- 启动
 
 async function boot() {
-  const r = await fetch('api/meta');
-  META = await r.json();
+  META = await WFK.meta();
   $('wcount').textContent = META.weapons.length + ' 把';
   $('ecount').textContent = META.enemies.length + ' 个';
   const factions = [...new Set(META.enemies.map(e => e.faction))];
@@ -82,9 +81,9 @@ const factionName = f => {
 async function setWeapon(name) {
   if (S.weapon !== name) { S.stance = null; S.mods = {}; S.riven = []; }
   S.weapon = name;
-  const r = await fetch('api/weapon?name=' + encodeURIComponent(name));
-  if (!r.ok) return;
-  S.wmeta = await r.json();
+  const wj = await WFK.weaponInfo(name);
+  if (!wj) return;
+  S.wmeta = wj;
   const meta = META.weapons.find(w => w.n === name) || {};
   S.wmeta.l = meta.l || name;
   $('wsearch').placeholder = S.wmeta.l;
@@ -361,9 +360,8 @@ async function openModPicker(slot, kind) {
     if (!Object.values(S.mods).includes('Riven')) S.riven = [];
     closeModal(); renderSlots(); calc();
   };
-  const r = await fetch(`api/mods?weapon=${encodeURIComponent(S.weapon)}&slot=${slot}`);
-  const d = await r.json();
-  PICK.all = d.mods || [];
+  const r = await WFK.boot();
+  PICK.all = WFK.modsFor(S.weapon, slot) || [];
   for (const m of PICK.all) if (m.l && m.l !== m.n) MOD_LOC[m.n] = m.l;
   renderModList('');
   $('m-search').focus();
@@ -404,9 +402,7 @@ async function openCustom() {
   $('m-search').style.display = 'none';
   $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
   if (!CST_ATTRS.length) {
-    const r = await fetch('api/custom');
-    const d = await r.json();
-    CST_ATTRS = d.attrs || [];
+    CST_ATTRS = WFK.customAttrs();
   }
   const cur = Object.fromEntries((S.custom || []).map(x => [x.k, x.v]));
   $('m-list').innerHTML = `<div class="cst">${CST_ATTRS.map(a => `
@@ -447,9 +443,7 @@ async function openRiven(slot) {
   $('m-search').style.display = 'none';
   $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
   if (!RIVEN_ATTRS.length) {
-    const r = await fetch('api/riven?weapon=' + encodeURIComponent(S.weapon));
-    const d = await r.json();
-    RIVEN_ATTRS = d.attrs || [];
+    RIVEN_ATTRS = WFK.rivenAttrs(((S.wmeta && S.wmeta.category) || '') === 'Melee');
   }
   const cur = S.mods[slot] === 'Riven' ? (S.riven || []) : [];
   const opts = k => `<option value="">—</option>` +
@@ -637,10 +631,7 @@ function calc() {
       mods: S.mods, opts: S.opts,
     };
     try {
-      const r = await fetch('api/calc', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      });
-      const d = await r.json();
+      const d = await WFK.calc(body);
       if (seq !== CALC_SEQ) return;
       if (d.error) { banner(d.error); return; }
       LAST = d;

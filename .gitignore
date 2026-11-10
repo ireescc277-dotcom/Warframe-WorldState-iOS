@@ -41,3 +41,7 @@ WarframeWatch/Resources/ArbSchedule.json
 # 计算器数据产物：由 scripts/build_dpsapp.py 生成，含本机配卡，不进仓库
 server/data/payload.json
 node_modules/
+
+# 计算器前端离线包：由 scripts/build_web_site.py 从 server/site 生成
+# （站点脚本 + 666 把武器 + 敌人 + 中文表 + 预生成索引），不重复提交 4MB 数据
+web/app/site/

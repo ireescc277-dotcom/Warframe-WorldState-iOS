@@ -42,7 +42,28 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await send('Runtime.enable');
   await send('Page.enable');
   await send('Page.navigate', {url: URL_});
-  await sleep(3500);
+  // 等内核真正就绪：iframe 里的站点脚本执行完，武器/敌人列表渲染出来。
+  // 首次要拉 448KB 内核 + 2.9MB 武器数据，固定 sleep 会误判成「页面坏了」。
+  let ready = false;
+  for (let i = 0; i < 60 && !ready; i++) {
+    await sleep(500);
+    const chk = await send('Runtime.evaluate', {
+      expression: `!!(window.WFK && window.WFK.W) || document.querySelectorAll('.slot').length > 0`,
+      returnByValue: true,
+    });
+    ready = !!(chk && chk.result && chk.result.value);
+  }
+  // 再等结果卡片：calc 要重建内核环境并跑完整 reCalc
+  let hasResult = false;
+  for (let i = 0; i < 40 && !hasResult; i++) {
+    await sleep(500);
+    const chk = await send('Runtime.evaluate', {
+      expression: `document.querySelectorAll('.acard').length > 0`,
+      returnByValue: true,
+    });
+    hasResult = !!(chk && chk.result && chk.result.value);
+  }
+  await sleep(600);
   const r = await send('Runtime.evaluate', {expression: `JSON.stringify({
     slots: document.querySelectorAll('.slot').length,
     opts: document.querySelectorAll('.og').length,
