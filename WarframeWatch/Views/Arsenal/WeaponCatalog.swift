@@ -17,6 +17,7 @@ public struct WeaponEntry: Decodable, Identifiable, Hashable {
     public var id: String { n }
 
     /// 站点把武器图放在自己的 /data/img/ 下，文件名就是 imageName。
+    /// 包里带了一份（assets/weapon-icons），这里作为联网兜底。
     public var iconURL: URL? {
         guard !img.isEmpty else { return nil }
         return URL(string: "https://warframe-damage.com/data/img/\(img)")
@@ -85,6 +86,11 @@ public final class WeaponCatalog: ObservableObject {
             return u.deletingLastPathComponent()
         }
         return nil
+    }
+
+    /// 打包进 App 的武器缩略图目录（webp）。
+    public static var iconsDir: URL? {
+        bundleRoot?.appendingPathComponent("icons")
     }
 
     public func load() {

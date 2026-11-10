@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 武器库：选一把枪，装进伤害计算器。
 ///
@@ -205,7 +206,7 @@ public struct ArsenalView: View {
 
     private func row(_ w: WeaponEntry) -> some View {
         HStack(spacing: WFUI.s3) {
-            WeaponThumb(url: w.iconURL, size: 40)
+            WeaponThumb(name: w.img, remote: w.iconURL, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(w.z)
@@ -246,16 +247,23 @@ public struct ArsenalView: View {
 
 // MARK: - 缩略图
 
-/// 武器图在站点自己的 CDN 上（`/data/img/<imageName>`）。断网时退化成占位方块，
-/// 不让行高抖动。
+/// 武器图。包里带了一份（`ios/DamageCalc/icons`，构建时从 assets 复制），
+/// 优先读本地，读不到再回站点 CDN。两边都没有就画占位块，保证行高不跳。
 struct WeaponThumb: View {
-    let url: URL?
+    let name: String?
+    let remote: URL?
     let size: CGFloat
+
+    @State private var local: UIImage?
 
     var body: some View {
         Group {
-            if let url = url {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
+            if let local = local {
+                Image(uiImage: local)
+                    .resizable()
+                    .scaledToFit()
+            } else if let remote = remote {
+                AsyncImage(url: remote) { phase in
                     switch phase {
                     case let .success(image):
                         image.resizable().scaledToFit()
@@ -274,6 +282,15 @@ struct WeaponThumb: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(WFTheme.panel)
         )
+        .onAppear(perform: loadLocal)
+    }
+
+    private func loadLocal() {
+        guard local == nil, let name = name, let dir = WeaponCatalog.iconsDir else { return }
+        let path = dir.appendingPathComponent(name).path
+        if let image = UIImage(contentsOfFile: path) {
+            local = image
+        }
     }
 
     private var placeholder: some View {

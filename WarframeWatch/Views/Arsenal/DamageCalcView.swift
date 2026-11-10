@@ -88,8 +88,17 @@ private struct CalcWebView: UIViewRepresentable {
         init(ready: Binding<Bool>) { self.ready = ready }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // 页面文档加载完还要等内核 boot（iframe 里 448KB 站点脚本 + 武器数据）
-            waitForKernel(webView, tries: 40)
+            // 页内状态打到构建日志：iOS 上这层出问题看不见控制台，只能靠这行
+            webView.evaluateJavaScript("""
+            (function(){try{return JSON.stringify({inline:!!window.__WF_INLINE,
+              wfk:!!window.WFK, ready:!!(window.WFK&&window.WFK.W),
+              body:document.body?document.body.innerHTML.length:-1,
+              scripts:Array.from(document.scripts).map(function(s){return (s.src||'inline').split('/').pop()}).slice(0,6)})}catch(e){return 'err:'+e.message}})()
+            """) { value, error in
+                print("[calc] page state: \(value ?? error?.localizedDescription ?? "nil")")
+            }
+            // 页面文档加载完还要等内核 boot（iframe 里 448KB 站点脚本 + 内联数据）
+            waitForKernel(webView, tries: 60)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

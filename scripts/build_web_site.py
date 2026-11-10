@@ -153,6 +153,24 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    # iOS 包里 fetch 用不了（wfapp:// 不在 Fetch API 允许的 scheme 内），
+    # 把武器与敌人数据打包成一个 JS 直接注入 window，页面一个请求都不发。
+    inline = {
+        "map": manifest,
+        "enemies": json.loads((SRC / "data/json/enemies-min.json").read_text(encoding="utf-8")),
+        "weapons": {},
+    }
+    for name, fname in manifest.items():
+        try:
+            inline["weapons"][name] = json.loads(
+                (SRC / "weapons" / fname).read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            pass
+    (DST / "data-bundle.js").write_text(
+        "window.__WF_INLINE=" + json.dumps(inline, ensure_ascii=False, separators=(",", ":")) + ";",
+        encoding="utf-8",
+    )
+
     # iOS App 用同一份资源：project.yml 把它当 folder reference 打进 bundle，
     # 所以这里同步一份过去（构建产物，不入库）。放在 WarframeWatch 之外，
     # 免得和那个 target 的普通 sources 重复收录。
@@ -161,7 +179,25 @@ def main() -> int:
         shutil.rmtree(ios)
     ios.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(ROOT / "web" / "app", ios)
-    print(f"[ios] {ios}")
+    # 武器缩略图：由 scripts/fetch_weapon_icons.py 下到 assets/，这里并进包里
+    icons = ROOT / "assets" / "weapon-icons"
+    if icons.exists():
+        shutil.copytree(icons, ios / "icons")
+
+    # 只给 iOS 那份接上内联数据；线上继续保持按需请求，不吃这 3MB。
+    for page, anchor, tag in (
+        (ios / "index.html", '<script src="site/weapon-index.js"></script>',
+         '<script src="site/data-bundle.js"></script>\n'),
+        (ios / "site" / "index.html", '<script src="weapon-map.js"></script>',
+         '<script src="data-bundle.js"></script>\n'),
+    ):
+        if page.exists():
+            text = page.read_text(encoding="utf-8")
+            if anchor in text and "data-bundle.js" not in text:
+                page.write_text(text.replace(anchor, tag + anchor, 1), encoding="utf-8")
+
+    icon_count = len(list((ios / "icons").glob("*.webp"))) if (ios / "icons").exists() else 0
+    print(f"[ios] {ios}  图标 {icon_count}")
 
     size = sum(p.stat().st_size for p in DST.rglob("*") if p.is_file())
     print(f"[ok] {DST}  {size/1048576:.2f} MB  索引 {len(index)}  shim={n1} zh={n2}")

@@ -34,12 +34,20 @@
   function boot() {
     if (booting) return booting;
     booting = (async function () {
-      var pair = await Promise.all([
-        fetch(BASE + 'weapons.json').then(function (r) { return r.json(); }),
-        fetch(BASE + 'data/json/enemies-min.json').then(function (r) { return r.json(); })
-      ]);
-      MANIFEST = pair[0];
-      ENEMIES = pair[1];
+      // iOS 包内加载时 fetch 不可用（WFK 走 wfapp:// 自定义 scheme，Fetch API
+      // 只认 http/https），数据由 site/data-bundle.js 预注入到 window。
+      var inline = global.__WF_INLINE;
+      if (inline) {
+        MANIFEST = inline.map;
+        ENEMIES = inline.enemies;
+      } else {
+        var pair = await Promise.all([
+          fetch(BASE + 'weapons.json').then(function (r) { return r.json(); }),
+          fetch(BASE + 'data/json/enemies-min.json').then(function (r) { return r.json(); })
+        ]);
+        MANIFEST = pair[0];
+        ENEMIES = pair[1];
+      }
 
       var t0 = performance.now();
       frame = document.createElement('iframe');
@@ -622,8 +630,14 @@
     await boot();
     var f = MANIFEST && MANIFEST[name];
     if (!f) return null;
-    var r = await fetch(BASE + 'weapons/' + encodeURIComponent(f));
-    var j = await r.json();
+    var j;
+    var inline = global.__WF_INLINE;
+    if (inline && inline.weapons && inline.weapons[name]) {
+      j = JSON.parse(JSON.stringify(inline.weapons[name]));
+    } else {
+      var r = await fetch(BASE + 'weapons/' + encodeURIComponent(f));
+      j = await r.json();
+    }
     j.name = name;
     j.index = WINDEX[name] || null;
     return j;

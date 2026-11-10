@@ -18,8 +18,29 @@
     return Promise.resolve(new Response(body || '', { status: 200 }));
   }
 
+  /// iOS 包里 fetch 不可用（自定义 scheme 不在 Fetch API 允许的 scheme 之列），
+  /// 数据改由 site/data-bundle.js 预注入。这里在内存里造响应，一个字节都不走网络。
+  function inlineBody(raw) {
+    var D = window.__WF_INLINE;
+    if (!D) return null;
+    if (raw.indexOf('enemies-min.json') !== -1) {
+      return JSON.stringify(D.enemies || []);
+    }
+    if (raw.indexOf('getWeapon.php') !== -1) {
+      var name = '';
+      try { name = new URL(String(raw), location.href).searchParams.get('name') || ''; } catch (e) {}
+      var w = (D.weapons || {})[name];
+      return JSON.stringify(w || { error: 'no weapon ' + name });
+    }
+    return null;
+  }
+
   window.fetch = function (input, init) {
     var raw = typeof input === 'string' ? input : (input && input.url) || '';
+
+    var inline = inlineBody(raw);
+    if (inline !== null) return empty(inline);
+
     var url = parse(raw);
     var href = url ? url.href : raw;
 
