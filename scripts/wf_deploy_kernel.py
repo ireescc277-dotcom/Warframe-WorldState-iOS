@@ -104,6 +104,7 @@ def main() -> int:
         print("WF_VPS_HOST / WF_VPS_PASS must be set", file=sys.stderr)
         return 2
 
+    web_only = "--web-only" in sys.argv
     size = make_bundle()
     print("bundle %.1f MB" % (size / 1048576))
 
@@ -113,6 +114,18 @@ def main() -> int:
                    banner_timeout=30, auth_timeout=30,
                    look_for_keys=False, allow_agent=False)
     try:
+        if web_only:
+            sftp = client.open_sftp()
+            try:
+                for f in ("index.html", "app.css", "app.js"):
+                    sftp.put(os.path.join(ROOT, "web/app", f), "%s/web/app/%s" % (REMOTE, f))
+                    print("put web/app/" + f)
+            finally:
+                sftp.close()
+            print("https /dps/:", run(client, "curl -s -o /dev/null -w '%{http_code} %{size_download}' "
+                                              "https://data.ireescc.com/dps/app.js", check=False)[0].strip())
+            return 0
+
         print("node:", run(client, "test -x %s && %s -v" % (NODE, NODE))[0].strip())
         run(client, "mkdir -p %s" % REMOTE)
 

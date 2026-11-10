@@ -55,7 +55,7 @@ const modName = n => n === 'Riven' ? '紫卡' : (MOD_LOC[n] || n);
 // ---------------------------------------------------------------- 启动
 
 async function boot() {
-  const r = await fetch('/api/meta');
+  const r = await fetch('api/meta');
   META = await r.json();
   $('wcount').textContent = META.weapons.length + ' 把';
   $('ecount').textContent = META.enemies.length + ' 个';
@@ -82,7 +82,7 @@ const factionName = f => {
 async function setWeapon(name) {
   if (S.weapon !== name) { S.stance = null; S.mods = {}; S.riven = []; }
   S.weapon = name;
-  const r = await fetch('/api/weapon?name=' + encodeURIComponent(name));
+  const r = await fetch('api/weapon?name=' + encodeURIComponent(name));
   if (!r.ok) return;
   S.wmeta = await r.json();
   const meta = META.weapons.find(w => w.n === name) || {};
@@ -361,7 +361,7 @@ async function openModPicker(slot, kind) {
     if (!Object.values(S.mods).includes('Riven')) S.riven = [];
     closeModal(); renderSlots(); calc();
   };
-  const r = await fetch(`/api/mods?weapon=${encodeURIComponent(S.weapon)}&slot=${slot}`);
+  const r = await fetch(`api/mods?weapon=${encodeURIComponent(S.weapon)}&slot=${slot}`);
   const d = await r.json();
   PICK.all = d.mods || [];
   for (const m of PICK.all) if (m.l && m.l !== m.n) MOD_LOC[m.n] = m.l;
@@ -404,7 +404,7 @@ async function openCustom() {
   $('m-search').style.display = 'none';
   $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
   if (!CST_ATTRS.length) {
-    const r = await fetch('/api/custom');
+    const r = await fetch('api/custom');
     const d = await r.json();
     CST_ATTRS = d.attrs || [];
   }
@@ -447,7 +447,7 @@ async function openRiven(slot) {
   $('m-search').style.display = 'none';
   $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
   if (!RIVEN_ATTRS.length) {
-    const r = await fetch('/api/riven?weapon=' + encodeURIComponent(S.weapon));
+    const r = await fetch('api/riven?weapon=' + encodeURIComponent(S.weapon));
     const d = await r.json();
     RIVEN_ATTRS = d.attrs || [];
   }
@@ -637,7 +637,7 @@ function calc() {
       mods: S.mods, opts: S.opts,
     };
     try {
-      const r = await fetch('/api/calc', {
+      const r = await fetch('api/calc', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       });
       const d = await r.json();
