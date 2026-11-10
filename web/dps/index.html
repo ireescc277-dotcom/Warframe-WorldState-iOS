@@ -96,6 +96,15 @@ main{flex:1;display:grid;grid-template-columns:264px minmax(420px,1fr) 292px;min
 .contrib .cl{flex:none;width:52px;color:var(--gold2);font-variant-numeric:tabular-nums}
 .contrib .cv{color:var(--mute)}
 .contrib .cr:nth-child(odd){background:#12151a}
+.incbox{margin-top:10px;border:1px solid #2a3240;border-radius:6px;overflow:hidden}
+.inchd{display:flex;justify-content:space-between;align-items:baseline;
+  padding:7px 10px;background:#1a2029;font-size:12px;color:var(--gold)}
+.incst{font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums}
+.incbox .contrib .cn{flex:none;width:26px;color:var(--gold);font-size:10px}
+.incbox .contrib .cl{flex:none;width:158px;color:#c8d0da;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.incbox .contrib .cv{flex:1;min-width:0}
+.incft{padding:6px 10px;font-size:10px;color:var(--mute);background:#12151a;
+  border-top:1px solid #1e242e}
 .simpane{margin-top:16px;max-width:640px;border-top:1px solid var(--line);padding-top:10px}
 .simpane .hd{font-size:11px;letter-spacing:1px;color:var(--mute);margin-bottom:8px}
 .simpane .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -315,6 +324,25 @@ function statVal(m, lv, k){
   const row = L[i]; if(!row) return 0;
   return row[k] || 0;
 }
+// 灵化：SkillTree 每一位 = 那一层选了哪个 slot
+function incStats(inc, skillTree){
+  const s = {}, picked = [];
+  if(!inc || skillTree == null) return {s, picked};
+  const st = String(skillTree).split("");
+  for(const e of inc.ev){
+    const c = st[e.t-1];
+    if(c === undefined) continue;
+    if(+c === e.s) picked.push(e);
+  }
+  for(const e of picked){
+    for(const k in (e.c||{})){
+      if(k === "criticalMultiplierSet" || k === "ammoMaxSet" || k === "heavyAttackEfficiencySet") continue;
+      s[k] = (s[k]||0) + e.c[k];
+    }
+  }
+  return {s, picked};
+}
+
 function aggregate(slots){
   const a = {dmg:0,cc:0,cd:0,ms:0,fr:0,sc:0,mag:0,rl:0,
              phys:{},elem:{},fac:{},bad:[]};
@@ -344,22 +372,25 @@ function aggregate(slots){
 }
 
 // 元素合流：先天元素排最前，之后按槽位顺序
-function buildComponents(wp, a, slotOrder){
-  const baseTotal0 = DT.reduce((s,t)=>s+(wp.dmg[DT.indexOf(t)]||0),0) || wp.td || 1;
+function buildComponents(wp, a, slotOrder, flat, addPct){
+  const raw0 = DT.reduce((s,t)=>s+(wp.dmg[DT.indexOf(t)]||0),0) || wp.td || 1;
+  // 灵化把基础伤害抬高之后，所有百分比都作用在抬高后的值上
+  const baseTotal0 = (raw0 + (flat||0)) * (1 + (addPct||0));
+  const scale0 = baseTotal0 / raw0;
   const dMul = 1 + a.dmg/100;
   const phys = [];
   for(const t of PHYS){
-    let v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
+    let v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
     if(a.phys[t]) v *= (1 + a.phys[t]/100);
     if(v > 0) phys.push({t,v,innate:true});
   }
   const q = [];
   for(const t of ELEM_ORDER){
-    const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
+    const v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
     if(v > 0) q.push({t,v,innate:true});
   }
   for(const t of ["blast","radiation","magnetic","viral","corrosive","gas"]){
-    const v = (wp.dmg[DT.indexOf(t)]||0) * dMul;
+    const v = (wp.dmg[DT.indexOf(t)]||0) * scale0 * dMul;
     if(v > 0) q.push({t,v,innate:true,combo:true});
   }
   for(const t of slotOrder){
@@ -432,22 +463,24 @@ const BANE_KEY = {Grineer:"grineer","Kuva Grineer":"grineer",Corpus:"corpus",
   "Corpus Amalgam":"corpus",Infested:"infested","Infested Deimos":"infested",
   Orokin:"corrupted",Sentient:"sentient",Narmer:"narmer",Murmur:"murmur"};
 
-function assemble(wp, slots, enemy, level, opt){
+function assemble(wp, slots, enemy, level, opt, inc, skillTree){
   const a = aggregate(slots);
+  const IS = incStats(inc, skillTree).s;
   const order = slots.filter(Boolean).map(s=>{
     const m=M[s.m]; if(!m) return null;
     return ALLELEM.filter(t=>statVal(m,s.lv,t)>0);
   }).filter(Boolean).flat();
-  const comps = buildComponents(wp, a, order);
+  const comps = buildComponents(wp, a, order, IS.flatBaseDamage||0, IS.additiveBaseDamage||0);
 
-  const cc = (wp.cc||0)*100 * (1 + a.cc/100);
-  const cm = (wp.cm||1) * (1 + a.cd/100);
+  // 灵化里 +X% Base Critical Chance 是加到基础值上，再被 mod 乘
+  const cc = ((wp.cc||0) + (IS.criticalChance||0)) * 100 * (1 + a.cc/100);
+  const cm = ((wp.cm||1) + (IS.criticalMultiplier||0)) * (1 + a.cd/100);
   const critMul = (opt.crit === false) ? 1 : 1 + (cc/100)*(cm-1);
-  const ms = (wp.ms||1) * (1 + a.ms/100);
-  const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100));
-  const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100)));
-  const rl  = Math.max(0,(wp.rl||0) / (1 + a.rl/100));
-  const sc  = Math.max(0,(wp.sc||0) * (1 + a.sc/100));
+  const ms = (wp.ms||1) * (1 + a.ms/100 + (IS.multishot||0));
+  const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100 + (IS.fireRate||0)));
+  const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100) + (IS.flatMagazine||0)));
+  const rl  = Math.max(0,(wp.rl||0) / (1 + a.rl/100 + (IS.reloadSpeed||0)));
+  const sc  = Math.max(0,((wp.sc||0) + (IS.statusChance||0)) * (1 + a.sc/100));
 
   const lv = level + (opt.steel ? 100 : 0);
   const fk = enemy.fk || "";
@@ -608,8 +641,8 @@ function simulate(A, opt){
   };
 }
 
-function compute(wp, slots, enemy, level, opt){
-  const A = assemble(wp, slots, enemy, level, opt);
+function compute(wp, slots, enemy, level, opt, inc, skillTree){
+  const A = assemble(wp, slots, enemy, level, opt, inc, skillTree);
   const d = direct(A);
   const s = opt.status ? simulate(A, opt) : null;
   return {A, d, s};
@@ -663,10 +696,11 @@ document.getElementById("wsearch").oninput = renderWeapons;
 
 function selectWeapon(i){
   state.wi = i; state.ci = 0;
-  state.slots = pad8(builds[i].slots[0]);
+  state.slots = padN(builds[i].slots[0]);
   renderWeapons(); renderBuild();
 }
-function pad8(a){ const x = a.slice(0,8); while(x.length<8) x.push(null); return JSON.parse(JSON.stringify(x)); }
+// 槽位数不固定：8 个普通槽 + 特殊功能槽 + 紫卡槽，实测有 7~11 个，不能截断
+function padN(a){ const x = a.slice(); while(x.length<8) x.push(null); return JSON.parse(JSON.stringify(x)); }
 
 // ---------------------------------------------------------------- 配卡
 const bwrap = document.getElementById("bwrap");
@@ -709,6 +743,45 @@ function renderBuild(){
       <span class="cv">${parts.join(" · ")||'<i style="color:#5a636e">无数值（行为型）</i>'}</span></div>`);
   });
   if(contrib.length) html += `<div class="contrib">${contrib.join("")}</div>`;
+
+  // 灵化：把 SkillTree 还原成选中的节点
+  const incData = WF.i[b.w];
+  if(incData && b.sk){
+    const {s: IS, picked} = incStats(incData, b.sk);
+    const INC_L = {flatBaseDamage:"基础伤害", additiveBaseDamage:"基础伤害", criticalChance:"暴击率",
+      criticalMultiplier:"暴击倍率", statusChance:"触发", fireRate:"射速", multishot:"多重",
+      reloadSpeed:"装填", flatMagazine:"弹匣", range:"范围", accuracy:"精度", recoil:"后坐",
+      projectileSpeed:"弹速", punchThrough:"穿透", initialCombo:"初始连击",
+      heavyAttackWindUp:"重击蓄力", heavyAttackEfficiency:"重击效率", ammoEfficiency:"弹药效率",
+      headshotDamageBonus:"爆头伤害", zoom:"瞄准倍率", comboDuration:"连击持续"};
+    const MODELLED = new Set(["flatBaseDamage","additiveBaseDamage","criticalChance",
+      "criticalMultiplier","statusChance","fireRate","multishot","reloadSpeed","flatMagazine"]);
+    const fmtV = (k, v)=>{
+      if(k === "flatBaseDamage" || k === "flatMagazine") return (v>0?"+":"")+v;
+      if(k === "criticalMultiplier") return (v>0?"+":"")+v.toFixed(2)+"×";
+      return (v>0?"+":"")+(v*100).toFixed(0)+"%";
+    };
+    let rows = "", dim = 0;
+    for(const e of picked){
+      const kv = Object.entries(e.c||{});
+      const shown = kv.filter(([k])=>MODELLED.has(k)).map(([k,v])=>`<b>${INC_L[k]||k} ${fmtV(k,v)}</b>`);
+      const rest = kv.filter(([k])=>!MODELLED.has(k));
+      if(rest.length) dim++;
+      const cell = shown.length ? shown.join(" · ")
+        : (rest.length ? `<i style="color:#5a636e">未建模：${rest.map(([k])=>INC_L[k]||k).join("、")}</i>`
+                       : `<i style="color:#5a636e">无直伤改动</i>`);
+      rows += `<div class="cr"><span class="cn">T${e.t}</span>
+        <span class="cl">${e.n}</span>
+        <span class="cv">${cell}</span></div>`;
+    }
+    html += `<div class="incbox">
+      <div class="inchd"><span>灵化进化</span>
+        <span class="incst">${picked.length} 个节点 · SkillTree ${b.sk}</span></div>
+      <div class="contrib">${rows}</div>
+      ${dim?`<div class="incft">另外 ${dim} 个节点带未建模的效果（弹药、后坐、连击等），不计入计算。</div>`:""}
+    </div>`;
+  }
+
   const a = aggregate(state.slots);
   if(a.bad.length){
     html += `<div class="note warn">未解析 ${a.bad.length} 个槽位：${a.bad.slice(0,4).join("、")}${a.bad.length>4?"…":""}
@@ -740,7 +813,8 @@ function renderBuild(){
     }
     slotsEl.appendChild(d);
   });
-  while(slotsEl.children.length<8){
+  const minSlots = Math.max(8, state.slots.length);
+  while(slotsEl.children.length<minSlots){
     const d=document.createElement("div"); d.className="slot empty"; d.textContent="+";
     const idx = slotsEl.children.length;
     d.onclick = ()=> openPicker(idx);
@@ -749,7 +823,7 @@ function renderBuild(){
   bwrap.querySelectorAll(".tabs button").forEach(btn=>{
     btn.onclick = ()=>{
       state.ci = +btn.dataset.ci;
-      state.slots = pad8(builds[state.wi].slots[state.ci]);
+      state.slots = padN(builds[state.wi].slots[state.ci]);
       renderBuild();
     };
   });
@@ -889,7 +963,7 @@ function buildRanking(){
   if(state.rankingKey === key && state.ranking) return;
   const rows = builds.map((b,i)=>{
     const w = W[b.w];
-    const r = compute(w, pad8Cache(b,0), state.enemy, state.level, opt());
+    const r = compute(w, padCache2(b,0), state.enemy, state.level, opt(), WF.i[b.w], b.sk);
     const val = state.status ? (r.s ? r.s.dps : r.d.burst) : r.d.burst;
     return {idx:i, name:w.z||w.n, val};
   });
@@ -897,16 +971,17 @@ function buildRanking(){
   state.ranking = rows; state.rankingKey = key;
 }
 const padCache = new Map();
-function pad8Cache(b, ci){
+function padCache2(b, ci){
   const k = b.w+"|"+ci;
-  if(!padCache.has(k)) padCache.set(k, pad8(b.slots[ci]||[]));
+  if(!padCache.has(k)) padCache.set(k, padN(b.slots[ci]||[]));
   return padCache.get(k);
 }
 
 function recompute(){
   if(state.wi<0 || !state.enemy){ return; }
   const w = W[builds[state.wi].w];
-  const r = compute(w, state.slots, state.enemy, state.level, opt());
+  const bd = builds[state.wi];
+  const r = compute(w, state.slots, state.enemy, state.level, opt(), WF.i[bd.w], bd.sk);
   const A = r.A, d = r.d, s = r.s;
 
   document.getElementById("rburst").textContent = fmt(d.burst);

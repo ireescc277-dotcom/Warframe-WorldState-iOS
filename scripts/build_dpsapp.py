@@ -203,8 +203,67 @@ def load_builds(weapons):
                 if any(slots):
                     configs.append(slots)
             if configs:
-                builds.append({"w": uid, "slots": configs})
+                b = {"w": uid, "slots": configs}
+                if w.get("SkillTree"):
+                    b["sk"] = w["SkillTree"]      # 灵化进化：每一位 = 那一层选的 slot
+                builds.append(b)
     return builds
+
+
+# ---------------------------------------------------------------- 灵化
+# Genesis 数据按基础型号记录（boar_incarnon 同时对应 Boar 和 Boar Prime），
+# 所以先把变体词摘掉再查表。
+INC_VARIANTS = {"prime", "prisma", "vandal", "wraith", "kuva", "tenet", "dex",
+                "mk1", "sancti", "rakta", "telos", "vaykor", "synoid", "secura",
+                "carmine", "brutalist"}
+
+
+def inc_slug(name: str) -> str:
+    s = (name or "").lower()
+    s = re.sub(r"[&'.,()!:']", " ", s).replace("-", " ")
+    return "_".join(w for w in s.split() if w and w not in INC_VARIANTS)
+
+
+def inc_full_slug(name: str) -> str:
+    """保留变体词的写法，用来查 variantStatChanges（paris_prime / prisma_skana）。"""
+    s = (name or "").lower()
+    s = re.sub(r"[&'.,()!:']", " ", s).replace("-", " ")
+    return "_".join(w for w in s.split() if w)
+
+
+def load_incarnon(weapons):
+    """uniqueName -> {id, ev:[{t,s,n,d,c}]}，只收能对上的。
+
+    进化数值按型号分叉：variantStatChanges 里有本型号就用它，
+    否则退回 statChanges（Boar / Torid 这类没有分叉的走这条）。
+    """
+    path = os.path.join(GD, "incarnon.json")
+    if not os.path.exists(path):
+        return {}
+    data = json.load(open(path, encoding="utf-8"))
+    out = {}
+    for uid, w in weapons.items():
+        nm = w.get("n") or ""
+        sl, full = inc_slug(nm), inc_full_slug(nm)
+        for cand in (sl, sl + "_incarnon"):
+            if cand not in data:
+                continue
+            ev = []
+            for e in data[cand]:
+                c = e.get("statChanges") or {}
+                vt = e.get("variantStatChanges") or {}
+                if full in vt:
+                    c = vt[full]
+                elif sl in vt:
+                    c = vt[sl]
+                ev.append({
+                    "t": e["tier"], "s": e["slot"], "n": e["name"],
+                    "d": (e.get("description") or "").replace("\n", " ")[:220],
+                    "c": c,
+                })
+            out[uid] = {"id": cand, "ev": ev}
+            break
+    return out
 
 
 def main():
@@ -213,6 +272,7 @@ def main():
     mods = load_mods()
     builds = load_builds(weapons)
     enemies = load_enemies()
+    incarnon = load_incarnon(weapons)
 
     # 只留有配卡的武器，外加全部 mod（供选卡器用）
     payload = {
@@ -222,11 +282,13 @@ def main():
             "mods": len(mods),
             "builds": len(builds),
             "enemies": len(enemies),
+            "incarnon": len(incarnon),
         },
         "w": weapons,
         "m": mods,
         "b": builds,
         "e": enemies,
+        "i": incarnon,
     }
     # 精简：武器只保留需要的字段
     slim = {}
@@ -264,6 +326,13 @@ def main():
         print(f"未解析 mod {len(missing)} 个（路径型/未收录）")
         for k, v in list(missing.items())[:8]:
             print("   ", k.split("/")[-1], v)
+
+    # 灵化：有 SkillTree 但没对上进化表的，逐条报出来
+    withst = [b for b in builds if b.get("sk")]
+    nomap = [b for b in withst if b["w"] not in incarnon]
+    print(f"灵化：{len(withst)} 把带 SkillTree，{len(withst)-len(nomap)} 把已匹配进化表")
+    for b in nomap[:6]:
+        print("   未匹配：", weapons[b["w"]].get("n"), b["sk"])
 
 
 if __name__ == "__main__":
