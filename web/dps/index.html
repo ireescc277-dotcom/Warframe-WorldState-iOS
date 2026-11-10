@@ -119,6 +119,14 @@ main{flex:1;display:grid;grid-template-columns:264px minmax(420px,1fr) 292px;min
 .estat div{background:#1d222a;border-radius:4px;padding:4px 7px}
 .estat span{display:block;color:var(--mute);font-size:10px}
 .estat b{font-variant-numeric:tabular-nums;font-size:12px}
+.extq{padding:8px 12px}
+.extq .exh{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--gold);margin-bottom:6px}
+.extq .exh span{color:var(--mute);font-size:10px}
+.extq .row{gap:8px;margin-bottom:5px}
+.extq .lb2{font-size:11px;color:var(--mute);width:56px;flex:none}
+.extq .pc{font-size:10px;color:var(--mute);width:14px}
+.extq .chk{gap:14px;margin-top:7px}
+.extq .chk label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mute);cursor:pointer}
 .facres{padding:7px 12px;border-bottom:1px solid var(--line);font-size:11px;line-height:1.7}
 .facres b{color:#b9a06a;font-weight:500}
 
@@ -203,6 +211,20 @@ code{background:#1d222a;padding:0 4px;border-radius:3px;font-size:11px;color:#b9
       </div>
       <div class="estat" id="estat"></div>
     </div>
+    <div class="elvl extq">
+      <div class="exh">外部条件<span>不计入武器本体</span></div>
+      <div class="row"><span class="lb2">病毒层数</span>
+        <input type="range" id="xvirR" min="0" max="10" value="0">
+        <input type="number" id="xvir" class="num" min="0" max="10" value="0"></div>
+      <div class="row"><span class="lb2">剥甲</span>
+        <input type="range" id="xarmR" min="0" max="100" value="0">
+        <input type="number" id="xarm" class="num" min="0" max="100" value="0"><span class="pc">%</span></div>
+      <div class="row"><span class="lb2">时间窗口</span>
+        <input type="range" id="xwinR" min="3" max="60" value="10">
+        <input type="number" id="xwin" class="num" min="3" max="60" value="10"><span class="pc">秒</span></div>
+      <div class="row chk"><label><input type="checkbox" id="xhd"> 爆头 ×2</label>
+        <label><input type="checkbox" id="xcrit" checked> 计入暴击</label></div>
+    </div>
     <div class="facres" id="facres"></div>
     <div style="padding:6px 8px 0"><input id="esearch" placeholder="搜索敌人…" style="width:100%"></div>
     <div class="fchips" id="fchips"></div>
@@ -217,7 +239,7 @@ code{background:#1d222a;padding:0 4px;border-radius:3px;font-size:11px;color:#b9
     <div class="cmp" id="rburstcmp"></div>
   </div>
   <div class="fbox">
-    <div class="lb">含状态 · 10 秒实战</div>
+    <div class="lb" id="dpslbl">含状态 · 10 秒实战</div>
     <div class="big s" id="rdps">—</div>
     <div class="cmp" id="rdpscmp"></div>
   </div>
@@ -420,7 +442,7 @@ function assemble(wp, slots, enemy, level, opt){
 
   const cc = (wp.cc||0)*100 * (1 + a.cc/100);
   const cm = (wp.cm||1) * (1 + a.cd/100);
-  const critMul = 1 + (cc/100)*(cm-1);
+  const critMul = (opt.crit === false) ? 1 : 1 + (cc/100)*(cm-1);
   const ms = (wp.ms||1) * (1 + a.ms/100);
   const fr = Math.max(0.05,(wp.fr||1) * (1 + a.fr/100));
   const mag = Math.max(1, Math.round((wp.mag||1) * (1 + a.mag/100)));
@@ -430,13 +452,15 @@ function assemble(wp, slots, enemy, level, opt){
   const lv = level + (opt.steel ? 100 : 0);
   const fk = enemy.fk || "";
   const hp = scaleHealth(enemy.hp, lv, enemy.bl, fk);
-  const ar0 = scaleArmor(enemy.ar, lv, enemy.bl, fk);
+  const arRaw = scaleArmor(enemy.ar, lv, enemy.bl, fk);
+  const ar0 = Math.max(0, arRaw * (1 - (opt.armorStrip||0)/100));
   const sh = scaleShield(enemy.sh, lv, enemy.bl, fk);
   const banePct = (a.fac[BANE_KEY[fk]] || 0)/100;
+  const headMul = opt.headshot ? 2 : 1;
 
   const compsF = comps.map(c=>{
     const f = facMult(fk, c.t);
-    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)};
+    return {t:c.t, v:c.v, f, vCrit:c.v*f*critMul*ms*(1+banePct)*headMul};
   });
   const perShotShield = compsF.reduce((s,c)=>s+c.vCrit,0);
   const shotBase = comps.reduce((s,c)=>s+c.v,0) * ms;   // 不含暴击、不含加成
@@ -472,7 +496,8 @@ function direct(A){
 // ---------------------------------------------------------------- 状态时间轴
 // 确定性模拟：按期望值推进，不做随机抽样。
 function simulate(A, opt){
-  const T = 10, dt = 0.05;
+  const T = Math.max(3, opt.window || 10), dt = 0.05;
+  const baseViral = Math.min(10, opt.extViral || 0);
   let hp = A.hp, sh = A.sh, og = A.og, armor = A.ar0;
   let mag = A.mag || 1, reload = 0, t = 0;
   let viral = [], corr = [], heatUntil = -1, dots = [];
@@ -525,13 +550,15 @@ function simulate(A, opt){
             armor:false, shieldPierce:true});
         }
       }
-      viral = viral.filter(x=>x>t); if(viral.length>10) viral = viral.slice(-10);
+      viral = viral.filter(x=>x>t);
+      const vcap = Math.max(0, 10 - baseViral);
+      if(viral.length>vcap) viral = viral.slice(-vcap);
       corr  = corr.filter(x=>x>t);  if(corr.length>10)  corr  = corr.slice(-10);
     }
     dots = dots.filter(d=>d.until > t);
 
     // 病毒加伤 / 剥甲
-    const vn = viral.length;
+    const vn = Math.min(10, baseViral + viral.length);
     const viralMul = vn > 0 ? 1 + (ST.viral.hp[0] + ST.viral.hp[1]*(vn-1)) : 1;
     const cStrip = Math.min(ST.corrosive.cap, ST.corrosive.strip * corr.length);
     const hStrip = (t < heatUntil) ? ST.heat.strip : 0;
@@ -590,7 +617,8 @@ function compute(wp, slots, enemy, level, opt){
 
 // ---------------------------------------------------------------- 状态
 const state = {wi:-1, ci:0, slots:[], enemy:null, level:100, steel:false,
-               status:true, fac:"全部", mode:"weapon", ranking:null, rankingKey:""};
+               status:true, fac:"全部", mode:"weapon", ranking:null, rankingKey:"",
+               extViral:0, armorStrip:0, window:10, headshot:false, crit:true};
 
 // ---------------------------------------------------------------- 武器列表
 const wlistEl = document.getElementById("wlist");
@@ -821,6 +849,22 @@ document.querySelectorAll("#spseg button").forEach(b=>{
   b.onclick = ()=>{ state.steel = b.dataset.v==="1";
     document.querySelectorAll("#spseg button").forEach(x=>x.classList.toggle("on",x===b)); recompute(); };
 });
+
+// 外部条件
+function bindNum(rid, nid, key, lo, hi){
+  const r = document.getElementById(rid), n = document.getElementById(nid);
+  const sync = v=>{
+    v = Math.max(lo, Math.min(hi, Math.round(v)||0));
+    state[key] = v; r.value = Math.min(hi, v); n.value = v; recompute();
+  };
+  r.oninput = ()=>sync(+r.value);
+  n.oninput = ()=>sync(+n.value);
+}
+bindNum("xvirR","xvir","extViral",0,10);
+bindNum("xarmR","xarm","armorStrip",0,100);
+bindNum("xwinR","xwin","window",3,60);
+document.getElementById("xhd").onchange = e=>{ state.headshot = e.target.checked; recompute(); };
+document.getElementById("xcrit").onchange = e=>{ state.crit = e.target.checked; recompute(); };
 document.getElementById("btnmode").onclick = ()=>{
   state.mode = state.mode==="rank" ? "weapon" : "rank";
   document.getElementById("btnmode").textContent = state.mode==="rank" ? "列表" : "排名";
@@ -836,10 +880,12 @@ function fmt(n){
   if(n>=1e4) return (n/1e3).toFixed(1)+"k";
   return Math.round(n).toLocaleString();
 }
-const opt = ()=>({steel:state.steel, status:state.status});
+const opt = ()=>({steel:state.steel, status:state.status, extViral:state.extViral,
+                  armorStrip:state.armorStrip, window:state.window,
+                  headshot:state.headshot, crit:state.crit});
 
 function buildRanking(){
-  const key = [state.level, state.steel, state.status, state.enemy.n].join("|");
+  const key = JSON.stringify([state.level, state.enemy.n, opt()]);
   if(state.rankingKey === key && state.ranking) return;
   const rows = builds.map((b,i)=>{
     const w = W[b.w];
@@ -870,19 +916,19 @@ function recompute(){
   if(s){
     document.getElementById("rdps").textContent = fmt(s.dps);
     document.getElementById("rdpscmp").innerHTML =
-      `直伤 <b>${fmt(s.directDps)}</b> · DoT <b>${fmt(s.dotDps)}</b> · 病毒 <b>${s.viralAtEnd}</b> 层`;
+      `直伤 <b>${fmt(s.directDps)}</b> · DoT <b>${fmt(s.dotDps)}</b> · 病毒 <b>${s.viralAtEnd + (state.extViral||0)}</b> 层`;
   } else {
     document.getElementById("rdps").textContent = "—";
     document.getElementById("rdpscmp").innerHTML = "已关闭状态计算";
   }
+  document.getElementById("dpslbl").textContent = `含状态 · ${state.window} 秒实战`;
 
   if(s && s.kill !== null){
     document.getElementById("rttk").textContent = s.kill.toFixed(2)+"s";
-    document.getElementById("rttkcmp").innerHTML = `10 秒内击杀`;
+    document.getElementById("rttkcmp").innerHTML = `${state.window} 秒内击杀`;
   } else {
-    document.getElementById("rttk").textContent = ">10s";
-    const hpLeft = 0;
-    document.getElementById("rttkcmp").innerHTML = `10 秒未击杀`;
+    document.getElementById("rttk").textContent = ">"+state.window+"s";
+    document.getElementById("rttkcmp").innerHTML = `${state.window} 秒未击杀`;
   }
 
   // 目标面板
