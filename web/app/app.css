@@ -249,6 +249,21 @@ header .sp{flex:1}
 .note p{margin:0 0 9px}
 .note b{color:var(--fg);font-weight:600}
 
+/* 配卡存档弹窗 */
+.lvrow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r);
+  border-top:1px solid #1a1e25}
+.lvrow:first-child{border-top:none}
+.lvrow:hover{background:var(--panel3)}
+.lvmain{flex:1;min-width:0;cursor:pointer}
+.lvt{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lvs{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lvdel{flex:none;padding:3px 8px;border:1px solid var(--line);border-radius:var(--r);
+  color:var(--faint);font-size:11px;white-space:nowrap}
+.lvdel:hover{color:var(--red);border-color:#4a2b2b}
+.lvdel[data-arm]{color:var(--red);border-color:#4a2b2b;background:#2a1c1c}
+.mfoot #lv-name{flex:1;min-width:0}
+
 /* ---------------------------------------------------------------- 提示条 */
 #banner{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
   background:#2a1c1c;border:1px solid #4a2b2b;color:#e0a0a0;padding:8px 16px;border-radius:var(--r);

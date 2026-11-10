@@ -1,5 +1,6 @@
 'use strict';
-// 前端：只负责选择与展示。所有数值来自服务端 kernel.js（站点本体脚本）。
+// 前端：只负责选择与展示。所有数值来自 kernel-web.js —— 它把站点自己的 min.js
+// 放进一个隐藏 iframe 里跑，喂配置、读回结果，不重写任何公式。
 //
 // 状态 S 的形状就是 /api/calc 的请求体：
 //   {weapon, enemy, level, steel, eximus, party, mods:{"0":"Serration"}, opts:{...}}
@@ -31,11 +32,16 @@ const S = {
   },
 };
 
+// opts 的出厂值。恢复存档时要按它补齐——老存档里可能没有后来新增的键。
+const OPTS_DEF = JSON.parse(JSON.stringify(S.opts));
+
 let META = { weapons: [], enemies: [] };
 let MOD_LOC = {};        // 英文名 -> 中文名，列表用
 let LAST = null;
 let CALC_SEQ = 0;
 let CALC_T = 0;
+let BOOTED = false;      // 启动流程走完之前不回写存档，否则会把半截状态存下来
+let HYDRA = false;       // 正在套用存档，期间同样不回写
 
 // ---------------------------------------------------------------- 数字
 
@@ -65,16 +71,51 @@ async function boot() {
   bindPick();
   bindFrame();
   bindHeader();
-
-  // 从外部带进来的武器：iOS App 的武器列表点进来时用 ?weapon=Torid。
-  // 没有参数就回到默认那把，用户自己从头配。
-  const q = new URLSearchParams(location.search);
-  const want = q.get('weapon');
-  const first = (want && META.weapons.find(w => w.n === want))
-    || META.weapons.find(w => w.n === 'Torid') || META.weapons[0];
-  await setWeapon(first.n);
-  setEnemy(META.enemies.find(e => e.name === 'Heavy Gunner') || META.enemies[0]);
+  await restore();
+  BOOTED = true;
+  calc();
 }
+
+const DEFAULT_W = 'Torid';
+const DEFAULT_E = 'Heavy Gunner';
+
+/// 启动时从哪来，决定恢复什么：
+///   ?weapon=Torid  → 从武器页「填装」进来，武器已经定了，只把这把武器上次的卡带回来
+///   没有参数        → 接着上次退出时的整套配置
+async function restore() {
+  const last = stGet(ST_LAST, null);
+  const want = new URLSearchParams(location.search).get('weapon');
+
+  if (!want) {
+    if (await applyBuild(last)) return;
+    await setWeapon(DEFAULT_W);
+    setEnemy(findEnemy(DEFAULT_E));
+    return;
+  }
+
+  const w = META.weapons.find(x => x.n === want)
+    || META.weapons.find(x => x.n === DEFAULT_W) || META.weapons[0];
+  // 先读记忆再换武器：setWeapon 会清空 mod，也会触发一次计算
+  const mem = (stGet(ST_WMEM, {}) || {})[w.n];
+
+  HYDRA = true;
+  await setWeapon(w.n, true);
+  if (mem) {
+    S.mods = Object.assign({}, mem.mods || {});
+    S.riven = mem.riven || [];
+    S.stance = mem.stance || null;
+    S.custom = mem.custom || [];
+  }
+  applyGlobals(last);
+  renderSlots();
+  renderOpts();
+  HYDRA = false;
+  autoSave();
+}
+
+const findEnemy = want => META.enemies.find(e => e.name === want)
+  || META.enemies.find(e => e.name === DEFAULT_E) || META.enemies[0];
+
 
 const factionName = f => {
   const e = META.enemies.find(x => x.faction === f);
@@ -83,8 +124,9 @@ const factionName = f => {
 
 // ---------------------------------------------------------------- 武器
 
-async function setWeapon(name) {
-  if (S.weapon !== name) { S.stance = null; S.mods = {}; S.riven = []; }
+async function setWeapon(name, keep) {
+  // keep：套用存档时不清空已有配卡（存档里的 mod 随后会被写回来）
+  if (S.weapon !== name && !keep) { S.stance = null; S.mods = {}; S.riven = []; }
   S.weapon = name;
   const wj = await WFK.weaponInfo(name);
   if (!wj) return;
@@ -439,7 +481,7 @@ $('m-search').addEventListener('input', e => renderModList(e.target.value));
 // ---------------------------------------------------------------- 紫卡
 //
 // 站点把紫卡当作临时构造的 mod（modsProps[9999]），不在 mod 表里。
-// 这里只收集 4 条属性，服务端按它自己的换算（百分比/倍数/秒）喂给内核。
+// 这里只收集 4 条属性，内核按站点自己的换算（百分比/倍数/秒）构造紫卡。
 
 let RIVEN_ATTRS = [];
 
@@ -620,6 +662,171 @@ function syncOptCount() {
   $('opt-n').textContent = n || '';
 }
 
+// ---------------------------------------------------------------- 存档
+//
+// 存在 localStorage。iOS 上页面是 http://127.0.0.1:<固定端口>，端口必须固定——
+// localStorage 按 origin（scheme + host + port）隔离，换端口就等于换了个站点，存档会全空。
+//
+// 三份数据各管一件事：
+//   wf.last.v1     上次退出的整套状态，刷新 / 关掉重开都接着来
+//   wf.wmem.v1     每把武器上次的 mod / 紫卡 / 架势，从武器页填装时带回来
+//   wf.loadouts.v1 手动存的配卡，可命名，可删
+
+const ST_LAST = 'wf.last.v1';
+const ST_WMEM = 'wf.wmem.v1';
+const ST_LIST = 'wf.loadouts.v1';
+const ST_MAX = 80;
+
+function stGet(k, def) {
+  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
+  catch (e) { return def; }
+}
+function stSet(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch (e) { banner('存档写入失败：' + (e && e.message || e)); return false; }
+}
+
+function snapshot() {
+  const w = S.wmeta || {};
+  return {
+    v: 1, ts: Date.now(),
+    weapon: S.weapon, wname: w.l || S.weapon,
+    enemy: S.enemy && S.enemy.name, ename: S.enemy ? (S.enemy.l || S.enemy.name) : '',
+    level: S.level, steel: !!S.steel, eximus: !!S.eximus, party: S.party || 1,
+    stance: S.stance || null,
+    riven: S.riven || [], custom: S.custom || [],
+    mods: Object.assign({}, S.mods),
+    opts: JSON.parse(JSON.stringify(S.opts)),
+  };
+}
+
+function autoSave() {
+  if (!BOOTED || HYDRA || !S.weapon) return;
+  const b = snapshot();
+  stSet(ST_LAST, b);
+  const m = stGet(ST_WMEM, {}) || {};
+  m[b.weapon] = { mods: b.mods, riven: b.riven, stance: b.stance, custom: b.custom };
+  stSet(ST_WMEM, m);
+}
+
+function syncLevelUI() {
+  $('lvl-num').value = S.level;
+  $('lvl-range').value = Math.min(200, S.level);
+}
+
+/// 敌人 / 等级 / 钢铁 / 条件跟武器无关，换武器也留着
+function applyGlobals(b) {
+  b = b || {};
+  if (b.opts) {
+    const o = Object.assign({}, OPTS_DEF, b.opts);
+    o.virus = Object.assign({}, OPTS_DEF.virus, b.opts.virus || {});
+    S.opts = o;
+  }
+  S.level = b.level || 100;
+  S.steel = !!b.steel;
+  S.eximus = !!b.eximus;
+  S.party = b.party || 1;
+  syncLevelUI();
+  setEnemy(findEnemy(b.enemy));
+}
+
+/// 整套套用。返回 false 表示这份存档没法用（武器已不存在等），调用方走默认值。
+async function applyBuild(b) {
+  if (!b || !b.weapon) return false;
+  if (!META.weapons.some(x => x.n === b.weapon)) return false;
+  HYDRA = true;
+  await setWeapon(b.weapon, true);
+  S.mods = Object.assign({}, b.mods || {});
+  S.riven = b.riven || [];
+  S.stance = b.stance || null;
+  S.custom = b.custom || [];
+  applyGlobals(b);
+  renderSlots();
+  renderOpts();
+  $('cst-n').textContent = S.custom.length ? S.custom.length + ' 项' : '';
+  HYDRA = false;
+  autoSave();
+  calc();
+  return true;
+}
+
+// ---------------------------------------------------------------- 存档弹窗
+
+const modCount = b => Object.keys(b.mods || {}).length;
+
+function autoTitle(b) {
+  const n = modCount(b);
+  return (b.wname || b.weapon) + (n ? ' · ' + n + ' mod' : '') + (b.ename ? '｜' + b.ename : '');
+}
+
+function timeLabel(ts) {
+  const d = new Date(ts || 0);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function loadoutListHTML() {
+  const list = stGet(ST_LIST, []) || [];
+  if (!list.length) {
+    return '<div class="lrow dim">还没有存档。配好一套后点下面的输入框命名，或者直接按「保存当前」。</div>';
+  }
+  return list.map(b => `<div class="lvrow">
+      <div class="lvmain" data-lv="${esc(b.id)}">
+        <div class="lvt">${esc(b.name)}</div>
+        <div class="lvs">${esc(b.wname || b.weapon)} · ${esc(b.ename || b.enemy || '')} Lv${b.level || 100} · ${modCount(b)} mod · ${timeLabel(b.ts)}</div>
+      </div>
+      <button class="lvdel" data-lvdel="${esc(b.id)}">×</button>
+    </div>`).join('');
+}
+
+function openLoadouts() {
+  $('modal').classList.add('on');
+  $('m-title').style.display = '';
+  $('m-title').textContent = '配卡存档';
+  $('m-search').style.display = 'none';
+  $('m-list').innerHTML = loadoutListHTML();
+  $('m-foot').innerHTML = `<input id="lv-name" placeholder="名称（留空自动命名）" autocomplete="off">
+    <button class="mbtn" id="lv-save">保存当前</button>`;
+  $('lv-save').onclick = () => {
+    const b = snapshot();
+    const name = ($('lv-name').value || '').trim();
+    b.name = name || autoTitle(b);
+    b.id = 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const list = stGet(ST_LIST, []) || [];
+    list.unshift(b);
+    stSet(ST_LIST, list.slice(0, ST_MAX));
+    $('lv-name').value = '';
+    $('m-list').innerHTML = loadoutListHTML();
+    banner('已存档：' + b.name);
+  };
+  $('lv-name').focus();
+}
+
+// 存档列表里的载入 / 删除。删除要连点两下——iOS 里 confirm() 未必有人接，
+// 不做原生弹窗，改成按钮自己二次确认。
+$('m-list').addEventListener('click', e => {
+  const del = e.target.closest('[data-lvdel]');
+  if (del) {
+    const id = del.dataset.lvdel;
+    if (!del.dataset.arm) {
+      del.dataset.arm = '1';
+      del.textContent = '删除?';
+      return;
+    }
+    const list = (stGet(ST_LIST, []) || []).filter(x => x.id !== id);
+    stSet(ST_LIST, list);
+    $('m-list').innerHTML = loadoutListHTML();
+    banner('已删除');
+    return;
+  }
+  const row = e.target.closest('[data-lv]');
+  if (!row) return;
+  const b = (stGet(ST_LIST, []) || []).find(x => x.id === row.dataset.lv);
+  if (!b) return;
+  closeModal();
+  applyBuild(b).then(ok => { if (!ok) banner('这份存档的武器在当前数据里找不到'); });
+});
+
 // ---------------------------------------------------------------- 计算
 
 function calc() {
@@ -627,6 +834,7 @@ function calc() {
   clearTimeout(CALC_T);
   const seq = ++CALC_SEQ;
   CALC_T = setTimeout(async () => {
+    autoSave();
     const body = {
       weapon: S.weapon, enemy: S.enemy.name, level: S.level,
       steel: S.steel, eximus: S.eximus, party: S.party,
@@ -689,6 +897,7 @@ function renderResult(d) {
 // ---------------------------------------------------------------- 头
 
 function bindHeader() {
+  $('btn-save').onclick = openLoadouts;
   $('btn-custom').onclick = openCustom;
   $('btn-note').onclick = () => {
     $('modal').classList.add('on');
@@ -697,10 +906,11 @@ function bindHeader() {
     $('m-search').style.display = 'none';
     $('m-foot').innerHTML = '';
     $('m-list').innerHTML = `<div class="note">
-      <p>所有数值由服务端运行 warframe-damage.com 的同一份脚本得出，不是本项目的独立实现。</p>
+      <p>所有数值由 warframe-damage.com 自己的那份脚本算出来，直接跑在页面里的隐藏 iframe 中，不是本项目的独立实现。</p>
       <p>它把整个射击 / 攻击窗口按秒切分，逐发抽取暴击、触发、多重，再把每秒伤害取<b>中位数</b>作为 DPS。所以同一配置重复算会有小幅波动，这是它本来的行为。</p>
       <p>每段攻击独立成账：直击造成的状态不会被同一把武器的爆炸段看见。</p>
       <p>生命 / 护甲 / 护盾 / 超宏四层各按自己的抗性与减伤算，数值不能直接相加。</p>
+      <p>配卡存在本机浏览器里，不上传；换设备或清缓存会丢。</p>
     </div>`;
   };
 }

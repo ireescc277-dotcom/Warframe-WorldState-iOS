@@ -86,7 +86,7 @@ private struct CalcWebView: UIViewRepresentable {
             return web
         }
 
-        let server = LocalStaticServer(root: root)
+        let server = LocalStaticServer.shared(root: root)
         let port = server.start()
         guard port > 0 else {
             DispatchQueue.main.async { failure = "本地计算服务没能启动" }
@@ -111,7 +111,9 @@ private struct CalcWebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
     static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
-        coordinator.server?.stop()
+        // 服务故意不关：它是共享的，关了下次启动要重新抢端口，抢不到就换 origin。
+        // 回环网卡上挂个只读文件服务，代价可以忽略，App 退出时随进程一起没。
+        coordinator.server = nil
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
@@ -200,7 +202,20 @@ private struct CalcWebView: UIViewRepresentable {
 
 /// 只做一件事：把 `GET /path` 映射成 App 包里的文件，回一个 Connection: close
 /// 的响应。没有 keep-alive、没有 Range，WKWebView 取静态资源不需要这些。
+///
+/// 整个 App 共用一个实例：端口固定 → origin 固定 → 页面里的配卡存档才是同一份。
+/// 若让每个页面各起一个，第二个会抢不到 41888 而落到 41889，等于换了个站点。
 final class LocalStaticServer {
+    private static var sharedInstance: LocalStaticServer?
+
+    static func shared(root: URL) -> LocalStaticServer {
+        let norm = root.standardizedFileURL
+        if let s = sharedInstance, s.root == norm { return s }
+        let s = LocalStaticServer(root: norm)
+        sharedInstance = s
+        return s
+    }
+
     private let root: URL
     private let queue = DispatchQueue(label: "wf.calc.static", attributes: .concurrent)
     private var listener: NWListener?
@@ -212,12 +227,26 @@ final class LocalStaticServer {
 
     deinit { stop() }
 
+    /// 固定端口。localStorage 按 origin（scheme + host + port）隔离，端口每次启动
+    /// 都换就等于换了个站点——页面里存的配卡会全空。所以先抢这几个端口，
+    /// 抢不到（被别的进程占着）才退回系统分配，那种情况下存档读不到，但页面照常能用。
+    private static let preferredPorts: [NWEndpoint.Port] =
+        ([41888, 41889, 41890] as [UInt16]).compactMap { NWEndpoint.Port(rawValue: $0) }
+
     func start() -> UInt16 {
         if listener != nil { return port }
+        for preferred in LocalStaticServer.preferredPorts {
+            if let got = listen(on: preferred) { return got }
+        }
+        return listen(on: .any) ?? 0
+    }
+
+    private func listen(on endpoint: NWEndpoint.Port) -> UInt16? {
+        port = 0
         do {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
-            let l = try NWListener(using: params, on: .any)
+            let l = try NWListener(using: params, on: endpoint)
             let sem = DispatchSemaphore(value: 0)
 
             l.stateUpdateHandler = { [weak self] state in
@@ -236,12 +265,16 @@ final class LocalStaticServer {
             }
 
             l.start(queue: queue)
-            listener = l
             _ = sem.wait(timeout: .now() + 3)
+            if port > 0 {
+                listener = l
+                return port
+            }
+            l.cancel()
+            return nil
         } catch {
-            return 0
+            return nil
         }
-        return port
     }
 
     func stop() {
