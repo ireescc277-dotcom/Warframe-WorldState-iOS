@@ -137,6 +137,9 @@ header .sp{flex:1}
 .srow > span{color:var(--mute);flex:none;width:52px}
 .srow > b{font-weight:500;font-variant-numeric:tabular-nums}
 .srow > b.sm{font-size:11px;color:#b9c0c9}
+.srow.strow{align-items:center}
+.srow.strow select{flex:1;min-width:0;background:#14181e;color:var(--fg);border:1px solid var(--line);
+  border-radius:5px;padding:3px 6px;font-size:11.5px;font-family:inherit}
 
 /* ---------------------------------------------------------------- 战甲 */
 .frame{border-bottom:1px solid var(--line);padding:0 20px;background:#0e1116}
@@ -164,8 +167,12 @@ header .sp{flex:1}
 .opthd > b{font-size:11px;color:var(--gold);font-variant-numeric:tabular-nums}
 .opthd > b:empty{display:none}
 .opthd .s{margin-left:auto;font-size:10px;color:var(--faint)}
-.og{padding:10px 14px 4px;border-bottom:1px solid #1a1e25}
-.ogh{font-size:10px;letter-spacing:1px;color:var(--faint);text-transform:uppercase;margin-bottom:6px}
+.ohadd{display:flex;align-items:center;gap:5px;padding:3px 8px;border:1px solid var(--line);
+  border-radius:5px;background:#12161b;color:var(--mute);font-size:10.5px;font-family:inherit;flex:none}
+.ohadd:hover{color:var(--fg);border-color:var(--line2)}
+.ohadd b{color:var(--gold2);font-size:10px;font-variant-numeric:tabular-nums}
+.ohadd b:empty{display:none}
+.og{padding:10px 14px 4px;border-bottom:1px solid #1a1e25}.ogh{font-size:10px;letter-spacing:1px;color:var(--faint);text-transform:uppercase;margin-bottom:6px}
 .orow{display:flex;align-items:center;gap:8px;padding:3px 0;min-height:26px}
 .orow .lb2{font-size:12px;color:var(--mute);flex:none;width:104px}
 .orow input[type=range]{flex:1;min-width:0}
@@ -213,6 +220,23 @@ header .sp{flex:1}
 .mfoot:empty{display:none}
 .mbtn{padding:4px 12px;border:1px solid var(--line);border-radius:var(--r);color:var(--mute);font-size:12px}
 .mbtn:hover{color:var(--fg);border-color:var(--line2)}
+
+/* 紫卡弹窗 */.rvt{display:flex;flex-direction:column;gap:8px;padding:8px 6px}
+.rvrow{display:grid;grid-template-columns:1fr 96px 24px;gap:8px;align-items:center}
+.rvrow select,.rvrow input{background:#14181e;color:var(--fg);border:1px solid var(--line);
+  border-radius:5px;padding:5px 7px;font-size:12px;font-family:inherit;min-width:0}
+.rvrow input{text-align:right;font-variant-numeric:tabular-nums}
+.rvu{font-size:10.5px;color:var(--faint);text-align:center}
+.rvnote{padding:2px 6px 10px;font-size:10.5px;color:var(--faint);line-height:1.6}
+
+/* 自定义属性弹窗：26 项两列 */
+.cst{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;padding:8px 6px}
+.cstrow{display:grid;grid-template-columns:1fr 76px;gap:6px;align-items:center}
+.cstrow label{font-size:11.5px;color:#b9c0c9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cstrow input{background:#14181e;color:var(--fg);border:1px solid var(--line);border-radius:5px;
+  padding:4px 6px;font-size:11.5px;font-family:inherit;text-align:right;font-variant-numeric:tabular-nums;min-width:0}
+.cstrow.on label{color:var(--gold2)}
+@media (max-width:700px){.cst{grid-template-columns:1fr}}
 .mrow{display:flex;flex-direction:column;gap:1px;padding:6px 9px;border-radius:var(--r);cursor:pointer}
 .mrow:hover{background:var(--panel3)}
 .mrow .mn{font-size:12.5px;display:flex;align-items:baseline;gap:7px}

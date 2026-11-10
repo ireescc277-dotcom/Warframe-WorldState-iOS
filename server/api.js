@@ -239,6 +239,17 @@ async function route(req, res) {
     return sendJSON(res, 200, { ...j, index: WEAPONS[name] }, ae);
   }
 
+  if (p === '/api/riven') {
+    // 紫卡可选属性随武器类别变（近战没有多重/弹匣，远程没有连击/范围）
+    const name = u.searchParams.get('weapon') || '';
+    const melee = (WEAPONS[name] && WEAPONS[name].category === 'Melee') || false;
+    return sendJSON(res, 200, { melee, attrs: K.rivenAttrs(melee) }, ae);
+  }
+
+  if (p === '/api/custom') {
+    return sendJSON(res, 200, { attrs: K.customAttrs() }, ae);
+  }
+
   if (p === '/api/mods') {
     const name = u.searchParams.get('weapon') || '';
     const slot = Number(u.searchParams.get('slot'));
@@ -263,6 +274,9 @@ async function route(req, res) {
         steel: body.steel,
         eximus: body.eximus,
         party: body.party,
+        stance: body.stance,
+        riven: body.riven,
+        custom: body.custom,
         mods: body.mods,
         opts: body.opts,
       }));

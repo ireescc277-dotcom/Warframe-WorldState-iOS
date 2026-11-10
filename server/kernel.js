@@ -155,16 +155,194 @@ function putMod(slot, name) {
   return true;
 }
 
-function applyMods(mods) {
+function applyMods(mods, riven) {
   clearMods();
   const lost = [];
   for (const slot of Object.keys(mods || {})) {
     const name = mods[slot];
     if (!name) continue;
+    if (name === 'Riven') {
+      if (!putRiven(Number(slot), riven)) lost.push({ slot: Number(slot), name });
+      continue;
+    }
     if (!putMod(Number(slot), name)) lost.push({ slot: Number(slot), name });
   }
   W.invalidateModStatsCache();
   return lost;
+}
+
+// ---------------------------------------------------------------- 自定义属性
+//
+// 站点的 26 项面板外加成，写进 customStats，由 getCustomStat() 在各处读取。
+// d=1 的项界面按百分比填、内部存小数；d=0 的项原值（多重、连击数、初始连击等）。
+
+const CUSTOM_ATTR = [
+  { k: 'base', n: 'Base Damage', l: '基础伤害', pct: 1 },
+  { k: 'base_per_status', n: 'Base Damage per Status Effect', l: '每层状态的基础伤害', pct: 1 },
+  { k: 'flat_change_dmg', n: 'Increase Base Damage (flat)', l: '固定加算基础伤害', pct: 0 },
+  { k: 'abilityCombo', n: 'Combo Ability Multiplier', l: '技能连击倍率', pct: 0 },
+  { k: 'crit_chance', n: 'Critical Chance', l: '暴击率', pct: 1 },
+  { k: 'mult_crit_chance', n: 'Critical Chance (multiplicative)', l: '暴击率（乘算）', pct: 1 },
+  { k: 'flat_crit_chance', n: 'Critical Chance (absolute)', l: '暴击率（绝对加成）', pct: 1 },
+  { k: 'crit_chance_weakp', n: 'Weak Point Critical Chance', l: '弱点暴击率', pct: 1 },
+  { k: 'crit_mult', n: 'Critical Multiplier', l: '暴击倍率', pct: 1 },
+  { k: 'crit_mult_add', n: 'Critical Multiplier (absolute)', l: '暴击倍率（绝对加成）', pct: 0 },
+  { k: 'crit_mult_mult', n: 'Critical Multiplier (final ×)', l: '暴击倍率（最终乘算）', pct: 0 },
+  { k: 'status_chance', n: 'Status Chance', l: '触发几率', pct: 1 },
+  { k: 'status_chance_mult', n: 'Vulnerable to Status Chance', l: '触发几率易伤', pct: 1 },
+  { k: 'absolute_status_chance', n: 'Status Chance (absolute)', l: '触发几率（绝对加成）', pct: 0 },
+  { k: 'status_damage', n: 'Status Damage', l: '状态伤害', pct: 1 },
+  { k: 'vuln_status_damage', n: 'Vulnerability Status Damage', l: '易伤状态伤害', pct: 1 },
+  { k: 'speed', n: 'Fire Rate / Attack Speed', l: '射速 / 攻速', pct: 1 },
+  { k: 'multishot', n: 'Multishot', l: '多重', pct: 0 },
+  { k: 'magazineSize', n: 'Magazine Size', l: '弹匣容量', pct: 1 },
+  { k: 'reloadTime', n: 'Reload Time', l: '装填速度', pct: 1 },
+  { k: 'mult_for_head', n: 'Headshot Damage', l: '爆头伤害', pct: 1 },
+  { k: 'headshot_mult', n: 'Weak Point Damage', l: '弱点伤害', pct: 1 },
+  { k: 'initialCombo', n: 'Initial Combo', l: '初始连击', pct: 0 },
+  { k: 'dmgVulnerability', n: 'Damage Vulnerability', l: '伤害易伤', pct: 1 },
+  { k: 'heatInherit', n: 'Heat Inherit', l: '火焰继承', pct: 1 },
+  { k: 'heatAdd', n: 'Add Heat Instance', l: '附加火焰实例', pct: 1 },
+];
+
+function applyCustom(list) {
+  const cs = W.customStats || (W.customStats = {});
+  for (const k in cs) delete cs[k];
+  const out = {};
+  for (const it of list || []) {
+    const meta = CUSTOM_ATTR.find(a => a.k === it.k);
+    const v = Number(it.v);
+    if (!meta || !isFinite(v) || v === 0) continue;
+    const val = meta.pct ? v / 100 : v;
+    W.setCustomStat(it.k, val);
+    out[it.k] = v;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- 紫卡
+//
+// 站点不把紫卡放在 modsProps 里：它是弹窗临时构造的 modsProps[9999]，
+// 由 showRiven() 从 #rivenSettings 的四个输入块读出来。
+// 这里的属性表与站点源码里的那张一致（含 addt 归类）。
+
+const RIVEN_ATTR = {
+  crit_chance: { name: 'Critical Chance' },
+  crit_mult: { name: 'Critical Multiplier' },
+  multishot: { name: 'Multishot' },
+  status_chance: { name: 'Status Chance' },
+  base: { name: 'Damage' },
+  speed: { name: 'Fire Rate / Attack Speed' },
+  Cold: { name: 'Cold', addt: 'element' },
+  Heat: { name: 'Heat', addt: 'element' },
+  Electricity: { name: 'Electricity', addt: 'element' },
+  Toxin: { name: 'Toxin', addt: 'element' },
+  Impact: { name: 'Impact', addt: 'phys' },
+  Puncture: { name: 'Puncture', addt: 'phys' },
+  Slash: { name: 'Slash', addt: 'phys' },
+  addViral: { name: 'Viral' },
+  addBlast: { name: 'Blast' },
+  addGas: { name: 'Gas' },
+  addMagnetic: { name: 'Magnetic' },
+  addRadiation: { name: 'Radiation' },
+  addCorrosive: { name: 'Corrosive' },
+  status_damage: { name: 'Status Damage' },
+  Corpus: { name: 'Damage to Corpus', addt: 'SMITE' },
+  Grineer: { name: 'Damage to Grineer', addt: 'SMITE' },
+  Infested: { name: 'Damage to Infested', addt: 'SMITE' },
+  Scaldra: { name: 'Damage to Scaldra', addt: 'SMITE' },
+  Techrot: { name: 'Damage to Techrot', addt: 'SMITE' },
+  crit_chance_weakp: { name: 'Weak Point Critical Chance', addt: 'SMITE' },
+  ammoCapacity: { name: 'Ammo Maximum' },
+  ammoEff: { name: 'Ammo Efficiency' },
+  mult_for_head: { name: 'Weak Point Damage' },
+  magazineSize: { name: 'Magazine Capacity' },
+  reloadTime: { name: 'Reload Speed' },
+  shot_speed: { name: 'Shot Speed' },
+  comboDuration: { name: 'Combo Duration' },
+  initialCombo: { name: 'Initial Combo' },
+  melee_combo_eff: { name: 'Heavy Attack Efficiency' },
+  range: { name: 'Range' },
+  punch_through: { name: 'Punch Through' },
+  zoom: { name: 'Zoom' },
+  recoil: { name: 'Weapon Recoil' },
+  status_duration: { name: 'Status Duration' },
+};
+
+// 近战与远程可选属性不同，站点是按 productCategory 删表实现的
+const RIVEN_DROP_MELEE = ['punch_through', 'shot_speed', 'reloadTime', 'magazineSize', 'ammoCapacity', 'multishot', 'ammoEff'];
+const RIVEN_DROP_RANGED = ['range', 'melee_combo_eff', 'initialCombo', 'comboDuration'];
+
+function rivenAttrs(melee) {
+  if (melee == null) melee = (W.currWeaponInitial || W.currWeapon || {}).productCategory === 'Melee';
+  const drop = melee ? RIVEN_DROP_MELEE : RIVEN_DROP_RANGED;
+  return Object.keys(RIVEN_ATTR)
+    .filter(k => !drop.includes(k))
+    .map(k => ({
+      k, n: RIVEN_ATTR[k].name, l: loc(RIVEN_ATTR[k].name), g: RIVEN_ATTR[k].addt || 'misc',
+      // 站点 showRiven 对这三类做不同换算：原值 / 减 1 / 除 100
+      u: ['Corpus', 'Grineer', 'Infested', 'Scaldra', 'Techrot'].includes(k) ? 'x'
+        : ['comboDuration', 'initialCombo', 'range', 'punch_through'].includes(k) ? 's' : '%',
+    }));
+}
+
+// props: [{p:'crit_chance', v:60}, ...] 最多四条，v 是用户填的原始数字
+function setRiven(props) {
+  const list = (props || []).filter(x => x && x.p && RIVEN_ATTR[x.p] && Number(x.v)).slice(0, 4);
+  const blocks = W.$('#rivenSettings').find('.rivenSettingsInputBlock');
+  blocks.each((i, el) => {
+    const box = W.$(el);
+    const inp = box.find('.customDropdownInput');
+    const val = box.find('.rivenSettingsIAVal');
+    const it = list[i];
+    if (!it) {
+      inp.attr('data-type', '').attr('data-addt', '').text('Select property').data('type', '').data('addt', '');
+      val.val('');
+      return;
+    }
+    const meta = RIVEN_ATTR[it.p];
+    inp.attr('data-type', it.p).attr('data-addt', meta.addt || '')
+      .data('type', it.p).data('addt', meta.addt || '').text(meta.name);
+    val.val(String(Number(it.v)));
+  });
+  W.showRiven();
+  const rv = W.modsProps[9999];
+  if (!rv || !rv.action || !Object.keys(rv.action).length) return null;
+  return rv;
+}
+
+function putRiven(slot, props) {
+  const rv = setRiven(props);
+  if (!rv) return false;
+  W.modsPanel[slot] = {
+    name: 'Riven',
+    actions: JSON.parse(JSON.stringify(rv.action)),
+    tags: rv.tags,
+    info: '',
+  };
+  W.invalidateModStatsCache();
+  return true;
+}
+
+// 架势槽是 9。装了架势后，站点的连段命中表存在 actions.stances 里，
+// 由 #stanceAttackList 当前选中项决定每次 10 秒窗口打几下。
+function stanceList() {
+  const cell = W.modsPanel[9];
+  if (!cell || !cell.actions || !cell.actions.stances) return [];
+  return Object.keys(cell.actions.stances);
+}
+
+function setStance(name) {
+  const names = stanceList();
+  const box = W.$('#stanceAttackList');
+  box.empty();
+  if (!names.length) return null;
+  for (const n of names) box.append(W.$('<option>').attr('data-name', n).text(n));
+  const pick = names.includes(name) ? name : names[0];
+  const idx = names.indexOf(pick);
+  box[0].selectedIndex = idx;
+  W.__wfoptStanceCombo = pick;
+  return pick;
 }
 
 // ---------------------------------------------------------------- 选项
@@ -240,18 +418,15 @@ function collect() {
   const w = W;
   const out = [];
   const info = (w.currWeapon && w.currWeapon.info) || {};
-  // 站点结果区显示的是 currWeapon.info[攻击].queue_<层>（它标作 "Random queue dps"），
-  // dpsQueue 只是内部序列，拿它当结果是错的。
-  for (const name of Object.keys(w.dpsQueue || {})) {
-    const row = { name, dps: {}, ttk: {}, total: {} };
+  // 结果区取的是 currWeapon.info[攻击].queue_<层>（站点标作 "Random queue dps"）。
+  // 注意生命层的字段名是 queue_hp，不是 queue_health —— 后者不存在。
+  const FIELD = { health: 'queue_hp', armor: 'queue_armor', shield: 'queue_shield', overguard: 'queue_overguard' };
+  for (const name of Object.keys(info)) {
     const it = info[name] || {};
+    const row = { name, l: loc(name), dps: {}, ttk: {}, total: {} };
     for (const d of ['health', 'armor', 'shield', 'overguard']) {
-      const v = it['queue_' + d];
-      if (v != null && isFinite(v)) row.dps[d] = Math.round(v);
-      else {
-        const a = w.dpsQueue[name] && w.dpsQueue[name][d === 'health' ? 'hp' : d];
-        if (a && a.length) row.dps[d] = a[a.length - 1];
-      }
+      const v = it[FIELD[d]];
+      if (v != null && isFinite(v) && v > 0) row.dps[d] = Math.round(v);
       const t = w.TTK_Queue[name] && w.TTK_Queue[name][d];
       if (t && t.length && t[t.length - 1] != null) row.ttk[d] = t[t.length - 1];
       const m = w.MedianTotal_Queue[name] && w.MedianTotal_Queue[name][d];
@@ -268,8 +443,14 @@ async function calc(req) {
   await setWeapon(req.weapon);
   setEnemy(req.enemy, req.steel, req.level, req.eximus, req.party);
 
-  const lost = applyMods(req.mods);
+  const lost = applyMods(req.mods, req.riven);
   applyOpts(req.opts);
+  applyCustom(req.custom);
+  W.invalidateModStatsCache();
+
+  // 近战：架势决定连段命中数，必须在 reCalc 之前选好。
+  const stances = stanceList();
+  const stance = stances.length ? setStance(req.stance) : null;
 
   // 结果队列是累加的，算之前清空。
   for (const k of Q) W[k] = {};
@@ -283,6 +464,9 @@ async function calc(req) {
     steel: !!W.currEnemySPStatus,
     eximus: !!W.currEnemyEximusStatus,
     party: (W.$('#eParty').length ? Number(W.$('#eParty').val()) : 1) || 1,
+    queueLen: W.queueLength,
+    stances,
+    stance,
     target: {
       hp: W.currEnemy.currHealth, ar: W.currEnemy.currArmor,
       sh: W.currEnemy.currShield, og: W.currEnemy.currOverguard,
@@ -345,4 +529,8 @@ function weaponInfo(name) {
   return j;
 }
 
-module.exports = { boot, calc, weapons, enemies, mods, weaponInfo, loc, get W() { return W; } };
+module.exports = {
+  boot, calc, weapons, enemies, mods, weaponInfo, rivenAttrs, loc,
+  customAttrs: () => CUSTOM_ATTR.map(a => ({ k: a.k, n: a.n, l: a.l, pct: a.pct })),
+  get W() { return W; },
+};

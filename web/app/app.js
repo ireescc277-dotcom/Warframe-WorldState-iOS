@@ -17,6 +17,9 @@ const S = {
   eximus: false,
   party: 1,
   mods: {},        // slot -> mod 英文名（计算只认英文名）
+  stance: null,    // 近战架势招式（架势 mod 装在 9 号槽）
+  riven: [],       // 紫卡四条属性 [{p:'crit_chance', v:120}]，对应 mods 里的 'Riven'
+  custom: [],      // 自定义属性 [{k:'base', v:50}]
   opts: {
     strength: 100, headshot: false, stealth: false, allConds: true,
     heavy: false, heavyStart: 12, meleeCombo: 12,
@@ -47,7 +50,7 @@ function fmt(v) {
   return (Math.round(v * 100) / 100).toString();
 }
 const fmtT = v => (v == null || !isFinite(v)) ? '—' : (v < 1 ? v.toFixed(2) : v.toFixed(1)) + 's';
-const modName = n => MOD_LOC[n] || n;
+const modName = n => n === 'Riven' ? '紫卡' : (MOD_LOC[n] || n);
 
 // ---------------------------------------------------------------- 启动
 
@@ -77,6 +80,7 @@ const factionName = f => {
 // ---------------------------------------------------------------- 武器
 
 async function setWeapon(name) {
+  if (S.weapon !== name) { S.stance = null; S.mods = {}; S.riven = []; }
   S.weapon = name;
   const r = await fetch('/api/weapon?name=' + encodeURIComponent(name));
   if (!r.ok) return;
@@ -269,8 +273,22 @@ function renderSlots() {
     <div class="sidehd">配卡</div>
     <div class="srow"><span>已装</span><b>${used} / ${defs.length}</b></div>
     <div class="srow"><span>灵化</span><b>${w.incarnon ? '有' : '无'}</b></div>
-    <div class="srow"><span>兼容</span><b class="sm">${(w.compTags || []).map(t => esc(t)).join(' / ') || '—'}</b></div>`;
+    <div class="srow"><span>兼容</span><b class="sm">${(w.compTags || []).map(t => esc(t)).join(' / ') || '—'}</b></div>
+    <div id="stbox"></div>`;
   renderFrame();
+  if (LAST) renderStanceBox(LAST);
+}
+
+// 近战装架势后，连段里打哪一套由招式决定，命中数不同、DPS 不同。
+function renderStanceBox(d) {
+  const box = $('stbox');
+  if (!box) return;
+  const list = d.stances || [];
+  if (!list.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="srow strow"><span>招式</span>
+    <select id="stsel">${list.map(n => `<option${n === d.stance ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+  </div>`;
+  $('stsel').onchange = e => { S.stance = e.target.value; calc(); };
 }
 
 // ---------------------------------------------------------------- 战甲
@@ -334,11 +352,13 @@ async function openModPicker(slot, kind) {
   $('m-title').style.display = '';
   $('m-title').textContent = `槽位 ${slot} · ${KIND_NAME[kind] || kind}`;
   $('m-search').style.display = '';
-  $('m-foot').innerHTML = `<button class="mbtn" id="m-clear">卸下</button>`;
+  $('m-foot').innerHTML = `<button class="mbtn" id="m-riven">紫卡…</button><button class="mbtn" id="m-clear">卸下</button>`;
   $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
   $('m-search').value = '';
+  $('m-riven').onclick = () => openRiven(slot);
   $('m-clear').onclick = () => {
     delete S.mods[slot];
+    if (!Object.values(S.mods).includes('Riven')) S.riven = [];
     closeModal(); renderSlots(); calc();
   };
   const r = await fetch(`/api/mods?weapon=${encodeURIComponent(S.weapon)}&slot=${slot}`);
@@ -373,7 +393,107 @@ const STATN = {
   impact: '冲击', puncture: '穿刺', combo: '连击', range: '范围', ammoEff: '弹药效率',
 };
 
+// ---------------------------------------------------------------- 自定义属性
+
+let CST_ATTRS = [];
+
+async function openCustom() {
+  $('modal').classList.add('on');
+  $('m-title').style.display = '';
+  $('m-title').textContent = '自定义属性 · 面板外加成';
+  $('m-search').style.display = 'none';
+  $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
+  if (!CST_ATTRS.length) {
+    const r = await fetch('/api/custom');
+    const d = await r.json();
+    CST_ATTRS = d.attrs || [];
+  }
+  const cur = Object.fromEntries((S.custom || []).map(x => [x.k, x.v]));
+  $('m-list').innerHTML = `<div class="cst">${CST_ATTRS.map(a => `
+    <div class="cstrow${cur[a.k] ? ' on' : ''}">
+      <label title="${esc(a.n)}">${esc(a.l)}${a.pct ? ' %' : ''}</label>
+      <input type="number" step="0.1" data-k="${a.k}" value="${cur[a.k] != null ? cur[a.k] : ''}" placeholder="0">
+    </div>`).join('')}</div>`;
+  $('m-list').querySelectorAll('.cstrow input').forEach(inp => {
+    inp.oninput = () => inp.closest('.cstrow').classList.toggle('on', !!Number(inp.value));
+  });
+  $('m-foot').innerHTML = `<button class="mbtn" id="cst-ok">应用</button><button class="mbtn" id="cst-reset">清空</button>`;
+  $('cst-reset').onclick = () => {
+    $('m-list').querySelectorAll('.cstrow input').forEach(i => { i.value = ''; i.closest('.cstrow').classList.remove('on'); });
+  };
+  $('cst-ok').onclick = () => {
+    const out = [];
+    $('m-list').querySelectorAll('.cstrow input').forEach(i => {
+      const v = Number(i.value);
+      if (i.value !== '' && isFinite(v) && v !== 0) out.push({ k: i.dataset.k, v });
+    });
+    S.custom = out;
+    $('cst-n').textContent = out.length ? `${out.length} 项` : '';
+    closeModal(); calc();
+  };
+}
+
 $('m-search').addEventListener('input', e => renderModList(e.target.value));
+
+// ---------------------------------------------------------------- 紫卡
+//
+// 站点把紫卡当作临时构造的 mod（modsProps[9999]），不在 mod 表里。
+// 这里只收集 4 条属性，服务端按它自己的换算（百分比/倍数/秒）喂给内核。
+
+let RIVEN_ATTRS = [];
+
+async function openRiven(slot) {
+  $('m-title').textContent = '紫卡 · 4 条属性';
+  $('m-search').style.display = 'none';
+  $('m-list').innerHTML = '<div class="lrow dim">载入…</div>';
+  if (!RIVEN_ATTRS.length) {
+    const r = await fetch('/api/riven?weapon=' + encodeURIComponent(S.weapon));
+    const d = await r.json();
+    RIVEN_ATTRS = d.attrs || [];
+  }
+  const cur = S.mods[slot] === 'Riven' ? (S.riven || []) : [];
+  const opts = k => `<option value="">—</option>` +
+    RIVEN_ATTRS.map(a => `<option value="${a.k}"${a.k === k ? ' selected' : ''}>${esc(a.l)}</option>`).join('');
+  $('m-list').innerHTML = `<div class="rvt">${[0, 1, 2, 3].map(i => {
+    const it = cur[i] || {};
+    return `<div class="rvrow">
+      <select class="rvp" data-i="${i}">${opts(it.p)}</select>
+      <input class="rvv" data-i="${i}" type="number" step="0.1" placeholder="值" value="${it.v != null ? it.v : ''}">
+      <span class="rvu" data-u="${i}"></span>
+    </div>`;
+  }).join('')}</div>
+  <div class="rvnote">百分数填 60；派系写倍数填 1.5；连击持续 / 范围 / 穿透填秒数或米数。至少填一条。</div>`;
+
+  const syncUnit = () => {
+    $('m-list').querySelectorAll('.rvp').forEach(s => {
+      const it = RIVEN_ATTRS.find(a => a.k === s.value);
+      const u = $('m-list').querySelector(`.rvu[data-u="${s.dataset.i}"]`);
+      if (u) u.textContent = it ? ({ '%': '%', x: '倍', s: '值' }[it.u] || '') : '';
+    });
+  };
+  $('m-list').querySelectorAll('.rvp').forEach(s => { s.onchange = syncUnit; });
+  syncUnit();
+
+  $('m-foot').innerHTML = `<button class="mbtn" id="rv-ok">装备紫卡</button><button class="mbtn" id="m-clear">卸下</button>`;
+  $('m-clear').onclick = () => {
+    delete S.mods[slot];
+    if (!Object.values(S.mods).includes('Riven')) S.riven = [];
+    closeModal(); renderSlots(); calc();
+  };
+  $('rv-ok').onclick = () => {
+    const out = [];
+    $('m-list').querySelectorAll('.rvp').forEach(s => {
+      const v = +$('m-list').querySelector(`.rvv[data-i="${s.dataset.i}"]`).value;
+      if (s.value && isFinite(v) && v !== 0) out.push({ p: s.value, v });
+    });
+    if (!out.length) { banner('紫卡至少填一条属性'); return; }
+    // 紫卡只能装一张
+    for (const k of Object.keys(S.mods)) if (S.mods[k] === 'Riven') delete S.mods[k];
+    S.riven = out;
+    S.mods[slot] = 'Riven';
+    closeModal(); renderSlots(); calc();
+  };
+}
 $('m-close').onclick = closeModal;
 $('modal').addEventListener('mousedown', e => { if (e.target === $('modal')) closeModal(); });
 $('m-list').addEventListener('click', e => {
@@ -511,6 +631,9 @@ function calc() {
     const body = {
       weapon: S.weapon, enemy: S.enemy.name, level: S.level,
       steel: S.steel, eximus: S.eximus, party: S.party,
+      stance: S.stance,
+      riven: S.riven,
+      custom: S.custom,
       mods: S.mods, opts: S.opts,
     };
     try {
@@ -532,6 +655,7 @@ const DT = { health: '生命', armor: '护甲', shield: '护盾', overguard: '�
 
 function renderResult(d) {
   if (d.target) renderEnemyStats(d.target);
+  renderStanceBox(d);
   const rows = d.attacks || [];
   if (!rows.length) {
     $('rbar').innerHTML = '<div class="empty">这个组合没有可算的攻击段</div>';
@@ -552,14 +676,14 @@ function renderResult(d) {
   $('attacks').innerHTML = rows.map(a => {
     const defs = Object.keys(a.dps);
     return `<div class="acard">
-      <div class="ahd">${esc(a.name)}<span class="atag">${defs.length} 层</span></div>
+      <div class="ahd">${esc(a.l || a.name)}<span class="atag">${defs.length} 层</span></div>
       <table class="atab">
         <thead><tr><th>目标层</th><th>队列 DPS</th><th>每发中位</th><th>TTK</th></tr></thead>
         <tbody>${defs.map(k => `<tr>
           <td>${DT[k] || k}</td>
           <td class="num">${fmt(a.dps[k])}</td>
           <td class="num dim">${fmt(a.total[k])}</td>
-          <td class="num">${fmtT(a.ttk[k])}</td>
+          <td class="num">${(a.ttk[k] == null || a.ttk[k] >= (d.queueLen || 20) - 0.02) ? '<span class="dim">' + (d.queueLen || 20) + 's 内打不死</span>' : fmtT(a.ttk[k])}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -569,6 +693,7 @@ function renderResult(d) {
 // ---------------------------------------------------------------- 头
 
 function bindHeader() {
+  $('btn-custom').onclick = openCustom;
   $('btn-note').onclick = () => {
     $('modal').classList.add('on');
     $('m-title').style.display = '';
