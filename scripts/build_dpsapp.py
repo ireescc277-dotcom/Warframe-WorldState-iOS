@@ -473,8 +473,8 @@ def load_rivens(weapons):
     return out, as_mod
 
 
-def main():
-    os.makedirs(OUT, exist_ok=True)
+def build_payload():
+    """产出计算器要吃的整份数据。前端（单文件版）和后端（api.js）共用。"""
     weapons = load_weapons()
     mods = load_mods()
     rivens, riven_mods = load_rivens(weapons)
@@ -507,11 +507,25 @@ def main():
         slim[uid] = {k: w[k] for k in ("n", "z", "dmg", "td", "cc", "cm", "sc", "fr",
                                        "mag", "rl", "ms", "tr", "cat", "mr") if k in w}
     payload["w"] = slim
+    return payload, weapons, builds, mods
+
+
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    payload, weapons, builds, mods = build_payload()
+    slim = payload["w"]
 
     js = "window.WF=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n"
     with open(os.path.join(OUT, "data.js"), "w", encoding="utf-8") as f:
         f.write(js)
-    print(f"data.js {len(js)/1024:.0f} KB | 武器 {len(slim)} | mod {len(mods)} | 配卡 {len(builds)} | 敌人 {len(enemies)}")
+    print(f"data.js {len(js)/1024:.0f} KB | 武器 {len(slim)} | mod {len(mods)} | 配卡 {len(builds)}")
+
+    # 服务端（server/api.js）读的同一份数据，去掉 window 包装
+    server_data = os.path.join(ROOT, "server", "data")
+    os.makedirs(server_data, exist_ok=True)
+    with open(os.path.join(server_data, "payload.json"), "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"server/data/payload.json {len(js)/1024:.0f} KB")
 
     # 自包含单文件版：把 data.js 内联进 index.html
     index = os.path.join(OUT, "index.html")

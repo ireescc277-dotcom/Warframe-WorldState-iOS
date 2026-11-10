@@ -137,3 +137,35 @@ C:\WarframeWorldState\
 - **本地打开调试**：
   - Windows 环境已生成完整工程结构，可通过 VS Code 或 Git 维护。
   - macOS 环境下执行 `xcodegen generate` 即可生成 `WarframeWatch.xcodeproj` 直接真机调试。
+
+---
+
+## 伤害计算（Web，前后端分离）
+
+线上地址：<https://data.ireescc.com/dps/>
+
+前一版 `web/dps/` 是把数据和公式全塞进一个 HTML 的单文件版（仍然可用，离线双击即开）。
+现在拆成三层，公式只有一份：
+
+| 层 | 位置 | 干什么 |
+| --- | --- | --- |
+| 数据 | `scripts/build_dpsapp.py` → `server/data/payload.json` | 读 DE 导出 + 本机 lastData，产出武器/mod/敌人/灵化/紫卡 |
+| 计算 | `server/engine.js` | 纯函数内核，服务端和页面共用；`scripts/dps_parity.js` 逐值对拍 |
+| 接口 | `server/api.js` | Node 24，127.0.0.1:8793，另兼静态文件 |
+| 前端 | `web/app/` | 只做界面与状态，所有数字走 `./api/*` |
+
+接口：`/api/meta`、`/api/weapon?uid=`、`/api/mods?cat=`、`/api/calc`（POST）、`/api/rank`（POST）、`/api/health`。
+
+```bash
+python scripts/build_dpsapp.py                      # 重建数据（同时写 data.js 和 payload.json）
+node server/api.js                                  # 本地起服务 → http://127.0.0.1:8793/
+node scripts/dps_api_test.js http://127.0.0.1:8793  # 接口自检
+node scripts/dps_ui_check.js http://127.0.0.1:8793/ # 无头浏览器量布局、点交互、截图
+
+WF_VPS_HOST=... WF_VPS_PASS=... python scripts/wf_deploy_dps.py
+WF_VPS_HOST=... WF_VPS_PASS=... python scripts/wf_deploy_dps.py --payload-only   # 只换数据
+```
+
+服务端 `/srv/wf-dps/{server,server/data,web/app}`，systemd 单元 `wf-dps.service`，
+nginx 只加一条 `location /dps/` 反代到 8793（`/etc/nginx/snippets/wf-dps.conf`）。
+payload 换了不用重启：api.js 按文件 mtime 自动重载。

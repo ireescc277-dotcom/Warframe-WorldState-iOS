@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>Warframe 伤害计算</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-pane="b">
+
+<header>
+  <div class="brand">WARFRAME <b>伤害计算</b><span id="buildinfo"></span></div>
+  <div class="sp"></div>
+  <div class="seg" id="seg-status">
+    <button data-v="1" class="on">含状态</button>
+    <button data-v="0">仅直伤</button>
+  </div>
+  <div class="seg" id="seg-steel">
+    <button data-v="0" class="on">普通</button>
+    <button data-v="1">钢铁 +100</button>
+  </div>
+  <button class="hbtn" id="btn-rank">排名</button>
+  <button class="hbtn" id="btn-riven">紫卡</button>
+  <button class="hbtn" id="btn-note">口径</button>
+</header>
+
+<main>
+  <aside class="col" id="col-w">
+    <div class="colhd">
+      <span id="wtitle">武器</span>
+      <span class="sp"></span>
+      <span class="chip" id="wcount">—</span>
+    </div>
+    <div class="search"><input id="wsearch" placeholder="搜索武器…" autocomplete="off" spellcheck="false"></div>
+    <div class="list" id="wlist"></div>
+  </aside>
+
+  <section class="col" id="col-b">
+    <div class="bwrap" id="bwrap"><div class="empty">加载中…</div></div>
+  </section>
+
+  <aside class="col" id="col-t">
+    <div class="colhd"><span>目标</span><span class="sp"></span><span class="chip" id="ecount">—</span></div>
+    <div class="tgtlevel">
+      <div class="row">
+        <span class="lb">等级</span>
+        <input type="range" id="lvl-range" min="1" max="200" value="100">
+        <input type="number" id="lvl-num" class="num" min="1" max="9999" value="100">
+      </div>
+      <div class="estat" id="estat"></div>
+    </div>
+    <div class="extq">
+      <div class="exh">外部条件<span>不计入武器本体</span></div>
+      <div class="row"><span class="lb2">病毒层数</span>
+        <input type="range" id="x-vir-r" min="0" max="10" value="0">
+        <input type="number" id="x-vir" class="num" min="0" max="10" value="0"></div>
+      <div class="row"><span class="lb2">剥甲</span>
+        <input type="range" id="x-arm-r" min="0" max="100" value="0">
+        <input type="number" id="x-arm" class="num" min="0" max="100" value="0"><span class="pc">%</span></div>
+      <div class="row"><span class="lb2">时间窗口</span>
+        <input type="range" id="x-win-r" min="3" max="60" value="10">
+        <input type="number" id="x-win" class="num" min="3" max="60" value="10"><span class="pc">秒</span></div>
+      <div class="row"><span class="lb2">伤害加成</span>
+        <input type="range" id="x-buf-r" min="0" max="500" value="0">
+        <input type="number" id="x-buf" class="num" min="0" max="500" value="0"><span class="pc">%</span></div>
+      <div class="row"><span class="lb2">暴击加成</span>
+        <input type="range" id="x-cc-r" min="0" max="200" value="0">
+        <input type="number" id="x-cc" class="num" min="0" max="200" value="0"><span class="pc">%</span></div>
+      <div class="row chk">
+        <label><input type="checkbox" id="x-hd"> 爆头 ×2</label>
+        <label><input type="checkbox" id="x-crit" checked> 计入暴击</label>
+      </div>
+      <div class="hint">伤害加成对应 Roar / Eclipse / Xata's Whisper；暴击加成对应 Covenant / Wrathful Advance。</div>
+    </div>
+    <div class="facres" id="facres"></div>
+    <div class="search"><input id="esearch" placeholder="搜索敌人…" autocomplete="off" spellcheck="false"></div>
+    <div class="fchips" id="fchips"></div>
+    <div class="list" id="elist"></div>
+  </aside>
+</main>
+
+<footer>
+  <div class="fbox">
+    <div class="lb">直伤 BURST · 不计状态</div>
+    <div class="big" id="r-burst">—</div>
+    <div class="cmp" id="r-burst-cmp"></div>
+  </div>
+  <div class="fbox">
+    <div class="lb" id="r-dps-lb">含状态 · 10 秒实战</div>
+    <div class="big s" id="r-dps">—</div>
+    <div class="cmp" id="r-dps-cmp"></div>
+  </div>
+  <div class="fbox">
+    <div class="lb">击杀时间 TTK</div>
+    <div class="big s" id="r-ttk">—</div>
+    <div class="cmp" id="r-ttk-cmp"></div>
+  </div>
+  <div id="brk"></div>
+</footer>
+
+<div id="tabbar">
+  <button data-pane="w">武器</button>
+  <button data-pane="b" class="on">配卡</button>
+  <button data-pane="t">目标</button>
+</div>
+
+<div id="modal">
+  <div class="mbox">
+    <div class="mhd">
+      <input id="m-search" placeholder="搜索…" autocomplete="off" spellcheck="false">
+      <span class="mtitle" id="m-title" style="display:none"></span>
+      <button class="x" id="m-close">关闭</button>
+    </div>
+    <div class="mlist" id="m-list"></div>
+    <div class="mfoot" id="m-foot"></div>
+  </div>
+</div>
+
+<div id="banner"></div>
+<div id="busy"></div>
+<script src="app.js"></script>
+</body>
+</html>

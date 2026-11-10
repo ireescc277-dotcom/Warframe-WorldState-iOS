@@ -37,3 +37,6 @@ WarframeWatch/Resources/ArbSchedule.json
 
 # 本机凭据（VPS 密码、发布 token），只在跑监听脚本的那台机器上
 .env.local
+
+# 计算器数据产物：由 scripts/build_dpsapp.py 生成，含本机配卡，不进仓库
+server/data/payload.json
