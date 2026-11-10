@@ -62,8 +62,10 @@ public struct SetDetailView: View {
 
     private var statusLine: String {
         if item.isOwned {
+            // 「已成套」会被读成「散件齐全」，而它真正的意思是这件装备已经造出来了。
+            // 造出来之后散件当然可能是缺的，于是两句话互相矛盾。
             let spare = item.parts.reduce(0) { $0 + $1.n }
-            return "\(item.cat) · 已成套 · 手上还有 \(spare) 件散件"
+            return spare > 0 ? "\(item.cat) · 已制成 · 散件余 \(spare) 件" : "\(item.cat) · 已制成"
         }
         if item.isReady { return "\(item.cat) · 部件齐全，还没造" }
         return "\(item.cat) · 缺 \(item.missing) 件：\(missingLabels)"

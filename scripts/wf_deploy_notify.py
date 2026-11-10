@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 
@@ -54,9 +55,10 @@ WATCH_TEMPLATE = """{
   "catchUpSeconds": 3600,
   "channels": {
     "bark": {
-      "key": "",
+      "key": "__BARK_KEY__",
       "server": "https://api.day.app",
       "level": "timeSensitive",
+      "ttl": 3600,
       "group": "warframe"
     },
     "ntfy": {
@@ -105,6 +107,7 @@ def load_env() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--restart-only", action="store_true")
+    parser.add_argument("--bark-key", help="写进 watch.json 的 Bark 设备 key，顺便验证一次")
     args = parser.parse_args()
 
     load_env()
@@ -135,8 +138,24 @@ def main() -> int:
                 print("· watch.json 已存在，保留")
             except OSError:
                 with sftp.file("/opt/wf-monitor/watch.json", "w") as fh:
-                    fh.write(WATCH_TEMPLATE)
-                print("· 写入 watch.json 模板（需要填推送 key）")
+                    fh.write(WATCH_TEMPLATE.replace("__BARK_KEY__", args.bark_key or ""))
+                print("· 写入 watch.json 模板")
+
+        if args.bark_key:
+            # 只改 bark 这一段，paths / ntfy / catchUpSeconds 原样保留
+            with sftp.file("/opt/wf-monitor/watch.json", "r") as fh:
+                config = json.loads(fh.read().decode("utf-8") or "{}")
+            bark = config.setdefault("channels", {}).setdefault("bark", {})
+            bark.update({
+                "key": args.bark_key,
+                "server": bark.get("server") or "https://api.day.app",
+                "level": bark.get("level") or "timeSensitive",
+                "ttl": int(bark.get("ttl") or 3600),
+                "group": bark.get("group") or "warframe",
+            })
+            with sftp.file("/opt/wf-monitor/watch.json", "w") as fh:
+                fh.write(json.dumps(config, ensure_ascii=False, indent=2))
+            print("· Bark key 已写入 watch.json")
 
         # unit 先落到 /tmp 再 mv，避免 sftp 写到一半留下半个文件
         with sftp.file("/tmp/wf-notify.service", "w") as fh:

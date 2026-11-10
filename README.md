@@ -12,8 +12,8 @@ Warframe 实时世界状态监控 iOS 原生 App（SwiftUI），由原先的单�
 目前已编译打包未签名 IPA，不需要开 Xcode 即可直接安装：
 
 1. **直接下载（手机浏览器打开即可）**：
-   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.5.0.ipa`
-2. **GitHub Releases**：[v1.5.0](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.5.0)
+   - `https://data.ireescc.com/wf/app/WarframeWatch-v1.5.1.ipa`
+2. **GitHub Releases**：[v1.5.1](https://github.com/ireescc277-dotcom/Warframe-WorldState-iOS/releases/tag/v1.5.1)
 3. **安装方式**：
    - **TrollStore (巨魔)**：直接分享到 TrollStore 点击 Install，永不过期。
    - **自签 / 证书**：导入爱思助手、SideStore、AltStore 或使用自备个人证书签名安装。
@@ -88,7 +88,13 @@ python scripts/wf_watch.py            # 常驻，10 秒看一眼 lastData.dat
 python scripts/wf_watch.py --once     # 立刻同步一次
 ```
 
-文件一变就走完整条链路（解密 → 重建 → 打包数据 → 推 VPS）。AlecaFrame 每几十秒重写一次这个文件，所以脚本要求 `(mtime, size)` 连续两次采样一致才动手，避免读到写了一半的内容。价格不跟着背包变化重抓，默认 12 小时补一次缺（`--market-every 0` 关掉）。Windows 上双击 `scripts/wf_watch.cmd` 即可在后台跑，日志在 `data/watch.log`。
+文件一变就走完整条链路（解密 → 重建 → 打包数据 → 推 VPS）。AlecaFrame 每几十秒重写一次这个文件，所以脚本要求 `(mtime, size)` 连续两次采样一致才动手，避免读到写了一半的内容。**背包是 10 秒轮询、变化即同步**，与价格无关。
+
+价格单独一条线，跑在独立线程里：每 12 小时检查一次，其中每 24 小时全量重抓（835 件约 9 分钟），其余时候只补缺。刷价期间照样盯背包，不会被拖住；刷完立刻重建一次并发布。`--market-every 0` 关掉价格这条线。
+
+Windows 上不用双击：已经注册了计划任务 `WarframeWatch Sync`（登录时启动、崩了自动重启），也可以手动 `scripts/wf_watch.cmd`，日志在 `data/watch.log`。
+
+> App 资产页顶部显示的「背包 MM-dd HH:mm」是游戏自己写的 `LastInventorySync`，不是同步时间。人不进游戏，这个时间就不会动；数据本身仍是每次变化都推。
 
 凭据放 `.env.local`（已 gitignore）：
 

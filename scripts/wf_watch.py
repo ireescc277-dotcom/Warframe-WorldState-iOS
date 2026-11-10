@@ -33,6 +33,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -101,8 +102,11 @@ def fingerprint(path: str) -> tuple[int, int]:
 def run(script: str, args: list[str] | None = None) -> bool:
     cmd = [sys.executable, os.path.join(SCRIPTS, script), *(args or [])]
     started = time.time()
+    # Windows 子进程默认按 GBK 往管道里写，这里强制它说 UTF-8；
+    # 否则日志里的中文全是 ????。
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
-                          errors="replace")
+                          errors="replace", env=env)
     tail = (proc.stdout or "").strip().splitlines()[-1:] or ["(无输出)"]
     if proc.returncode != 0:
         err = (proc.stderr or "").strip().splitlines()[-2:]
@@ -159,34 +163,25 @@ def sync(dat: str, publish: bool) -> bool:
     return True
 
 
-def maybe_market(state: dict) -> bool:
-    """价格单独一条低频线。
+def market_due(state: dict) -> tuple[bool, bool] | None:
+    """该不该刷价；返回 (该刷, 是否全量)，不该刷返回 None。
 
-    以前只补缺，等于新装备有价、老装备的价格永远停在第一次抓到的那天。
-    现在改成两档：每天全量重抓一次（835 件约 8 分钟），中间每 12 小时只补缺。
-    全量期间轮询会停一会儿，但背包文件不变，回来补扫就是。
+    只看时间，不动 state —— 真正刷完由调用方写回去。这样刷价可以放到
+    独立线程里跑，主线程照样盯背包文件。
     """
     every = int(state.get("marketEvery") or 0)
     if every <= 0:
-        return False
+        return None
     now = time.time()
-    last = float(state.get("marketTs") or 0)
-    if now - last < every * 3600:
-        return False
-
+    if now - float(state.get("marketTs") or 0) < every * 3600:
+        return None
     refresh = float(state.get("marketRefreshHours") or 24) * 3600
-    full_due = now - float(state.get("marketFull") or 0) >= refresh
-    if full_due:
-        log("全量刷价（835 件，约 8 分钟）")
-        if not run("wf_market.py", ["sync"]):
-            return False
-        state["marketFull"] = now
-    else:
-        log("补缺价")
-        if not run("wf_market.py", ["sync", "--missing"]):
-            return False
-    state["marketTs"] = now
-    return True
+    return True, (now - float(state.get("marketFull") or 0) >= refresh)
+
+
+def run_market(full: bool) -> bool:
+    log("全量刷价（835 件，约 8 分钟）" if full else "补缺价")
+    return run("wf_market.py", ["sync"] if full else ["sync", "--missing"])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -220,7 +215,12 @@ def main(argv: list[str] | None = None) -> int:
         fp = fingerprint(args.dat)
         state.update(datTs=fp[0], datSize=fp[1])
         # 先刷价再构建：反过来的话新价格进不了 InventoryData.json。
-        maybe_market(state)
+        due = market_due(state)
+        if due and run_market(due[1]):
+            now = time.time()
+            state["marketTs"] = now
+            if due[1]:
+                state["marketFull"] = now
         ok = sync(args.dat, not args.no_publish)
         write_state(state)
         return 0 if ok else 1
@@ -235,20 +235,53 @@ def main(argv: list[str] | None = None) -> int:
             fp = fingerprint(args.dat)
             last_seen = fp
             state.update(datTs=fp[0], datSize=fp[1])
-    maybe_market(state)
-    write_state(state)
+    # 刷价动辄十几分钟，放在主循环里会把「背包一变就同步」拖成十几分钟后。
+    # 所以扔进线程，主线程只负责盯文件；刷完再回来重建一次发布。
+    state_lock = threading.Lock()
+    market_running = threading.Event()
+    market_ready = threading.Event()
+
+    def save_state() -> None:
+        with state_lock:
+            write_state(state)
+
+    def refresh_market() -> None:
+        try:
+            due = market_due(state)
+            if not due or not run_market(due[1]):
+                return
+            now = time.time()
+            with state_lock:
+                state["marketTs"] = now
+                if due[1]:
+                    state["marketFull"] = now
+            market_ready.set()
+        finally:
+            market_running.clear()
+
+    def kick_market() -> None:
+        if market_running.is_set():
+            return
+        market_running.set()
+        threading.Thread(target=refresh_market, daemon=True).start()
+
+    kick_market()
+    save_state()
 
     pending: tuple[int, int] | None = None       # 上一次采样，用于判断是否稳定
     try:
         while True:
             time.sleep(args.interval)
-            # 价格有更新就跟一次完整发布，否则新价要等下次背包变化才上线。
-            if maybe_market(state):
+            # 价格刷完了：趁现在重建一次，否则新价要等下次背包变化才上线。
+            if market_ready.is_set() and not market_running.is_set():
+                market_ready.clear()
+                log("价格已更新，重建并发布")
                 if sync(args.dat, not args.no_publish):
                     fp = fingerprint(args.dat)
                     last_seen = fp
-                    state.update(datTs=fp[0], datSize=fp[1])
-                write_state(state)
+                    with state_lock:
+                        state.update(datTs=fp[0], datSize=fp[1])
+                save_state()
             try:
                 fp = fingerprint(args.dat)
             except FileNotFoundError:
@@ -264,9 +297,10 @@ def main(argv: list[str] | None = None) -> int:
             log(f"检测到更新 size={fp[1]}，开始同步")
             if sync(args.dat, not args.no_publish):
                 last_seen = fp
-                state.update(datTs=fp[0], datSize=fp[1])
-                maybe_market(state)
-                write_state(state)
+                with state_lock:
+                    state.update(datTs=fp[0], datSize=fp[1])
+                kick_market()
+                save_state()
             else:
                 log("同步失败，等下次文件变化再试")
     except KeyboardInterrupt:

@@ -163,24 +163,37 @@ def describe(row, nodes: dict) -> tuple[str, str]:
 
 
 def push_bark(cfg: dict, title: str, body: str) -> bool:
+    """Bark：POST /push 走 JSON。
+
+    早先拼的是 `/key/标题/正文` 的路径式接口，中文标题一长就撞 URL 长度上限，
+    而且 `call=1` 会一直响铃，不适合游戏提醒。改成 JSON 后正文原样过去，
+    ttl 让过期的裂隙通知自己消失，不堆在通知中心里。
+    """
     key = (cfg.get("key") or "").strip()
     if not key:
         return False
     server = (cfg.get("server") or "https://api.day.app").rstrip("/")
-    level = cfg.get("level") or "timeSensitive"
-    group = cfg.get("group") or "warframe"
-    url = (
-        f"{server}/{urllib.parse.quote(key)}/"
-        f"{urllib.parse.quote(title)}/{urllib.parse.quote(body)}"
-        f"?group={urllib.parse.quote(group)}&level={urllib.parse.quote(level)}"
-        "&call=1"
+    payload = {
+        "device_key": key,
+        "title": title,
+        "body": body,
+        "group": cfg.get("group") or "warframe",
+        "level": cfg.get("level") or "timeSensitive",
+        "ttl": int(cfg.get("ttl") or 3600),
+        "isArchive": 1,
+    }
+    if cfg.get("icon"):
+        payload["icon"] = cfg["icon"]
+    req = urllib.request.Request(
+        server + "/push",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json; charset=utf-8", "User-Agent": USER_AGENT},
     )
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=12) as resp:
-            payload = json.loads(resp.read().decode("utf-8") or "{}")
-        if payload.get("code") not in (200, None):
-            log(f"× Bark 拒绝：{payload.get('message')}")
+            result = json.loads(resp.read().decode("utf-8") or "{}")
+        if result.get("code") not in (200, None):
+            log(f"× Bark 拒绝：{result.get('message')}")
             return False
         return True
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:

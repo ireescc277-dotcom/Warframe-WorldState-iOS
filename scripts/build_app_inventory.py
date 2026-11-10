@@ -331,7 +331,7 @@ def main() -> int:
     size = os.path.getsize(OUT)
 
     t = data["totals"]
-    print(f"套装 {t['setsAll']}（已成套 {t['setsOwned']} / 可制造 {t['setsReady']}）")
+    print(f"套装 {t['setsAll']}（已制成 {t['setsOwned']} / 可制造 {t['setsReady']}）")
     print(f"散件可变现 {t['loosePlat']} p · {t['looseDucats']} Ducats")
     print(f"遗物 {t['relicKinds']} 代号 {t['relicUnits']} 个 · Aya {len(data['aya']['items'])} 项")
     print(f"-> {OUT}  {size//1024} KB")

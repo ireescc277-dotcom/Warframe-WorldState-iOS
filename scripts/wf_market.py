@@ -307,8 +307,12 @@ def cmd_sync(args) -> int:
     sys.stderr.write("\r" + " " * 30 + "\r")
     doc = {"ts": _now(), "source": "api.warframe.market/v2", "items": prices}
     os.makedirs(MARKET_DIR, exist_ok=True)
-    with open(PRICES_PATH, "w", encoding="utf-8") as fh:
+    # 原子替换：刷价在独立线程里跑，主线程随时可能来读这个文件，
+    # 半截 JSON 会让 build_app_inventory 直接崩。
+    tmp = PRICES_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, PRICES_PATH)
 
     errored = sum(1 for v in prices.values() if v.get("error"))
     print(f"{len(prices)} 件有价（失败 {errored}）  "
@@ -371,7 +375,7 @@ def cmd_report(args) -> int:
     for r in worth[:12]:
         print(f"  {r['name']:22s} {r['status']:7s} 余件 {r['loose']:5d} p")
 
-    print("\n拆卖 vs 整卖（已成套，摘要有套价的）：")
+    print("\n拆卖 vs 整卖（已制成，摘要有套价的）：")
     cmp_rows = [r for r in rows if r["status"] == "owned" and r["set"] and r["parts"]]
     for r in sorted(cmp_rows, key=lambda r: -(r["parts"] - r["set"]))[:10]:
         diff = r["parts"] - r["set"]

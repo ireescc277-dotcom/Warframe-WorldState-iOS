@@ -127,7 +127,7 @@ public struct AssetsView: View {
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
                 bigNumber(AssetFormat.grouped(t.looseDucats), unit: "", label: "可换 Ducats")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已成套")
+                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已制成")
             }
             .padding(.vertical, 16)
 
@@ -285,7 +285,7 @@ public struct AssetsView: View {
         case .loose:
             rows.sort { ($0.loose, $0.setPrice) > ($1.loose, $1.setPrice) }
         case .missing:
-            // 缺件少的在前；已成套（缺 0）沉到底，避免淹没缺口
+            // 缺件少的在前；已制成（没有缺口可补）沉到底
             rows.sort {
                 let lhs = $0.missing == 0 ? Int.max : $0.missing
                 let rhs = $1.missing == 0 ? Int.max : $1.missing
@@ -365,7 +365,7 @@ public struct AssetsView: View {
     private func subtitle(_ entry: PrimeSet) -> String {
         var bits = [entry.cat]
         if entry.isOwned {
-            bits.append("已成套")
+            bits.append("已制成")
             let spare = entry.parts.reduce(0) { $0 + $1.n }
             if spare > 0 { bits.append("余 \(spare) 件") }
         } else if entry.isReady {
