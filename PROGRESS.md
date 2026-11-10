@@ -48,6 +48,8 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
 - [x] 全局选项（强度 / 爆头 / 潜行 / 病毒 / 牛吼 / 丑女 / 消化 / 毒鞭 / 献身 / 剥甲 / 状态计数 / 马杜莱 / 重击 / 连击）
 - [x] 结果四层（生命 / 护甲 / 护盾 / 过盾）+ TTK，3 段攻击各自独立
 - [x] 单次计算 0.1s（缓存命中后），首次加载约 3MB 资源
+- [x] **iOS App**：武器页（666 把，带图标 / 中文名 / 分类）→ 点一把进计算器并预填；
+      也有「空计算器」直接进。周期页移到「更多」，腾出 tab 位置
 
 ## 待办（按对「能不能用」的影响排序）
 
@@ -59,15 +61,23 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
 | 4 | 结果分区呈现（四层分开，不再挤在表格行） | 可读性 | 未开始 |
 | 5 | TOP20 排行 / 多周期平均 | 站点有，用于横向比较 | 未开始 |
 | 6 | 近战重击起始连击数联动 | 部分近战配卡结果偏差 | 未开始 |
-| 7 | iOS 壳（WKWebView + 本地资源） | 见下 | 未开始 |
 
 ## 载体路线
 
 | 形态 | 代价 | 结论 |
 |---|---|---|
-| 静态网页 | 已完成 | 就是现在这个 |
-| PWA（加主屏 + Service Worker） | 低 | 离线可用，iOS/安卓/桌面通吃 |
-| iOS App（WKWebView 壳 + 本地资源） | 已有 CI 出 ipa，加壳即可 | 内核不用重写，Swift 只做容器 |
+| 静态网页 | 已完成 | `data.ireescc.com/dps/` |
+| iOS App | 已完成 | 武器页 + 内嵌计算器，CI 出未签名 ipa |
+| PWA（加主屏 + Service Worker） | 低 | 还没做；iOS 已走 App，优先级下降 |
+
+### iOS 上踩过的两个坑
+
+1. **`fetch()` 只认 http/https**。用 `wfapp://` 自定义 scheme 加载页面时，页面里的
+   数据请求全被拒，内核永远起不来。现在 App 内起一个 `127.0.0.1` 上的极简静态服务
+   （NWListener，Connection: close），和线上 nginx 那条路完全一致。
+2. **ATS 默认拦明文 http**。`project.yml` 里的 `NSAppTransportSecurity` 不会进最终
+   plist（用的是 `GENERATE_INFOPLIST_FILE`），必须在 CI 里用 PlistBuddy 补上，
+   否则 `http://127.0.0.1` 一样被拦，页面停在「加载计算内核」。
 
 Swift 重写算法是唯一确定错误的方向：448KB 的内核里有四套抗性、状态时间轴、
 mod 特例表和逐发随机队列，重写必然与站点不一致。
