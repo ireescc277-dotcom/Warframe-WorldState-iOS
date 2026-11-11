@@ -56,6 +56,8 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
       `wf.wmem` 每把武器上次的 mod / 紫卡 / 架势（从武器页填装时带回来），
       `wf.loadouts` 手动命名的存档（可存可载入可删，删除要连点两下）。
       12 项断言全过：`node scripts/dps_store_check.js`
+- [x] 武器页性能：666 行改 `LazyVStack`，缩略图用 ImageIO 解到显示尺寸并进
+      `NSCache`（原来 666 张 220×220 全解 = 120MB 量级，主线程一次性做完）
 
 ## 待办（按对「能不能用」的影响排序）
 
