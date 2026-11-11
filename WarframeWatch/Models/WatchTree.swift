@@ -850,3 +850,46 @@ public final class WatchTreeIndex {
         return raw < 0 ? raw + length : raw
     }
 }
+
+// MARK: - Server Push Alert Level
+
+/// 服务器那条推送（裂隙 / 入侵 / 虚空风暴）的打断强度。
+///
+/// 这四个值原样传给 Bark 的 `level`，对应 APNs 的四档中断级别。它管的是
+/// 「不知道什么时候会冒出来」的事件；仲裁和周期由本地排程负责，和这里无关。
+public enum WatchAlertLevel: String, CaseIterable, Identifiable {
+    case passive
+    case active
+    case timeSensitive
+    case critical
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .passive: return "静默"
+        case .active: return "默认"
+        case .timeSensitive: return "时效性"
+        case .critical: return "关键"
+        }
+    }
+
+    public var detail: String {
+        switch self {
+        case .passive: return "只进通知中心，不亮屏也不响"
+        case .active: return "亮屏、横幅、响一声"
+        case .timeSensitive: return "专注模式也照常弹，静音位仍然不响"
+        case .critical: return "绕过静音开关强制响铃，需要 Bark 里打开「重要警告」"
+        }
+    }
+
+    /// 用两三个字说清差别，放不下整段说明时用。
+    public var short: String {
+        switch self {
+        case .passive: return "不响"
+        case .active: return "响一声"
+        case .timeSensitive: return "穿专注"
+        case .critical: return "绕静音"
+        }
+    }
+}

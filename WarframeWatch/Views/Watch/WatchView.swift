@@ -29,6 +29,7 @@ public struct WatchView: View {
                         // 空选择时也留着：整行藏起来的话，新用户永远不知道
                         // 有这个开关，也就永远不会打开它。
                         alertRow
+                        pushLevelRow
                         hitSection
                         if !vm.watchSelection.isEmpty {
                             targetSection
@@ -255,6 +256,59 @@ public struct WatchView: View {
 
     private var icon: String {
         vm.notificationsEnabled ? "bell.fill" : "bell"
+    }
+
+    // MARK: - Push Level
+
+    /// 裂隙 / 入侵 / 虚空风暴的强度。
+    ///
+    /// 和上面那个开关是两条通道，别混：上面那条是本地排程，只排「时间能提前
+    /// 算出来」的（仲裁、周期），关掉 App 也照响；这一条走服务器 → Bark，
+    /// 谁也不知道下一个裂隙什么时候刷。两边的强度也只能各管各的。
+    private var pushLevelRow: some View {
+        let current = WatchAlertLevel(rawValue: vm.alertLevel) ?? .timeSensitive
+        return WFSurface {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: WFUI.s3) {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(WFTheme.cyan)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("推送强度")
+                            .font(.wfTitle)
+                            .foregroundColor(WFTheme.textPrimary)
+                        Text(current.detail)
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                HStack(spacing: 6) {
+                    ForEach(WatchAlertLevel.allCases) { level in
+                        Button {
+                            vm.setAlertLevel(level)
+                        } label: {
+                            Text(level.title)
+                                .font(.system(size: 12, weight: level == current ? .semibold : .regular))
+                                .foregroundColor(level == current ? WFTheme.bgPrimary : WFTheme.textSecondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 7)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(level == current ? WFTheme.gold : WFTheme.panel)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(14)
+        }
     }
 
     private var hint: String {

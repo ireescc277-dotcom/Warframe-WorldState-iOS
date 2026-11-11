@@ -29,6 +29,9 @@ MAX_PATH_LEN = 120
 # App 能选的根只有这几个，别的字符串说明是脏数据或者有人在试探。
 ROOTS = ("fis|", "arb|", "inv|", "storm|", "cycle|")
 
+# 推送强度直通 Bark 的 level，也就是 APNs 的四档中断级别，别的值不接受。
+LEVELS = ("passive", "active", "timeSensitive", "critical")
+
 
 def load_config() -> dict:
     try:
@@ -109,6 +112,16 @@ class Handler(BaseHTTPRequestHandler):
         paths = clean_paths(doc.get("paths") if isinstance(doc, dict) else None)
         config = load_config()
         config["paths"] = paths
+
+        # 强度是可选的：老版本 App 只发 paths，这时保留服务器上原来的值。
+        level = doc.get("alertLevel")
+        applied = None
+        if isinstance(level, str) and level in LEVELS:
+            channels = config.get("channels")
+            if isinstance(channels, dict) and isinstance(channels.get("bark"), dict):
+                channels["bark"]["level"] = level
+                applied = level
+
         config["updatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         config["updatedFrom"] = "app"
         try:
@@ -116,7 +129,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as exc:
             self._reply(500, {"ok": False, "error": str(exc)})
             return
-        self._reply(200, {"ok": True, "paths": len(paths)})
+        self._reply(200, {"ok": True, "paths": len(paths), "alertLevel": applied})
 
     def log_message(self, fmt: str, *args) -> None:
         stamp = datetime.now().strftime("%m-%d %H:%M:%S")

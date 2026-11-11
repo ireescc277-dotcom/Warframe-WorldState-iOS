@@ -52,6 +52,21 @@ public final class StorageService {
     public func saveWatchPaths(_ paths: Set<String>) {
         UserDefaults.standard.set(Array(paths), forKey: watchPathsKey)
     }
+
+    // MARK: - Server Push Alert Level
+    //
+    // 服务器那条推送（裂隙 / 入侵 / 风暴）走 Bark，强度由这里决定。
+    // 和本地通知开关不是一回事：那个管仲裁和周期，这个管"不知道什么时候
+    // 会冒出来"的东西。
+    private let alertLevelKey = "wf_alert_level_v1"
+
+    public func loadAlertLevel() -> String {
+        UserDefaults.standard.string(forKey: alertLevelKey) ?? "timeSensitive"
+    }
+
+    public func saveAlertLevel(_ level: String) {
+        UserDefaults.standard.set(level, forKey: alertLevelKey)
+    }
     
     // MARK: - Event History Records
     private let eventHistoryKey = "wf_ws_event_history_v1"

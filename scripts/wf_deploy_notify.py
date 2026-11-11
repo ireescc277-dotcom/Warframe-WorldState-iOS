@@ -48,11 +48,6 @@ WantedBy=multi-user.target
 WATCH_TEMPLATE = """{
   "paths": [],
   "catchUpSeconds": 3600,
-  "rules": {
-    "batchSeconds": 180,
-    "minRemainingRatio": 0.3,
-    "quietHours": {"start": 1, "end": 8, "utcOffset": 8, "mode": "passive"}
-  },
   "channels": {
     "bark": {
       "key": "__BARK_KEY__",

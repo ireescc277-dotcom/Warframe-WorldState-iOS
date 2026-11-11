@@ -12,6 +12,7 @@ public final class WatchSync {
     public static let shared = WatchSync()
 
     private var lastSent: Set<String>?
+    private var lastLevel: String?
     private var pending: Task<Void, Never>?
 
     private init() {}
@@ -23,16 +24,17 @@ public final class WatchSync {
         return base.deletingLastPathComponent().appendingPathComponent("watch")
     }
 
-    public func schedule(_ paths: Set<String>) {
+    public func schedule(_ paths: Set<String>, level: String) {
         guard let endpoint = Self.endpoint else { return }
-        guard paths != lastSent else { return }
+        guard paths != lastSent || level != lastLevel else { return }
         pending?.cancel()
         pending = Task { [weak self] in
             // 连着勾好几项时不要每次都发一轮。
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else { return }
-            if await Self.upload(paths, to: endpoint) {
+            if await Self.upload(paths, level: level, to: endpoint) {
                 self?.lastSent = paths
+                self?.lastLevel = level
             }
         }
     }
@@ -42,31 +44,33 @@ public final class WatchSync {
     /// 只在「选择变了」时上传不够：换机、重装、某次上传失败之后，服务器会一直
     /// 按旧的那份推，而 App 里看不到任何异样——表现出来就是「推的都是我没勾的，
     /// 我勾的从来没响过」。这里每次都把当前选择对一遍，服务器一致就只比较不发包。
-    public func syncNow(_ paths: Set<String>) {
+    public func syncNow(_ paths: Set<String>, level: String) {
         guard let endpoint = Self.endpoint else { return }
-        guard paths != lastSent else { return }
+        guard paths != lastSent || level != lastLevel else { return }
         pending?.cancel()
         pending = Task { [weak self] in
-            if await Self.upload(paths, to: endpoint) {
+            if await Self.upload(paths, level: level, to: endpoint) {
                 self?.lastSent = paths
+                self?.lastLevel = level
                 return
             }
             // 失败重试一次，还不行就等下个刷新点。
             try? await Task.sleep(nanoseconds: 20_000_000_000)
             guard !Task.isCancelled else { return }
-            if await Self.upload(paths, to: endpoint) {
+            if await Self.upload(paths, level: level, to: endpoint) {
                 self?.lastSent = paths
+                self?.lastLevel = level
             }
         }
     }
 
-    private static func upload(_ paths: Set<String>, to url: URL) async -> Bool {
+    private static func upload(_ paths: Set<String>, level: String, to url: URL) async -> Bool {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 12
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let payload: [String: Any] = ["paths": paths.sorted()]
+        let payload: [String: Any] = ["paths": paths.sorted(), "alertLevel": level]
         guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return false }
         request.httpBody = body
         do {

@@ -21,18 +21,17 @@ watch.json 里的 paths 与 App 蹲守树是同一套写法（见 WatchTree.swif
 
 前缀匹配，所以写得越短范围越大；路径之间是并集。
 
-推送的粒度是「一次轮换」而不是「一个场次」。一次轮换会同时刷出 2–3 个裂隙，
-逐个推等于同一句话连说三遍，所以同一批（first_seen 相差不到 batchSeconds）
-合并成一条，正文列出这批的节点。`rules` 里可以调：
+**这是纯过滤器：命中一条推一条，没命中一条都不推。** 不做合并、不做静默时段、
+不做配额——收多少条完全由勾选范围决定。嫌多就把范围勾细，不要在这层想办法。
 
-    "rules": {
-      "batchSeconds": 180,                  // 同一批的时间窗
-      "minRemainingRatio": 0.3,             // 只剩三成时间的场次不推（停机补捉）
-      "quietHours": {"start": 1, "end": 8,  // 本地时间，服务器跑在 UTC
-                     "utcOffset": 8, "mode": "passive"}
-    }
+`channels.bark.level` 决定强度，直通 APNs 的中断级别：
 
-`mode` 取 `passive`（照常进通知中心，不响铃）、`drop`（整段丢弃）或 `off`。
+    passive        只进通知中心
+    active         默认
+    timeSensitive  穿透专注模式，但不绕静音开关
+    critical       绕静音与专注，需要 Bark App 里打开"重要警告"
+
+`channels.bark.ttl` 是通知的存活时间（秒），裂隙结束后从通知中心一起消失。
 """
 
 from __future__ import annotations
@@ -137,123 +136,44 @@ def _place(row, nodes: dict) -> tuple[str, str]:
     return name, planet
 
 
+def _remaining(row) -> str:
+    return fmt_left(row["ends_at"] - time.time()) if row["ends_at"] else ""
+
+
 def describe(row, nodes: dict) -> tuple[str, str]:
-    """把一行 occurrence 变成推送的标题与正文。"""
-    return describe_batch([row], nodes)
+    """一行 occurrence → 一条通知。
 
-
-def group_key(row):
-    """哪些行算「同一件事」。
-
-    裂隙按纪元 + 难度：一次轮换刷出的几个同纪元裂隙，对用户是同一件事。
-    入侵按奖励：同一项奖励刷在三个节点上，也只需要说一次。
+    一条事件一条，不按轮换合并、不按星球攒批。收多少条完全由勾选范围决定：
+    命中就推，没命中一条都不推。
     """
     kind = row["kind"]
-    if kind == "fissure":
-        return (kind, row["era"] or "", int(row["hard"] or 0))
-    if kind == "storm":
-        return (kind, row["era"] or "")
-    if kind == "invasion":
-        return (kind, row["target"] or "")
-    return (kind, row["key"])
-
-
-def _remaining(rows) -> str:
-    ends = [r["ends_at"] for r in rows if r["ends_at"]]
-    if not ends:
-        return ""
-    return fmt_left(min(ends) - time.time())
-
-
-def describe_batch(rows, nodes: dict) -> tuple[str, str]:
-    """把同一批场次写成一条通知：标题说是什么，正文按星球列节点。"""
-    rows = list(rows)
-    first = rows[0]
-    kind = first["kind"]
-    count = len(rows)
-
-    places: dict[str, list[str]] = {}
-    for row in rows:
-        name, planet = _place(row, nodes)
-        places.setdefault(planet, []).append(name)
-
-    lines: list[str] = []
-    for planet in sorted(places):
-        names = " / ".join(sorted(set(places[planet])))
-        lines.append(f"{planet} · {names}" if planet else names)
-    left = _remaining(rows)
-    if left:
-        lines.append(left)
-    body = "\n".join(lines)
+    name, planet = _place(row, nodes)
+    where = f"{planet} · {name}" if planet else name
+    left = _remaining(row)
+    body = f"{where}\n{left}" if left else where
+    task = (nodes.get(row["node_id"] or "") or {}).get("task") or ""
 
     if kind == "fissure":
-        era = ERA_ZH.get(first["era"] or "", first["era"] or "")
-        diff = "钢铁" if first["hard"] else "普通"
-        tasks = {(nodes.get(r["node_id"] or "") or {}).get("task") or "" for r in rows}
+        era = ERA_ZH.get(row["era"] or "", row["era"] or "")
+        diff = "钢铁" if row["hard"] else "普通"
         title = f"{era}裂隙 · {diff}"
-        if len(tasks) == 1 and tasks != {""}:
-            title += f" · {tasks.pop()}"
-        if count > 1:
-            title += f" · {count} 处"
+        if task:
+            title += f" · {task}"
         return title, body
 
     if kind == "invasion":
-        reward = (first["target"] or "").split("|")[-1]
-        title = f"入侵奖励：{INV_ZH.get(reward, reward)}"
-        if count > 1:
-            title += f" · {count} 处"
-        return title, body
+        reward = (row["target"] or "").split("|")[-1]
+        return f"入侵奖励：{INV_ZH.get(reward, reward)}", body
 
     if kind == "storm":
-        era = ERA_ZH.get(first["era"] or "", first["era"] or "")
-        title = f"{era}虚空风暴" + (f" · {count} 处" if count > 1 else "")
+        era = ERA_ZH.get(row["era"] or "", row["era"] or "")
+        title = f"{era}虚空风暴" + (f" · {task}" if task else "")
         return title, body
 
     if kind == "arbitration":
-        task = (nodes.get(first["node_id"] or "") or {}).get("task") or ""
         return (f"仲裁 · {task}" if task else "仲裁"), f"{body}（回填记录，非实时）"
 
-    return "Warframe 提醒", f"{body} {first['target']}"
-
-
-# MARK: - 推送规则
-
-
-def local_hour(offset: int) -> int:
-    """服务器跑在 UTC，静默时段按人的作息算，所以要换算。"""
-    return (datetime.now(timezone.utc).hour + offset) % 24
-
-
-def quiet_mode(rules: dict) -> tuple[str | None, bool]:
-    """返回 (Bark level 覆盖, 是否整条丢弃)。"""
-    window = rules.get("quietHours")
-    if not isinstance(window, dict):
-        return None, False
-    mode = (window.get("mode") or "passive").lower()
-    if mode == "off":
-        return None, False
-    start = int(window.get("start", 1))
-    end = int(window.get("end", 8))
-    if start == end:
-        return None, False
-    hour = local_hour(int(window.get("utcOffset", 8)))
-    inside = start <= hour < end if start < end else (hour >= start or hour < end)
-    if not inside:
-        return None, False
-    return ("passive" if mode == "passive" else None), mode == "drop"
-
-
-def worth_pushing(row, now: float, rules: dict) -> bool:
-    """只剩三成时间的场次不推。
-
-    这是给「服务停机后补捉」用的：重启时会把最近一小时的旧行捞出来，那些
-    多半已经过半，推到手你也来不及了。
-    """
-    ratio = float(rules.get("minRemainingRatio") or 0.3)
-    starts, ends = row["starts_at"], row["ends_at"]
-    if not (starts and ends) or ends <= starts:
-        return True
-    return (ends - now) >= (ends - starts) * ratio
+    return "Warframe 提醒", f"{where} {row['target']}"
 
 
 # MARK: - 推送通道
@@ -266,7 +186,7 @@ def push_bark(cfg: dict, title: str, body: str, level: str | None = None) -> boo
     而且 `call=1` 会一直响铃，不适合游戏提醒。改成 JSON 后正文原样过去，
     ttl 让过期的裂隙通知自己消失，不堆在通知中心里。
 
-    `level` 是覆盖值，静默时段传 `passive`：照常进通知中心，不响铃不亮屏。
+    `level` 不传就用 `channels.bark.level`，再没有就 `timeSensitive`。
     """
     key = (cfg.get("key") or "").strip()
     if not key:
@@ -413,7 +333,6 @@ def fetch_new(conn: sqlite3.Connection, cursor: int) -> list[sqlite3.Row]:
 def sweep(conn, config: dict, state: dict, nodes: dict, dry_run: bool = False) -> int:
     paths = [p for p in (config.get("paths") or []) if isinstance(p, str)]
     channels = config.get("channels") or {}
-    rules = config.get("rules") if isinstance(config.get("rules"), dict) else {}
     # 没勾任何东西就不推。以前这里若退回到一份默认 paths，推的就是别人写的
     # 偏好，用户会以为自己关注了别的东西。
     if not paths:
@@ -429,60 +348,31 @@ def sweep(conn, config: dict, state: dict, nodes: dict, dry_run: bool = False) -
     rows = fetch_new(conn, cursor)
     pushed = state.get("pushed") or {}
     highest = cursor
+    delivered = 0
 
-    matched = []
     for row in rows:
         highest = max(highest, int(row["first_seen"]))
         target = row["target"] or ""
-        path = covered(target, paths)
-        if not path:
-            continue
+        if not covered(target, paths):
+            continue          # 没勾的，一条都不推
         if row["kind"] == "arbitration":
             # 仲裁是回填的历史记录，实时性由 App 的排程通知负责，这里不重复推。
             continue
         if row["key"] in pushed:
             continue
         if row["ends_at"] and row["ends_at"] < now:
-            continue
+            continue          # 已经结束的场次，推到手也没用
         if int(row["first_seen"]) < horizon:
-            continue
-        if not worth_pushing(row, now, rules):
-            pushed[row["key"]] = now
-            continue
-        matched.append((row, path))
+            continue          # 停机期间攒下的
 
-    # 按「轮换」归并。一次轮换会同时刷出几个裂隙，逐个推等于同一句话连说
-    # 三遍——用户看到的就是「一阵一阵地来」。
-    bucket = max(30, int(rules.get("batchSeconds") or 180))
-    batches: dict[tuple, list] = {}
-    for row, path in matched:
-        key = (group_key(row), int(row["first_seen"]) // bucket)
-        batches.setdefault(key, []).append((row, path))
-
-    level, drop = quiet_mode(rules)
-    delivered = 0
-
-    for key in sorted(batches, key=lambda k: min(int(r["first_seen"]) for r, _ in batches[k])):
-        group = batches[key]
-        batch_rows = [r for r, _ in group]
-        title, body = describe_batch(batch_rows, nodes)
-
-        if drop:
-            for r, _ in group:
-                pushed[r["key"]] = now
-            log(f"· 静默时段跳过 {title} · {body.replace(chr(10), ' · ')}")
-            continue
-
+        title, body = describe(row, nodes)
         if dry_run:
-            log(f"[dry] {title} / {body.replace(chr(10), ' · ')}  ← {group[0][1]}")
-            for r, _ in group:
-                pushed[r["key"]] = now
+            log(f"[dry] {title} / {body.replace(chr(10), ' · ')}  ← {target}")
+            pushed[row["key"]] = now
             delivered += 1
             continue
-
-        if push_all(channels, title, body, batch_rows[0], level):
-            for r, _ in group:
-                pushed[r["key"]] = now
+        if push_all(channels, title, body, row):
+            pushed[row["key"]] = now
             delivered += 1
             log(f"√ {title} · {body.replace(chr(10), ' · ')}")
         else:

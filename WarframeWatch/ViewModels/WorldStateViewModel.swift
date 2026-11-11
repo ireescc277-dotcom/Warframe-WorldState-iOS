@@ -51,6 +51,9 @@ public final class WorldStateViewModel: ObservableObject {
     @Published public var notificationPermission: NotificationPermission = .notDetermined
     /// 当前排出去的计划条数，界面上要给个数，否则用户不知道有没有生效。
     @Published public var pendingAlertCount: Int = 0
+    /// 服务器那条推送的强度（Bark 的中断级别）。裂隙 / 入侵 / 风暴冒出来时
+    /// 用它，和上面那个本地通知开关是两条独立的通道。
+    @Published public var alertLevel: String = "timeSensitive"
 
     // Exhaustive watch tree
     public let watchTree: WatchTreeIndex
@@ -108,6 +111,7 @@ public final class WorldStateViewModel: ObservableObject {
         self.watchItems = storage.loadWatchItems()
         self.schedule = ArbitrationScheduleStore.localized()
         self.notificationsEnabled = storage.loadNotificationsEnabled()
+        self.alertLevel = storage.loadAlertLevel()
         if let seeded = Self.seededWatchPaths {
             // 只进内存，不写 UserDefaults：这是给 CI 截图用的取景参数，
             // 不该改掉用户自己的选择。
@@ -121,7 +125,7 @@ public final class WorldStateViewModel: ObservableObject {
         checkNotificationStatus()
         loadInitialData()
         // 服务器上的蹲守选择必须等于这台设备勾的那份，否则推的就是别人的偏好。
-        WatchSync.shared.syncNow(self.watchSelection.paths)
+        WatchSync.shared.syncNow(self.watchSelection.paths, level: self.alertLevel)
     }
     
     // MARK: - Timer for Countdowns
@@ -261,7 +265,7 @@ public final class WorldStateViewModel: ObservableObject {
                 }
             }
             refreshLiveWatchHits()
-            WatchSync.shared.syncNow(watchSelection.paths)
+            WatchSync.shared.syncNow(watchSelection.paths, level: alertLevel)
         } catch {
             let details = service.lastErrorDetails ?? error.localizedDescription
             self.errorMessage = "刷新失败: \(details)"
@@ -351,8 +355,17 @@ public final class WorldStateViewModel: ObservableObject {
         updated.toggle(id, tree: watchTree)
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
-        WatchSync.shared.schedule(updated.paths)
+        WatchSync.shared.schedule(updated.paths, level: alertLevel)
         rebuildNotifications()
+    }
+
+    /// 改推送强度。这一个动作本身就值得立刻上传——用户刚点完就想看到效果，
+    /// 不该等下一次勾选才生效。
+    public func setAlertLevel(_ level: WatchAlertLevel) {
+        guard alertLevel != level.rawValue else { return }
+        alertLevel = level.rawValue
+        storage.saveAlertLevel(level.rawValue)
+        WatchSync.shared.syncNow(watchSelection.paths, level: level.rawValue)
     }
 
     /// Adds a whole branch in one tap, used by the empty-state presets. Adding
@@ -365,7 +378,7 @@ public final class WorldStateViewModel: ObservableObject {
         }
         watchSelection = updated
         storage.saveWatchPaths(updated.paths)
-        WatchSync.shared.schedule(updated.paths)
+        WatchSync.shared.schedule(updated.paths, level: alertLevel)
         rebuildNotifications()
     }
     
