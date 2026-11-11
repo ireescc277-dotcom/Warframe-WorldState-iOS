@@ -129,3 +129,40 @@ mod 特例表和逐发随机队列，重写必然与站点不一致。
 
 构建注意：Windows 上 `swift build` 需要设 `SDKROOT`，且 `ProcessEnvironment`
 遇到 `HTTP_PROXY`/`http_proxy` 并存会 fatalError —— 统一用 `scripts/swiftw.sh`。
+
+## 通知（蹲守推送）
+
+两条通道，分工不同，不要混：
+
+| 通道 | 负责 | 可靠性 |
+|---|---|---|
+| App 本地通知 | 仲裁 / 周期 / 星标目标（时间能提前算出来） | 关掉 App 也算数，靠系统排程 |
+| VPS `wf-notify` | 裂隙 / 入侵 / 虚空风暴（冒出来才知道） | 30 秒一轮，准点；App 不开也能收到 |
+
+**服务器推的必须等于 App 勾的。** `watch.json` 的 `paths` 只有一个来源：App 上传。
+部署模板里的 `paths` 当年写了四条示例（`fis|VoidT5` 等），App 没上传时服务器就
+按那四条推——安魂裂隙只刷赤毒要塞（历史库 186 场里 183 场），于是手机上一水
+的赤毒要塞，用户自己勾的节点反而从来没响过。现在模板是空数组，且 App 每次启动
+和刷新都会 `syncNow` 对账一次，不再只在「选择变了」时才上传。
+
+**推送粒度是「一次轮换」，不是一个场次。** 一次轮换会同时刷 2–3 个裂隙，
+逐个推等于同一句话连说三遍（三天 167 场，46 次是同一分钟来 2 条）。同一批
+（`first_seen` 相差 180 秒内、同纪元同难度）合成一条，正文列节点和剩余时间。
+
+`watch.json` 的 `rules` 可调：
+
+```json
+"rules": {
+  "batchSeconds": 180,
+  "minRemainingRatio": 0.3,
+  "quietHours": {"start": 1, "end": 8, "utcOffset": 8, "mode": "passive"}
+}
+```
+
+- `batchSeconds`：同一批的时间窗
+- `minRemainingRatio`：只剩三成时间的场次不推（停机补捉的旧行）
+- `quietHours.mode`：`passive`（进通知中心不响铃）/ `drop`（整段丢弃）/ `off`
+
+App 本地那条路的坑：`postNewLiveHits` 只在 App 处于后台时发，而账本以前是先记
+再判断能不能发——前台刷新一次就把命中吃掉了，之后进后台也不补。现在改成真的
+投递之后才记账。
