@@ -2,11 +2,14 @@
   "attacks" : [
     {
       "attack" : "Grenade Impact",
-      "directDamage" : 150127.9908,
+      "directDamage" : 100085.32719999997,
       "dotDamage" : 0,
-      "dps" : 7506.39954,
+      "dps" : 5004.266359999999,
       "layers" : [
         {
+          "byType" : {
+            "corrosive" : 84166.33054619937
+          },
           "damage" : 84166.33054619937,
           "dps" : 4208.3165273099685,
           "layer" : "health",
@@ -14,6 +17,9 @@
           "ttk" : 19.466666666666665
         },
         {
+          "byType" : {
+            "corrosive" : 150127.9908
+          },
           "damage" : 150127.9908,
           "dps" : 7506.39954,
           "layer" : "armor",
@@ -27,21 +33,30 @@
       "procs" : {
         "corrosion" : 10.487999999999998
       },
+      "rawByType" : {
+        "corrosive" : 100085.32719999997
+      },
       "shots" : 24
     },
     {
       "attack" : "Poison Cloud",
-      "directDamage" : 45038.39723999999,
+      "directDamage" : 30025.598160000005,
       "dotDamage" : 0,
-      "dps" : 2251.9198619999997,
+      "dps" : 1501.2799080000002,
       "layers" : [
         {
+          "byType" : {
+            "corrosive" : 25701.43161538944
+          },
           "damage" : 25701.43161538944,
           "dps" : 1285.071580769472,
           "layer" : "health",
           "maxHP" : 83817.54358429373
         },
         {
+          "byType" : {
+            "corrosive" : 45038.39723999999
+          },
           "damage" : 45038.39723999999,
           "dps" : 2251.9198619999997,
           "layer" : "armor",
@@ -55,15 +70,21 @@
       "procs" : {
         "corrosion" : 7.866000000000001
       },
+      "rawByType" : {
+        "corrosive" : 30025.598160000005
+      },
       "shots" : 18
     },
     {
       "attack" : "Incarnon Form",
-      "directDamage" : 1171706.8051040007,
+      "directDamage" : 781137.8700693325,
       "dotDamage" : 0,
-      "dps" : 58585.34025520003,
+      "dps" : 39056.89350346663,
       "layers" : [
         {
+          "byType" : {
+            "corrosive" : 922533.4960151372
+          },
           "damage" : 922533.4960151372,
           "dps" : 46126.67480075686,
           "layer" : "health",
@@ -71,6 +92,9 @@
           "ttk" : 2.375
         },
         {
+          "byType" : {
+            "corrosive" : 1171706.8051040007
+          },
           "damage" : 1171706.8051040007,
           "dps" : 58585.34025520003,
           "layer" : "armor",
@@ -83,6 +107,9 @@
       ],
       "procs" : {
         "corrosion" : 30
+      },
+      "rawByType" : {
+        "corrosive" : 781137.8700693325
       },
       "shots" : 160
     }

@@ -64,33 +64,60 @@ public struct WeaponSimulator: Sendable {
             var layers: [LayerResult] = []
             for (layer, outcome) in layerOutcomes {
                 let hp = enemy.layerHP(layer)
-                let damage = outcome.damage[index] ?? 0
+                let vector = Self.vector(outcome.byType[index], touched: outcome.touched[index])
+                // 只在写结果时求和，顺序按固定类型表，保证逐位可复现。
+                let damage = vector.totalDamage
                 layers.append(LayerResult(layer: layer,
                                           maxHP: hp,
                                           damage: damage,
                                           dps: damage / max(options.window, 1e-9),
-                                          ttk: outcome.ttk[index] ?? nil))
+                                          byType: Self.keyed(vector),
+                                          ttk: outcome.ttk[index]))
             }
-            let raw = layerOutcomes.first(where: { $0.0 == .health })
-                .map { $0.1.raw[index] ?? 0 } ?? 0
-            let direct = layerOutcomes.first(where: { $0.0 == .health })
-                .map { $0.1.direct[index] ?? 0 } ?? 0
-            let dot = layerOutcomes.first(where: { $0.0 == .health })
-                .map { $0.1.dot[index] ?? 0 } ?? 0
-            let procs = layerOutcomes.first(where: { $0.0 == .health })
-                .map { $0.1.procs[index] ?? [:] } ?? [:]
+            let health = layerOutcomes.first(where: { $0.0 == .health })?.1
+            let rawDirect = health.map { Self.vector($0.rawDirect[index]) } ?? [:]
+            let rawDot = health.map { Self.vector($0.rawDot[index]) } ?? [:]
+            let direct = rawDirect.totalDamage
+            let dot = rawDot.totalDamage
+            var rawVector = rawDirect
+            for (type, value) in rawDot.ordered { rawVector[type, default: 0] += value }
+            let procs = health?.procs[index] ?? [:]
 
             return AttackResult(
                 attack: segments[index].name,
                 shots: Double(schedules[index].count),
-                dps: raw / max(options.window, 1e-9),
+                dps: (direct + dot) / max(options.window, 1e-9),
                 directDamage: direct,
                 dotDamage: dot,
+                rawByType: Self.keyed(rawVector),
                 layers: layers,
                 procs: procs,
                 notes: segments[index].notes
             )
         }
+    }
+
+    /// 定长数组 → `DamageType` 向量。
+    ///
+    /// `touched` 为 nil 时只收非零项；否则「出现过但被免疫成 0」的类型也保留，
+    /// 这样结果里能看出是免疫，而不是这种伤害根本不存在。
+    static func vector(_ row: [Double], touched: [Bool]? = nil) -> [DamageType: Double] {
+        var out: [DamageType: Double] = [:]
+        for (i, type) in DamageType.allCases.enumerated() where i < row.count {
+            if row[i] != 0 {
+                out[type] = row[i]
+            } else if let touched, i < touched.count, touched[i] {
+                out[type] = 0
+            }
+        }
+        return out
+    }
+
+    /// `DamageType` 向量转成可用于 JSON 的字符串键，按固定顺序写入。
+    static func keyed(_ vector: [DamageType: Double]) -> [String: Double] {
+        var out: [String: Double] = [:]
+        for (type, value) in vector.ordered { out[type.rawValue] = value }
+        return out
     }
 
     /// 一发子弹：开火时刻，以及它是否是弹匣里的最后一发。
@@ -182,30 +209,49 @@ public struct WeaponSimulator: Sendable {
 
     private struct State {
         var hp: Double
-        var acc: [Int: Double] = [:]
-        var ttk: [Int: Double?] = [:]
-        var direct: [Int: Double] = [:]
-        var dot: [Int: Double] = [:]
-        var raw: [Int: Double] = [:]
+        /// 累计有效伤害，只用来判 TTK（阈值比较与类型无关）。
+        var acc: [Double]
+        var ttk: [Double?]
+        /// 每段 × 每类型：扣完减伤之后实际造成的伤害。
+        var byType: [[Double]]
+        /// 该段是否出现过这个类型（用来把「免疫成 0」和「根本没这种伤害」区分开）。
+        var touched: [[Bool]]
+        /// 每段 × 每类型：命中直伤，扣减伤之前。
+        var rawDirect: [[Double]]
+        /// 每段 × 每类型：DOT，扣减伤之前。
+        var rawDot: [[Double]]
         var procCounts: [Int: [String: Double]] = [:]
         var dots: [DotInstance] = []
         var stacks: [ProcKind: [StackEntry]] = [:]
+
+        init(hp: Double, segmentCount: Int) {
+            let types = DamageType.count
+            self.hp = hp
+            self.acc = Array(repeating: 0, count: segmentCount)
+            self.ttk = Array<Double?>(repeating: nil, count: segmentCount)
+            self.byType = Array(repeating: Array(repeating: 0, count: types), count: segmentCount)
+            self.touched = Array(repeating: Array(repeating: false, count: types), count: segmentCount)
+            self.rawDirect = Array(repeating: Array(repeating: 0, count: types), count: segmentCount)
+            self.rawDot = Array(repeating: Array(repeating: 0, count: types), count: segmentCount)
+        }
     }
 
     private struct LayerOutcome {
-        var damage: [Int: Double] = [:]
-        var ttk: [Int: Double?] = [:]
-        var direct: [Int: Double] = [:]
-        var dot: [Int: Double] = [:]
-        var raw: [Int: Double] = [:]
-        var procs: [Int: [String: Double]] = [:]
+        /// 每段 × 每类型，已扣减伤。
+        var byType: [[Double]]
+        var touched: [[Bool]]
+        var ttk: [Double?]
+        /// 每段 × 每类型，未减免。
+        var rawDirect: [[Double]]
+        var rawDot: [[Double]]
+        var procs: [Int: [String: Double]]
     }
 
     // MARK: - 时间轴
 
     private func simulate(layer: Layer, hp: Double, schedules: [[Shot]]) -> LayerOutcome {
         let runtimes = self.runtimes
-        var state = State(hp: hp)
+        var state = State(hp: hp, segmentCount: segments.count)
         var pointers = [Int](repeating: 0, count: schedules.count)
 
         // 外部病毒层数（战甲技能 / 队友），在窗口开始时就已经挂在目标身上。
@@ -242,17 +288,12 @@ public struct WeaponSimulator: Sendable {
             }
         }
 
-        var outcome = LayerOutcome()
-        for i in segments.indices {
-            let damage = state.acc[i] ?? 0
-            outcome.damage[i] = damage
-            outcome.ttk[i] = state.ttk[i] ?? nil
-            outcome.direct[i] = state.direct[i] ?? 0
-            outcome.dot[i] = state.dot[i] ?? 0
-            outcome.raw[i] = state.raw[i] ?? 0
-            outcome.procs[i] = state.procCounts[i] ?? [:]
-        }
-        return outcome
+        return LayerOutcome(byType: state.byType,
+                            touched: state.touched,
+                            ttk: state.ttk,
+                            rawDirect: state.rawDirect,
+                            rawDot: state.rawDot,
+                            procs: state.procCounts)
     }
 
     private func fire(_ state: inout State, segment index: Int, at t: Double,
@@ -265,12 +306,14 @@ public struct WeaponSimulator: Sendable {
         let context = mitigationContext(layer: layer, at: t, state: state)
         for entry in attack.damage {
             let type = entry.type
-            var raw = entry.value * scale
-            raw *= faction.multiplier(for: type) * enemy.elementalResistance(type)
-            let dealt = raw * mitigation(layer: layer, type: type, context: context)
-            state.raw[index, default: 0] += raw
-            state.direct[index, default: 0] += raw
-            apply(&state, index: index, dealt, at: t)
+            // 武器侧的伤害（mod/crit/多重/爆头）与敌人侧的因素（派系倍率、
+            // 元素抗性、减伤）分开乘：前者原样记账，后者只作用在实伤上。
+            // 这样「某类型被免疫」在 byType 里是 0，在 rawByType 里仍是原值。
+            let weaponSide = entry.value * scale
+            let enemySide = faction.multiplier(for: type) * enemy.elementalResistance(type)
+            let dealt = weaponSide * enemySide * mitigation(layer: layer, type: type, context: context)
+            state.rawDirect[index][type.index] += weaponSide
+            apply(&state, index: index, type: type, dealt, at: t)
         }
 
         // 超宏在的时候敌人免疫状态；这一层只吃直伤。
@@ -312,7 +355,7 @@ public struct WeaponSimulator: Sendable {
         state.procCounts[segment, default: [:]][kind.rawValue, default: 0] += allowed
 
         if kind.isDamageOverTime {
-            let perTick = dotPerTick(kind: kind, type: type, attack: runtimes[segment])
+            let perTick = dotPerTick(kind: kind, attack: runtimes[segment])
             let ticks = max(1, Int(runtimes[segment].statusDuration.rounded(.down)))
             var remaining = allowed
             // 整数层给完整实例（保证 tick 相位正确），小数层给一个按比例缩放的实例。
@@ -341,7 +384,6 @@ public struct WeaponSimulator: Sendable {
                 * Rules.blastRatio
                 * attack.factionSquared
                 * attack.statusDamage
-                * faction.multiplier(for: .blast)
             state.dots.append(DotInstance(kind: kind, type: .blast,
                                           perTick: perTick * allowed,
                                           start: t,
@@ -358,20 +400,17 @@ public struct WeaponSimulator: Sendable {
         }
     }
 
-    /// 每跳伤害。
+    /// 每跳伤害（**武器侧**，不含派系倍率、抗性与减伤——那三项在 `tickDots` 里乘）。
     ///
     /// 结构来自 wiki 的 Bleed 示例：
     /// `100 × (1+Serration) × 0.35 × (1+Bane)² × (1+Elementalist)`
     /// 即：命中总伤害 × 比例 × 派系加成**二次结算** × 状态伤害加成。
     /// 来源：<https://wiki.warframe.com/w/Status_Effect>（"DoT Damage Scaling"）
-    private func dotPerTick(kind: ProcKind, type: DamageType, attack: SegmentRuntime) -> Double {
-        let resolvedType = dotType(kind: kind, source: type)
-        return attack.dotBase
+    private func dotPerTick(kind: ProcKind, attack: SegmentRuntime) -> Double {
+        attack.dotBase
             * Rules.dotRatio(kind)
             * attack.factionSquared
             * attack.statusDamage
-            * faction.multiplier(for: resolvedType)
-            * enemy.elementalResistance(resolvedType)
     }
 
     private func dotType(kind: ProcKind, source: DamageType) -> DamageType {
@@ -397,12 +436,13 @@ public struct WeaponSimulator: Sendable {
         while index < state.dots.count {
             guard state.dots[index].nextTick <= t + 1e-9 else { index += 1; continue }
             var instance = state.dots[index]
-            let raw = instance.perTick
-            let dealt = raw * mitigation(layer: layer, type: instance.type,
-                                         context: mitigationContext(layer: layer, at: t, state: state))
-            state.raw[instance.segment, default: 0] += raw
-            state.dot[instance.segment, default: 0] += raw
-            apply(&state, index: instance.segment, dealt, at: t)
+            let weaponSide = instance.perTick
+            let enemySide = faction.multiplier(for: instance.type) * enemy.elementalResistance(instance.type)
+            let dealt = weaponSide * enemySide
+                * mitigation(layer: layer, type: instance.type,
+                             context: mitigationContext(layer: layer, at: t, state: state))
+            state.rawDot[instance.segment][instance.type.index] += weaponSide
+            apply(&state, index: instance.segment, type: instance.type, dealt, at: t)
 
             instance.ticksLeft -= 1
             if instance.ticksLeft <= 0 {
@@ -415,11 +455,22 @@ public struct WeaponSimulator: Sendable {
         }
     }
 
-    private func apply(_ state: inout State, index: Int, _ amount: Double, at t: Double) {
-        guard amount > 0 else { return }
-        let total = (state.acc[index] ?? 0) + amount
-        state.acc[index] = total
-        if state.ttk[index] == nil, total >= state.hp {
+    /// 结算一次伤害：先写进该类型的账，再更新累计值与 TTK。
+    ///
+    /// 0 也记进去，所以「对某类型免疫」在结果里是一条值为 0 的分量，
+    /// 不需要把总和拆回来才知道少算了什么。
+    private func apply(_ state: inout State, index: Int, type: DamageType,
+                       _ amount: Double, at t: Double) {
+        let slot = type.index
+        // 只有「出现过但被算成 0」才需要标记；有伤害的类型靠非零就能进结果，
+        // 这条判断省掉每发都要写一次标记数组。
+        guard amount > 0 else {
+            state.touched[index][slot] = true
+            return
+        }
+        state.byType[index][slot] += amount
+        state.acc[index] += amount
+        if state.ttk[index] == nil, state.acc[index] >= state.hp {
             state.ttk[index] = t
         }
     }

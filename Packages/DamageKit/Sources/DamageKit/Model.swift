@@ -27,7 +27,9 @@ public struct Attack: Codable, Sendable, Equatable {
     public var hasConditionalMultishot: Bool
     public var radius: Double?
     public var forceProcs: [String: Double]?
-    public var unique: String?
+    /// 数据里的 `unique` 一律是对象（全库 423 处都是 dict，没有一处是字符串），
+    /// 例如 `{"force_procs": ["impact"]}`。按原始 JSON 存下来，不猜结构。
+    public var unique: [String: JSONValue]?
 
     public struct Falloff: Codable, Sendable, Equatable {
         public var start: Double
@@ -54,7 +56,7 @@ public struct Attack: Codable, Sendable, Equatable {
         hasConditionalMultishot: Bool = false,
         radius: Double? = nil,
         forceProcs: [String: Double]? = nil,
-        unique: String? = nil
+        unique: [String: JSONValue]? = nil
     ) {
         self.name = name
         self.speed = speed
@@ -112,7 +114,7 @@ public struct Attack: Codable, Sendable, Equatable {
         hasConditionalMultishot = try c.decodeIfPresent(Bool.self, forKey: .hasConditionalMultishot) ?? false
         radius = try c.decodeIfPresent(Double.self, forKey: .radius)
         forceProcs = try c.decodeIfPresent([String: Double].self, forKey: .forceProcs)
-        unique = try c.decodeIfPresent(String.self, forKey: .unique)
+        unique = try c.decodeIfPresent([String: JSONValue].self, forKey: .unique)
         damage = try Attack.decodeDamage(from: c)
     }
 
@@ -545,6 +547,11 @@ public struct LayerResult: Codable, Sendable, Equatable {
     public var maxHP: Double
     public var damage: Double
     public var dps: Double
+    /// 该层各伤害类型**扣完减伤之后**的实际伤害。
+    ///
+    /// 伤害向量全程按类型保留，只在写结果时才求和；所以免疫某一类型时，
+    /// 该类型在这里是 0，其余类型不受影响。
+    public var byType: [String: Double]
     /// 累计伤害第一次达到该层血量的时刻；窗口内没打死就是 nil。
     public var ttk: Double?
 }
@@ -555,6 +562,8 @@ public struct AttackResult: Codable, Sendable, Equatable {
     public var dps: Double
     public var directDamage: Double
     public var dotDamage: Double
+    /// 命中直伤 + DOT 的未减免伤害，按类型分解（扣减伤之前）。
+    public var rawByType: [String: Double]
     public var layers: [LayerResult]
     /// 各状态的期望触发次数。
     public var procs: [String: Double]

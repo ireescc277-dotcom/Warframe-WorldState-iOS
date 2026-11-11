@@ -2,11 +2,14 @@
   "attacks" : [
     {
       "attack" : "Normal Attack",
-      "directDamage" : 42052.542646593436,
-      "dotDamage" : 22140.663703431568,
-      "dps" : 6419.32063500247,
+      "directDamage" : 28035.028431062245,
+      "dotDamage" : 14760.442468954281,
+      "dps" : 4279.547090001653,
       "layers" : [
         {
+          "byType" : {
+            "heat" : 64193.2063500247
+          },
           "damage" : 64193.2063500247,
           "dps" : 6419.32063500247,
           "layer" : "health",
@@ -19,6 +22,9 @@
       ],
       "procs" : {
         "ignite" : 41.04000000000002
+      },
+      "rawByType" : {
+        "heat" : 42795.470900016524
       },
       "shots" : 80
     }

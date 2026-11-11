@@ -155,6 +155,23 @@ public enum ProcKind: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 
+extension DamageType {
+    /// 类型在 `allCases` 里的下标。
+    ///
+    /// 伤害账本按这个下标存在定长数组里：每发结算只改一个元素，
+    /// 不用为每种类型复制一次字典。
+    static let indexOf: [DamageType: Int] = {
+        var map: [DamageType: Int] = [:]
+        for (i, type) in allCases.enumerated() { map[type] = i }
+        return map
+    }()
+
+    @inline(__always)
+    var index: Int { Self.indexOf[self] ?? 0 }
+
+    static var count: Int { allCases.count }
+}
+
 extension Dictionary where Key == DamageType, Value == Double {
     /// 固定顺序的键值对。
     ///

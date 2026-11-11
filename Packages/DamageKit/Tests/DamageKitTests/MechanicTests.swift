@@ -356,4 +356,26 @@ final class MechanicTests: XCTestCase {
         let calc = Calculator()
         XCTAssertEqual(calc.evaluate(input), calc.evaluate(input))
     }
+
+    // MARK: 按类型保留
+
+    /// 目标对热免疫时，热这一条应当是 0，冲击照常结算。
+    /// 这条用例锁的是「伤害向量不提前求和」——否则免疫只能靠把总和拆回来实现。
+    func testImmuneTypeStaysZeroInVector() {
+        var enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e6)
+        enemy.elemRes = ["heat": 0]
+
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 50, .heat: 50])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 100)
+        let result = run(weapon, enemy, window: 1)
+
+        let health = result.attacks[0].layers.first { $0.layer == .health }!
+        XCTAssertEqual(health.byType["heat"] ?? -1, 0, accuracy: 1e-12)
+        XCTAssertEqual(health.byType["impact"] ?? 0, 50, accuracy: 1e-9)
+        XCTAssertEqual(health.damage, 50, accuracy: 1e-9)
+        // 未减免的那张表里两条都在，方便看出是「免疫」而不是「没有这种伤害」。
+        XCTAssertEqual(result.attacks[0].rawByType["heat"] ?? 0, 50, accuracy: 1e-9)
+        XCTAssertEqual(result.attacks[0].rawByType["impact"] ?? 0, 50, accuracy: 1e-9)
+    }
 }
