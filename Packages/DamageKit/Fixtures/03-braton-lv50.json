@@ -1,0 +1,16 @@
+{
+  "weapon": "Braton",
+  "enemy": "Lancer",
+  "level": 50,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Point Strike",
+      "Vital Sense"
+    ]
+  },
+  "options": {
+    "window": 10
+  }
+}

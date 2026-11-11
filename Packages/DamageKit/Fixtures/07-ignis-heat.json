@@ -1,0 +1,15 @@
+{
+  "weapon": "Ignis",
+  "enemy": "Charger",
+  "level": 60,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Hellfire"
+    ]
+  },
+  "options": {
+    "window": 10
+  }
+}

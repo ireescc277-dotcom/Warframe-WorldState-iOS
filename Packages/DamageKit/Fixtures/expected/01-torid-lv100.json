@@ -1,0 +1,101 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Grenade Impact",
+      "directDamage" : 2760.1758241758225,
+      "dotDamage" : 1573.8752564102585,
+      "dps" : 216.70255402930337,
+      "layers" : [
+        {
+          "damage" : 433.405108058607,
+          "dps" : 21.67025540293035,
+          "layer" : "health",
+          "maxHP" : 83817.54358429373
+        },
+        {
+          "damage" : 4334.051080586068,
+          "dps" : 216.70255402930337,
+          "layer" : "armor",
+          "maxHP" : 2700,
+          "ttk" : 13.099999999999998
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "poison" : 5.520000000000003
+      },
+      "shots" : 24
+    },
+    {
+      "attack" : "Poison Cloud",
+      "directDamage" : 828.052747252747,
+      "dotDamage" : 476.1303296703291,
+      "dps" : 65.20915384615381,
+      "layers" : [
+        {
+          "damage" : 130.4183076923077,
+          "dps" : 6.520915384615385,
+          "layer" : "health",
+          "maxHP" : 83817.54358429373
+        },
+        {
+          "damage" : 1304.1830769230762,
+          "dps" : 65.20915384615381,
+          "layer" : "armor",
+          "maxHP" : 2700
+        }
+      ],
+      "notes" : [
+        "该段有伤害衰减，未给 distance，按满伤害计算"
+      ],
+      "procs" : {
+        "poison" : 4.140000000000001
+      },
+      "shots" : 18
+    },
+    {
+      "attack" : "Incarnon Form",
+      "directDamage" : 13134.929816849784,
+      "dotDamage" : 12678.491005714493,
+      "dps" : 1290.6710411282274,
+      "layers" : [
+        {
+          "damage" : 2581.3420822563594,
+          "dps" : 129.06710411281796,
+          "layer" : "health",
+          "maxHP" : 83817.54358429373
+        },
+        {
+          "damage" : 25813.42082256455,
+          "dps" : 1290.6710411282274,
+          "layer" : "armor",
+          "maxHP" : 2700,
+          "ttk" : 3.25
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "poison" : 62.40000000000008
+      },
+      "shots" : 160
+    }
+  ],
+  "enemy" : "Heavy Gunner",
+  "enemyStats" : {
+    "armor" : 2700,
+    "armorDR" : 0.9,
+    "health" : 83817.54358429373,
+    "overguard" : 0,
+    "shield" : 0
+  },
+  "level" : 100,
+  "notes" : [
+    "护甲已顶到 2700 上限（90% 减伤）"
+  ],
+  "weapon" : "Torid",
+  "window" : 20
+}

@@ -1,0 +1,17 @@
+{
+  "weapon": "Braton",
+  "enemy": "Corpus Tech",
+  "level": 100,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Stormbringer",
+      "Cryo Rounds",
+      "Magnetic Might"
+    ]
+  },
+  "options": {
+    "window": 15
+  }
+}

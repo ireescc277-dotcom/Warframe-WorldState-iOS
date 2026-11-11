@@ -1,0 +1,19 @@
+{
+  "weapon": "Torid",
+  "enemy": "Heavy Gunner",
+  "level": 150,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Stormbringer",
+      "Infected Clip"
+    ]
+  },
+  "options": {
+    "window": 20,
+    "steelPath": true,
+    "externalViralStacks": 10,
+    "armorStrip": 0.5
+  }
+}

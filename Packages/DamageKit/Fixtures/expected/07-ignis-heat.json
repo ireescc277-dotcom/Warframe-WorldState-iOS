@@ -1,0 +1,40 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Normal Attack",
+      "directDamage" : 42052.542646593436,
+      "dotDamage" : 22140.663703431568,
+      "dps" : 6419.32063500247,
+      "layers" : [
+        {
+          "damage" : 64193.2063500247,
+          "dps" : 6419.32063500247,
+          "layer" : "health",
+          "maxHP" : 10300.655963385261,
+          "ttk" : 2.125
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "ignite" : 41.04000000000002
+      },
+      "shots" : 80
+    }
+  ],
+  "enemy" : "Charger",
+  "enemyStats" : {
+    "armor" : 0,
+    "armorDR" : 0,
+    "health" : 10300.655963385261,
+    "overguard" : 0,
+    "shield" : 0
+  },
+  "level" : 60,
+  "notes" : [
+
+  ],
+  "weapon" : "Ignis",
+  "window" : 10
+}

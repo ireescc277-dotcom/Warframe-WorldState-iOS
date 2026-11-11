@@ -99,6 +99,10 @@ set -a && . ./.env.local && set +a && python scripts/wf_deploy_kernel.py --web-o
 Swift 重写算法是唯一确定错误的方向：448KB 的内核里有四套抗性、状态时间轴、
 mod 特例表和逐发随机队列，重写必然与站点不一致。
 
+> 2026-11-11 补充：上面这条针对的是「重写一套和站点逐值一致的东西」。
+> `Packages/DamageKit` 走的是另一条路——按 wiki 规则重新建模、全期望值、
+> 结果不打算和站点对齐（详见下面「DamageKit」一节）。两套口径并存。
+
 ## 硬限制
 
 - 站点每次重算重新抽样，同一配置连续刷新结果会浮动；单次攻击（如 Slam）
@@ -107,3 +111,21 @@ mod 特例表和逐发随机队列，重写必然与站点不一致。
 - 战甲 mod / 光环 / 执政官碎片按站点的类型名筛选，个别冷门 mod 可能不出现
 - 配卡存在本机浏览器的 `localStorage` 里，不上传：换设备、清缓存、iOS 上删 App 都会丢。
   想长期留着的配置，用 `?p=` 串导出（待办 #2）才是唯一可靠的搬运方式
+
+## DamageKit（纯 Swift 计算核心）
+
+`Packages/DamageKit`：不移植站点内核，按 wiki 规则从零实现，全期望值、无随机。
+交付物是 Swift Package + `damagekit-cli` + 48 个用例 + 10 组固定 fixture。
+
+- 口径与站点**不同**：站点逐发蒙特卡洛抽样，这里给确定性的期望值；
+  同一配置两边数值不会逐值相等。
+- 关键规则（暴击分级、元素合并顺序、触发权重、DOT 倍率与 tick 相位、
+  护甲减伤、等级缩放、病毒/腐蚀叠加）都在 `Rules.swift` 里带 wiki 链接。
+- 灵化进化按 wiki 的「Increase **Base** …」口径实现：+20% 暴率是加在基础值上的
+  绝对百分点（15%→35%），固定伤害/弹匣先加再吃 mod，`l_add_multishot` 只在
+  弹匣最后一发生效；选项的 `type` 决定作用于哪一段攻击。
+- 性能（release）：Torid 0.38ms / Soma 3.67ms / Ignis 0.17ms；含数据加载 15–19ms。
+- 已知缺口和待确认项写在 `Packages/DamageKit/README.md`，不靠猜数字补全。
+
+构建注意：Windows 上 `swift build` 需要设 `SDKROOT`，且 `ProcessEnvironment`
+遇到 `HTTP_PROXY`/`http_proxy` 并存会 fatalError —— 统一用 `scripts/swiftw.sh`。

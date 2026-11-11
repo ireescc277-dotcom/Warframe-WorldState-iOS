@@ -1,0 +1,78 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Normal Attack",
+      "directDamage" : 20990.123785714368,
+      "dotDamage" : 1015.3299620961485,
+      "dps" : 1100.2726873905442,
+      "layers" : [
+        {
+          "damage" : 6666.517135173056,
+          "dps" : 333.3258567586528,
+          "layer" : "health",
+          "maxHP" : 42499.82454038347
+        },
+        {
+          "damage" : 22005.453747810883,
+          "dps" : 1100.2726873905442,
+          "layer" : "armor",
+          "maxHP" : 2700,
+          "ttk" : 1.828571428571429
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "bleed" : 6.8969999999999905,
+        "knockback" : 3.135000000000006,
+        "weakened" : 24.94000000000002
+      },
+      "shots" : 132
+    },
+    {
+      "attack" : "Incarnon Form",
+      "directDamage" : 32755.934581538477,
+      "dotDamage" : 3387.158400747549,
+      "dps" : 1807.1546491143013,
+      "layers" : [
+        {
+          "damage" : 24191.60333767082,
+          "dps" : 1209.5801668835409,
+          "layer" : "health",
+          "maxHP" : 42499.82454038347
+        },
+        {
+          "damage" : 36143.09298228603,
+          "dps" : 1807.1546491143013,
+          "layer" : "armor",
+          "maxHP" : 2700,
+          "ttk" : 1.4000000000000001
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "bleed" : 60.620346534653265,
+        "knockback" : 18.369801980198048,
+        "weakened" : 13.777351485148467
+      },
+      "shots" : 175
+    }
+  ],
+  "enemy" : "Heavy Gunner",
+  "enemyStats" : {
+    "armor" : 2700,
+    "armorDR" : 0.9,
+    "health" : 42499.82454038347,
+    "overguard" : 0,
+    "shield" : 0
+  },
+  "level" : 80,
+  "notes" : [
+    "护甲已顶到 2700 上限（90% 减伤）"
+  ],
+  "weapon" : "Boltor",
+  "window" : 20
+}

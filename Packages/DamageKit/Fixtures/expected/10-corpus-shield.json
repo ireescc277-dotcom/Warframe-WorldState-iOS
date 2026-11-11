@@ -1,0 +1,110 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Normal Attack",
+      "directDamage" : 49577.561151824186,
+      "dotDamage" : 446.83358537353587,
+      "dps" : 3334.959649146517,
+      "layers" : [
+        {
+          "damage" : 50024.394737197756,
+          "dps" : 3334.959649146517,
+          "layer" : "health",
+          "maxHP" : 118280.85991509621
+        },
+        {
+          "damage" : 112347.9519604145,
+          "dps" : 7489.863464027633,
+          "layer" : "shield",
+          "maxHP" : 16680.574624540975,
+          "ttk" : 2.285714285714286
+        }
+      ],
+      "notes" : [
+        "mod 与该武器不兼容: Magnetic Might"
+      ],
+      "procs" : {
+        "bleed" : 1.370442857142855,
+        "disrupt" : 7.255285714285724,
+        "knockback" : 1.3301357142857138,
+        "weakened" : 1.3301357142857138
+      },
+      "shots" : 99
+    },
+    {
+      "attack" : "Incarnon Form",
+      "directDamage" : 112396.63697802178,
+      "dotDamage" : 3268.9292870768973,
+      "dps" : 7711.03775100665,
+      "layers" : [
+        {
+          "damage" : 115665.56626509975,
+          "dps" : 7711.03775100665,
+          "layer" : "health",
+          "maxHP" : 118280.85991509621
+        },
+        {
+          "damage" : 400910.11394484586,
+          "dps" : 26727.34092965639,
+          "layer" : "shield",
+          "maxHP" : 16680.574624540975,
+          "ttk" : 1.2
+        }
+      ],
+      "notes" : [
+        "mod 与该武器不兼容: Magnetic Might"
+      ],
+      "procs" : {
+        "bleed" : 3.4199999999999973,
+        "disrupt" : 10.992857142857156,
+        "knockback" : 2.4428571428571386,
+        "weakened" : 0.24428571428571397
+      },
+      "shots" : 75
+    },
+    {
+      "attack" : "Incarnon Form Radial Attack",
+      "directDamage" : 111792.35398351648,
+      "dotDamage" : 8339.105324175864,
+      "dps" : 8008.763953846084,
+      "layers" : [
+        {
+          "damage" : 120131.45930769127,
+          "dps" : 8008.763953846084,
+          "layer" : "health",
+          "maxHP" : 118280.85991509621,
+          "ttk" : 14.59999999999998
+        },
+        {
+          "damage" : 422854.56340394355,
+          "dps" : 28190.30422692957,
+          "layer" : "shield",
+          "maxHP" : 16680.574624540975,
+          "ttk" : 1.2
+        }
+      ],
+      "notes" : [
+        "mod 与该武器不兼容: Magnetic Might"
+      ],
+      "procs" : {
+        "disrupt" : 10.992857142857156,
+        "ignite" : 6.107142857142867
+      },
+      "shots" : 75
+    }
+  ],
+  "enemy" : "Corpus Tech",
+  "enemyStats" : {
+    "armor" : 0,
+    "armorDR" : 0,
+    "health" : 118280.85991509621,
+    "overguard" : 0,
+    "shield" : 16680.574624540975
+  },
+  "level" : 100,
+  "notes" : [
+
+  ],
+  "weapon" : "Braton",
+  "window" : 15
+}

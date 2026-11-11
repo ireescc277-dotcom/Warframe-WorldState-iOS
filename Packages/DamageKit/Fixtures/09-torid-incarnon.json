@@ -1,0 +1,22 @@
+{
+  "weapon": "Torid",
+  "enemy": "Heavy Gunner",
+  "level": 100,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Stormbringer",
+      "Infected Clip"
+    ],
+    "incarnonPerks": [
+      "18:0",
+      "19:0",
+      "20:0",
+      "21:0"
+    ]
+  },
+  "options": {
+    "window": 20
+  }
+}

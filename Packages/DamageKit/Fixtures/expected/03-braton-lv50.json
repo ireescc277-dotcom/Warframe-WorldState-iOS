@@ -1,0 +1,109 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Normal Attack",
+      "directDamage" : 17564.600421406598,
+      "dotDamage" : 433.6289263679977,
+      "dps" : 1799.8229347774661,
+      "layers" : [
+        {
+          "damage" : 15702.31374544133,
+          "dps" : 1570.231374544133,
+          "layer" : "health",
+          "maxHP" : 5845.223771072858,
+          "ttk" : 2.971428571428572
+        },
+        {
+          "damage" : 17998.22934777466,
+          "dps" : 1799.8229347774661,
+          "layer" : "armor",
+          "maxHP" : 553.7463498475772,
+          "ttk" : 0.22857142857142856
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "bleed" : 2.751959999999996,
+        "knockback" : 2.6710199999999995,
+        "weakened" : 2.6710199999999995
+      },
+      "shots" : 71
+    },
+    {
+      "attack" : "Incarnon Form",
+      "directDamage" : 78564.25879120873,
+      "dotDamage" : 6005.451941999977,
+      "dps" : 8456.97107332084,
+      "layers" : [
+        {
+          "damage" : 80277.24980850934,
+          "dps" : 8027.724980850934,
+          "layer" : "health",
+          "maxHP" : 5845.223771072858,
+          "ttk" : 0.8
+        },
+        {
+          "damage" : 84569.7107332084,
+          "dps" : 8456.97107332084,
+          "layer" : "armor",
+          "maxHP" : 553.7463498475772,
+          "ttk" : 0
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "bleed" : 6.383999999999993,
+        "knockback" : 4.560000000000001,
+        "weakened" : 0.45600000000000024
+      },
+      "shots" : 50
+    },
+    {
+      "attack" : "Incarnon Form Radial Attack",
+      "directDamage" : 65470.21565934074,
+      "dotDamage" : 15320.030464285648,
+      "dps" : 8079.024612362659,
+      "layers" : [
+        {
+          "damage" : 72658.49793604182,
+          "dps" : 7265.849793604182,
+          "layer" : "health",
+          "maxHP" : 5845.223771072858,
+          "ttk" : 1
+        },
+        {
+          "damage" : 80790.2461236266,
+          "dps" : 8079.024612362659,
+          "layer" : "armor",
+          "maxHP" : 553.7463498475772,
+          "ttk" : 0
+        }
+      ],
+      "notes" : [
+
+      ],
+      "procs" : {
+        "ignite" : 11.39999999999999
+      },
+      "shots" : 50
+    }
+  ],
+  "enemy" : "Lancer",
+  "enemyStats" : {
+    "armor" : 553.7463498475772,
+    "armorDR" : 0.18458211661585908,
+    "health" : 5845.223771072858,
+    "overguard" : 0,
+    "shield" : 0
+  },
+  "level" : 50,
+  "notes" : [
+
+  ],
+  "weapon" : "Braton",
+  "window" : 10
+}

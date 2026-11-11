@@ -1,0 +1,11 @@
+{
+  "weapon": "Torid",
+  "enemy": "Heavy Gunner",
+  "level": 100,
+  "build": {
+    "mods": []
+  },
+  "options": {
+    "window": 20
+  }
+}

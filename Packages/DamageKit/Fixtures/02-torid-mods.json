@@ -1,0 +1,19 @@
+{
+  "weapon": "Torid",
+  "enemy": "Heavy Gunner",
+  "level": 100,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Stormbringer",
+      "Infected Clip",
+      "Vital Sense",
+      "Point Strike",
+      "Bane of Grineer"
+    ]
+  },
+  "options": {
+    "window": 20
+  }
+}

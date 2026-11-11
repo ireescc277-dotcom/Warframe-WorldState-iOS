@@ -1,0 +1,15 @@
+{
+  "weapon": "Hek",
+  "enemy": "Butcher",
+  "level": 30,
+  "build": {
+    "mods": [
+      "Point Blank",
+      "Hell's Chamber",
+      "Blaze"
+    ]
+  },
+  "options": {
+    "window": 5
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "attacks" : [
+    {
+      "attack" : "Normal Attack",
+      "directDamage" : 42563.63974358974,
+      "dotDamage" : 2137.8064519871787,
+      "dps" : 8940.289239115393,
+      "layers" : [
+        {
+          "damage" : 42982.75495169902,
+          "dps" : 8596.550990339803,
+          "layer" : "health",
+          "maxHP" : 994.8111697149683,
+          "ttk" : 0
+        },
+        {
+          "damage" : 44701.446195576966,
+          "dps" : 8940.289239115393,
+          "layer" : "armor",
+          "maxHP" : 200,
+          "ttk" : 0
+        }
+      ],
+      "notes" : [
+        "该段有伤害衰减，未给 distance，按满伤害计算"
+      ],
+      "procs" : {
+        "bleed" : 1.6478000000000002,
+        "ignite" : 4.9434000000000005,
+        "knockback" : 1.2358500000000001,
+        "weakened" : 5.3553500000000005
+      },
+      "shots" : 8
+    }
+  ],
+  "enemy" : "Butcher",
+  "enemyStats" : {
+    "armor" : 200,
+    "armorDR" : 0.06666666666666667,
+    "health" : 994.8111697149683,
+    "overguard" : 0,
+    "shield" : 0
+  },
+  "level" : 30,
+  "notes" : [
+
+  ],
+  "weapon" : "Hek",
+  "window" : 5
+}

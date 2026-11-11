@@ -1,0 +1,15 @@
+{
+  "weapon": "Boltor",
+  "enemy": "Heavy Gunner",
+  "level": 80,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Fanged Fusillade"
+    ]
+  },
+  "options": {
+    "window": 20
+  }
+}

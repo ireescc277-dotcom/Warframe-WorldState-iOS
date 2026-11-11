@@ -1,0 +1,20 @@
+{
+  "weapon": "Soma",
+  "enemy": "Bombard",
+  "level": 120,
+  "build": {
+    "mods": [
+      "Serration",
+      "Split Chamber",
+      "Infected Clip",
+      "Cryo Rounds",
+      "Hellfire",
+      "Vital Sense",
+      "Point Strike"
+    ]
+  },
+  "options": {
+    "window": 20,
+    "headshot": true
+  }
+}
