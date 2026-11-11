@@ -120,6 +120,8 @@ public final class WorldStateViewModel: ObservableObject {
         setupTimer()
         checkNotificationStatus()
         loadInitialData()
+        // 服务器上的蹲守选择必须等于这台设备勾的那份，否则推的就是别人的偏好。
+        WatchSync.shared.syncNow(self.watchSelection.paths)
     }
     
     // MARK: - Timer for Countdowns
@@ -200,18 +202,26 @@ public final class WorldStateViewModel: ObservableObject {
         let now = Date()
         var ledger = storage.loadNotifiedHits().filter { $0.value > now.timeIntervalSince1970 }
 
-        var fresh: [WatchHit] = []
-        for hit in matchedLiveHits where ledger[hit.id] == nil {
-            ledger[hit.id] = (hit.expiry ?? now.addingTimeInterval(24 * 3600)).timeIntervalSince1970
-            fresh.append(hit)
-        }
-        storage.saveNotifiedHits(ledger)
-
+        let fresh = matchedLiveHits.filter { ledger[$0.id] == nil }
         guard notificationsEnabled, notificationPermission.isAuthorized, !fresh.isEmpty else { return }
+
         #if canImport(UIKit)
         // .inactive 也算前台：冷启动那一瞬间就是 inactive，那时候不需要提醒。
         guard UIApplication.shared.applicationState == .background else { return }
-        notificationService.post(fresh)
+
+        // 账本要等真的投递出去之后才记。以前是先记账再判断能不能发，于是前台
+        // 刷新一次就把这批命中吃掉了，之后进后台也不会再补——表现就是「从来
+        // 没在关注的东西出现时收到过通知」。
+        for hit in fresh {
+            ledger[hit.id] = (hit.expiry ?? now.addingTimeInterval(24 * 3600)).timeIntervalSince1970
+        }
+        storage.saveNotifiedHits(ledger)
+
+        // 一次最多三条，先给最快结束的，剩下的回 App 就看见了。
+        let ordered = fresh.sorted {
+            ($0.expiry ?? .distantFuture) < ($1.expiry ?? .distantFuture)
+        }
+        notificationService.post(ordered)
         #endif
     }
     
@@ -251,6 +261,7 @@ public final class WorldStateViewModel: ObservableObject {
                 }
             }
             refreshLiveWatchHits()
+            WatchSync.shared.syncNow(watchSelection.paths)
         } catch {
             let details = service.lastErrorDetails ?? error.localizedDescription
             self.errorMessage = "刷新失败: \(details)"

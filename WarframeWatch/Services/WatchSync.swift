@@ -37,6 +37,29 @@ public final class WatchSync {
         }
     }
 
+    /// 启动和每次刷新都调一次。
+    ///
+    /// 只在「选择变了」时上传不够：换机、重装、某次上传失败之后，服务器会一直
+    /// 按旧的那份推，而 App 里看不到任何异样——表现出来就是「推的都是我没勾的，
+    /// 我勾的从来没响过」。这里每次都把当前选择对一遍，服务器一致就只比较不发包。
+    public func syncNow(_ paths: Set<String>) {
+        guard let endpoint = Self.endpoint else { return }
+        guard paths != lastSent else { return }
+        pending?.cancel()
+        pending = Task { [weak self] in
+            if await Self.upload(paths, to: endpoint) {
+                self?.lastSent = paths
+                return
+            }
+            // 失败重试一次，还不行就等下个刷新点。
+            try? await Task.sleep(nanoseconds: 20_000_000_000)
+            guard !Task.isCancelled else { return }
+            if await Self.upload(paths, to: endpoint) {
+                self?.lastSent = paths
+            }
+        }
+    }
+
     private static func upload(_ paths: Set<String>, to url: URL) async -> Bool {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

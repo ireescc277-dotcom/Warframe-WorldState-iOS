@@ -273,7 +273,10 @@ public struct WatchView: View {
         guard vm.pendingAlertCount > 0 else {
             return "已开启，暂时没有排得上时间的条目"
         }
-        return "已排 \(vm.pendingAlertCount) 条：仲裁 / 周期提前 5 分钟，目标提前 30 分钟"
+        // 两条通道分工不同，写清楚比笼统说「已排 N 条」有用：本地这些是能提前
+        // 算出时间的（仲裁 / 周期），裂隙那类冒出来才知道，靠服务器按同一份
+        // 选择实时推。
+        return "已排 \(vm.pendingAlertCount) 条定时提醒；裂隙 / 入侵 / 风暴由服务器实时推"
     }
 
     // MARK: - Hits
