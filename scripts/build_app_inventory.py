@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIEW = os.path.join(ROOT, "data", "inventory", "view.json")
+SNAPSHOT = os.path.join(ROOT, "data", "inventory", "latest.json.gz")
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
 ICONS = os.path.join(ROOT, "data", "market", "icons.json")
@@ -324,6 +325,20 @@ def main() -> int:
     if not os.path.exists(MARKET_PRICES):
         print("没有价格快照，先跑 `wf_market.py sync`", file=sys.stderr)
         return 1
+
+    # builtAt 打的是「现在几点」，不是「数据是哪一刻的」。所以链路里只要有一步没产出
+    # 新文件，结果就是时间戳一路更新、内容一直是几天前那份，从界面上根本看不出来。
+    # 这里直接拿 view.json 和背包快照比时间，旧了就停下，别把陈货当新货推上去。
+    if os.path.exists(SNAPSHOT) and os.path.exists(VIEW):
+        if os.path.getmtime(VIEW) + 60 < os.path.getmtime(SNAPSHOT):
+            print(
+                "view.json 比背包快照旧：build_inventory_view.py 没有重跑？"
+                f"\n  view.json   {datetime.fromtimestamp(os.path.getmtime(VIEW)):%Y-%m-%d %H:%M:%S}"
+                f"\n  快照        {datetime.fromtimestamp(os.path.getmtime(SNAPSHOT)):%Y-%m-%d %H:%M:%S}",
+                file=sys.stderr,
+            )
+            return 1
+
     data = build()
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as fh:

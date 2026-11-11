@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ImageIO
 
 /// 武器库：选一把枪，装进伤害计算器。
 ///
@@ -174,7 +175,7 @@ public struct ArsenalView: View {
 
     private var list: some View {
         let rows = filtered
-        return VStack(spacing: 0) {
+        return LazyVStack(spacing: 0) {
             if catalog.failed {
                 Text("App 包里没有计算器资源（web/app）。构建时先跑 scripts/build_web_site.py。")
                     .font(.wfBody)
@@ -247,6 +248,63 @@ public struct ArsenalView: View {
 
 // MARK: - 缩略图
 
+/// 武器图的内存缓存。
+///
+/// 666 行一次性铺开时，每张 220×220 的 RGBA 解码后接近 200 KB，全解出来是
+/// 120 MB 级别——真机上会被系统回收，表现出来就是「列表很卡、图一会儿全没了」。
+/// 所以只解码滚到眼前的那几张，解到显示尺寸（40pt × 3 倍 = 120px），按文件名缓存。
+final class WeaponIconStore {
+    static let shared = WeaponIconStore()
+
+    private let cache = NSCache<NSString, UIImage>()
+    private let queue = DispatchQueue(label: "wf.weapon.icon",
+                                      qos: .userInitiated,
+                                      attributes: .concurrent)
+
+    private init() {
+        cache.countLimit = 320
+        cache.totalCostLimit = 24 * 1024 * 1024
+    }
+
+    func cached(_ name: String) -> UIImage? {
+        cache.object(forKey: name as NSString)
+    }
+
+    /// 本地包里没有这张图时返回 nil，调用方自己决定要不要走网络。
+    func load(_ name: String, maxPixel: CGFloat) async -> UIImage? {
+        if let hit = cached(name) { return hit }
+        guard let dir = WeaponCatalog.iconsDir else { return nil }
+        let url = dir.appendingPathComponent(name)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+
+        return await withCheckedContinuation { cont in
+            queue.async {
+                let image = WeaponIconStore.downsample(url: url, maxPixel: maxPixel)
+                if let image = image {
+                    let cost = Int(maxPixel * maxPixel * 4)
+                    self.cache.setObject(image, forKey: name as NSString, cost: cost)
+                }
+                cont.resume(returning: image)
+            }
+        }
+    }
+
+    /// 让 ImageIO 直接解到目标尺寸，而不是先解全图再缩。
+    private static func downsample(url: URL, maxPixel: CGFloat) -> UIImage? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+        ]
+        guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: cg)
+    }
+}
+
 /// 武器图。包里带了一份（`ios/DamageCalc/icons`，构建时从 assets 复制），
 /// 优先读本地，读不到再回站点 CDN。两边都没有就画占位块，保证行高不跳。
 struct WeaponThumb: View {
@@ -255,6 +313,7 @@ struct WeaponThumb: View {
     let size: CGFloat
 
     @State private var local: UIImage?
+    @State private var tried = false
 
     var body: some View {
         Group {
@@ -262,15 +321,14 @@ struct WeaponThumb: View {
                 Image(uiImage: local)
                     .resizable()
                     .scaledToFit()
-            } else if let remote = remote {
+            } else if tried, let remote = remote {
+                // 本地没有这张图才走网络，避免每行都去撞一次 CDN
                 AsyncImage(url: remote) { phase in
                     switch phase {
                     case let .success(image):
                         image.resizable().scaledToFit()
-                    case .failure:
-                        placeholder
                     default:
-                        placeholder.opacity(0.5)
+                        placeholder
                     }
                 }
             } else {
@@ -282,14 +340,17 @@ struct WeaponThumb: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(WFTheme.panel)
         )
-        .onAppear(perform: loadLocal)
-    }
-
-    private func loadLocal() {
-        guard local == nil, let name = name, let dir = WeaponCatalog.iconsDir else { return }
-        let path = dir.appendingPathComponent(name).path
-        if let image = UIImage(contentsOfFile: path) {
+        .task(id: name) {
+            guard local == nil, !tried else { return }
+            guard let name = name, !name.isEmpty else {
+                tried = true
+                return
+            }
+            let px = size * UIScreen.main.scale
+            let image = await WeaponIconStore.shared.load(name, maxPixel: px)
+            if Task.isCancelled { return }
             local = image
+            tried = true
         }
     }
 

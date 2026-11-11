@@ -539,7 +539,16 @@ def main(argv=None):
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(html)
+
+    # view.json 是 build_app_inventory.py 的输入。以前只有 --json-only 才写它，
+    # 而编排里不带这个参数——于是 HTML 每次刷新、App 那份快照却一直在读三天前
+    # 的旧文件，builtAt 却按当前时间重打，看起来「更新了」其实内容没动。
+    json_path = os.path.splitext(args.out)[0] + ".json"
+    with open(json_path, "w", encoding="utf-8") as fh:
+        fh.write(payload)
+
     print(f"{args.out}  {len(html)/1024:.0f} KB")
+    print(f"{json_path}  {len(payload)/1024:.0f} KB")
     print(json.dumps(data["counts"], ensure_ascii=False))
     return 0
 
