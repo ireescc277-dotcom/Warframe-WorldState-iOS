@@ -49,3 +49,7 @@ node_modules/
 web/app/site/
 # iOS 侧是同一份资源的复制，作为 folder reference 打进 App 包
 ios/DamageCalc/
+
+# SwiftPM 在 Windows 上把资源包 Info.plist 生成到包根目录，属构建产物
+Packages/DamageKit/Info.plist
+Packages/DamageKit/mods.json
