@@ -938,7 +938,21 @@ struct ModAggregate {
                 for (key, value) in raw.objectValue ?? [:] { action[key] = value }
             }
         }
-        let conditional = action.removeValue(forKey: "WITH_COND")?.objectValue
+        var conditional = action.removeValue(forKey: "WITH_COND")?.objectValue
+        // A few source records put a full-rank passive and an ordinary stacked
+        // trigger in the same WITH_COND object. The resource rule, rather
+        // than a Mod-name branch here or in SwiftUI, tells the resolver which
+        // keys are permanent. Promote those values before applying either the
+        // normal action or the remaining conditional branch.
+        if var conditionalAction = conditional,
+           let alwaysActiveKeys = conditionalRule?.alwaysActiveKeys {
+            for key in alwaysActiveKeys {
+                if let value = conditionalAction.removeValue(forKey: key) {
+                    action[key] = value
+                }
+            }
+            conditional = conditionalAction
+        }
         if let value = action.removeValue(forKey: "base_per_status")?.doubleValue {
             registerPerStatusDamage(valueAtFullEffect: value, modName: mod.name,
                                     rule: conditionalRule, notes: &notes)

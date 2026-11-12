@@ -191,7 +191,15 @@ public struct InventoryAdapter: Sendable {
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnKill":
             ("Secondary Merciless", 5),
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageOnKill":
-            ("Melee Merciless", 5)
+            ("Melee Merciless", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnHeatProc":
+            ("Cascadia Flare", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryCritDmgAndMultishotOnColdProc":
+            ("Primary Frostbite", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnNoMelee":
+            ("Primary Deadhead", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee":
+            ("Secondary Deadhead", 5)
     ]
 
     private func findWeapon(_ id: String, in snapshot: [String: Any]) -> [String: Any]? {

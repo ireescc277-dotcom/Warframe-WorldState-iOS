@@ -330,6 +330,57 @@ final class FormulaOracleTests: XCTestCase {
                              attack: area, stacks: 3), 0, accuracy: 1e-12)
     }
 
+    func testImportedFrostbiteAndDeadheadUseTheirDeclaredConditionRules() {
+        // These cards are imported from DE's internal Arcane paths. Frostbite
+        // has two independently linear 40-stack bonuses. Deadhead has a
+        // three-stack damage bonus, but its full-rank headshot multiplier is
+        // passive and must not disappear when the player manually enters 0
+        // kill stacks.
+        let attack = Attack(name: "Direct", speed: 1, critChance: 0,
+                            critMultiplier: 2, statusChance: 0, damage: [.impact: 100])
+        var primary = Weapon(name: "Primary", attacks: [attack], magazineSize: 10, reloadTime: 0)
+        primary.categories = ["primary"]
+
+        func resolve(_ weapon: Weapon, _ mod: String, stacks: Double,
+                     headshot: Bool = false) -> ResolvedAttack {
+            BuildResolver(
+                weapon: weapon,
+                build: Build(mods: [mod]),
+                options: Options(conditionalModStacks: [mod: stacks],
+                                 allModConditionsMet: false,
+                                 headshot: headshot),
+                faction: .neutral
+            ).resolve(attack: attack)
+        }
+
+        let frostbiteBase = resolve(primary, "Primary Frostbite", stacks: 0)
+        let frostbiteHalf = resolve(primary, "Primary Frostbite", stacks: 20)
+        // Base critical damage has its own in-game quantization before relative
+        // multipliers. Assert the card's exact ratios rather than pretending
+        // that a displayed 2.0x is an unquantized binary floating-point 2.
+        XCTAssertEqual(frostbiteHalf.critMultiplier, frostbiteBase.critMultiplier * 1.6,
+                       accuracy: 1e-12)
+        XCTAssertEqual(frostbiteHalf.multishot, 1.45, accuracy: 1e-12)
+
+        let frostbiteFull = resolve(primary, "Primary Frostbite", stacks: 40)
+        XCTAssertEqual(frostbiteFull.critMultiplier, frostbiteBase.critMultiplier * 2.2,
+                       accuracy: 1e-12)
+        XCTAssertEqual(frostbiteFull.multishot, 1.9, accuracy: 1e-12)
+
+        let deadheadZero = resolve(primary, "Primary Deadhead", stacks: 0, headshot: true)
+        XCTAssertEqual(deadheadZero.baseDamageMultiplier, 1, accuracy: 1e-12)
+        XCTAssertEqual(deadheadZero.headshotMultiplier, 3.9, accuracy: 1e-12)
+
+        let deadheadTwo = resolve(primary, "Primary Deadhead", stacks: 2)
+        XCTAssertEqual(deadheadTwo.baseDamageMultiplier, 3.4, accuracy: 1e-12)
+
+        var secondary = primary
+        secondary.categories = ["secondary"]
+        let secondaryFull = resolve(secondary, "Secondary Deadhead", stacks: 3, headshot: true)
+        XCTAssertEqual(secondaryFull.baseDamageMultiplier, 4.6, accuracy: 1e-12)
+        XCTAssertEqual(secondaryFull.headshotMultiplier, 3.9, accuracy: 1e-12)
+    }
+
     func testConditionOverloadUsesPreexistingStatusWithoutAStackInput() {
         let attack = Attack(name: "Melee hit", speed: 1, critChance: 0, critMultiplier: 1,
                             statusChance: 0, damage: [.impact: 100])

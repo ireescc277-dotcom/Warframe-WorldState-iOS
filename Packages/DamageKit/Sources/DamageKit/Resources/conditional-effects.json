@@ -18,6 +18,26 @@
     "keys" : ["base"]
   },
   {
+    "mod" : "Primary Frostbite",
+    "maxStacks" : 40,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["crit_mult", "multishot"]
+  },
+  {
+    "mod" : "Primary Deadhead",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base"],
+    "alwaysActiveKeys" : ["mult_for_head"]
+  },
+  {
+    "mod" : "Secondary Deadhead",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base"],
+    "alwaysActiveKeys" : ["mult_for_head"]
+  },
+  {
     "mod" : "Lethal Rearmament",
     "maxStacks" : 3,
     "mode" : "scaledConditionalValue",

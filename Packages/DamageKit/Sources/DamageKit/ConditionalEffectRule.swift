@@ -42,6 +42,11 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
     public var mode: Mode
     /// 本条规则负责的 `WITH_COND` action 键。
     public var keys: [String]
+    /// 上游数据有时将一张满级卡的常驻属性和触发属性一起放在
+    /// `WITH_COND` 中。此处列出的键会先提升为普通 action，不随层数或
+    /// “所有条件满足”开关消失。例如满级 Deadhead 的 +30% 爆头倍率是常驻
+    /// 属性，而 +120% 基础伤害才是三层击杀 Buff。
+    public var alwaysActiveKeys: [String]?
     /// `base_per_status` 的层数与攻击段适用范围；没有该字段时，本规则只描述
     /// `WITH_COND` 的插值语义。
     public var perStatusDamage: PerStatusDamage?
@@ -53,11 +58,13 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
     }
 
     public init(mod: String, maxStacks: Double, mode: Mode, keys: [String],
+                alwaysActiveKeys: [String]? = nil,
                 perStatusDamage: PerStatusDamage? = nil) {
         self.mod = mod
         self.maxStacks = maxStacks
         self.mode = mode
         self.keys = keys
+        self.alwaysActiveKeys = alwaysActiveKeys
         self.perStatusDamage = perStatusDamage
     }
 }

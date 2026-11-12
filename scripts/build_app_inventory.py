@@ -104,6 +104,12 @@ UPGRADE_ALIASES = {
         ("Melee Merciless", 5),
     "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnHeatProc":
         ("Cascadia Flare", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryCritDmgAndMultishotOnColdProc":
+        ("Primary Frostbite", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnNoMelee":
+        ("Primary Deadhead", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee":
+        ("Secondary Deadhead", 5),
 }
 
 RIVEN_MAXIMUM = 1_073_741_823.0
