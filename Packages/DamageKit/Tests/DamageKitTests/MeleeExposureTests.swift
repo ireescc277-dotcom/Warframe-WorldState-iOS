@@ -3,12 +3,15 @@ import XCTest
 
 final class MeleeExposureTests: XCTestCase {
 
-    private func resolve(casts: Double) -> ResolvedAttack {
+    private func resolve(casts: Double, conditionalStepScale: Double? = nil) -> ResolvedAttack {
         let attack = Attack(name: "Strike", speed: 1, critChance: 0, critMultiplier: 1,
                             statusChance: 0, damage: [.impact: 100])
         var weapon = Weapon(name: "Melee", attacks: [attack], magazineSize: 0)
         weapon.categories = ["melee"]
-        let build = Build(slottedMods: [SlottedMod(slot: 10, name: "Melee Exposure")])
+        let build = Build(slottedMods: [
+            SlottedMod(slot: 10, name: "Melee Exposure",
+                       conditionalStepScale: conditionalStepScale)
+        ])
         let options = Options(conditionalModStacks: ["Melee Exposure": casts])
         return BuildResolver(weapon: weapon, build: build, options: options,
                              faction: .neutral).resolve(attack: attack)
@@ -38,5 +41,35 @@ final class MeleeExposureTests: XCTestCase {
 
         XCTAssertNil(resolved.damage[.corrosive])
         XCTAssertEqual(resolved.damage[.impact] ?? 0, 100, accuracy: 1e-9)
+    }
+
+    func testLowerRankMeleeExposureNeedsMoreCastsButKeepsTheSameCap() {
+        // The source record for rank 4 says +50% per ability cast while the
+        // rank-5 card says +60%; both explicitly retain a +240% cap.  Thus
+        // four casts are +200%, and the fifth reaches (rather than lowers)
+        // the normal full-rank cap.
+        let rankFourAfterFourCasts = resolve(casts: 4, conditionalStepScale: 5.0 / 6.0)
+        let rankFourAfterFiveCasts = resolve(casts: 5, conditionalStepScale: 5.0 / 6.0)
+        let fullRankAfterFourCasts = resolve(casts: 4)
+
+        XCTAssertEqual(rankFourAfterFourCasts.damage[.corrosive] ?? 0, 200, accuracy: 1e-9)
+        XCTAssertEqual(rankFourAfterFiveCasts.damage[.corrosive] ?? 0,
+                       fullRankAfterFourCasts.damage[.corrosive] ?? 0,
+                       accuracy: 1e-9)
+        XCTAssertEqual(rankFourAfterFiveCasts.damage[.corrosive] ?? 0, 240.625, accuracy: 1e-9)
+    }
+
+    func testRankOneMeleeExposureReachesTheUnchangedCapOnTheTwelfthCast() {
+        // The equipped account card is rank 1: its source text says +20% per
+        // cast, versus +60% at rank 5, while both ranks state a +240% cap.
+        let rankOneAfterElevenCasts = resolve(casts: 11, conditionalStepScale: 1.0 / 3.0)
+        let rankOneAfterTwelveCasts = resolve(casts: 12, conditionalStepScale: 1.0 / 3.0)
+        let fullRankAfterFourCasts = resolve(casts: 4)
+
+        XCTAssertLessThan(rankOneAfterElevenCasts.damage[.corrosive] ?? 0,
+                          fullRankAfterFourCasts.damage[.corrosive] ?? 0)
+        XCTAssertEqual(rankOneAfterTwelveCasts.damage[.corrosive] ?? 0,
+                       fullRankAfterFourCasts.damage[.corrosive] ?? 0,
+                       accuracy: 1e-9)
     }
 }

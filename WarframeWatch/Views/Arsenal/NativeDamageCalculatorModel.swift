@@ -418,6 +418,11 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// the calculator's normal full-rank data-table input rather than the
     /// previously imported physical card.
     @Published private(set) var weaponSlotActionScales: [Double?] = Array(repeating: nil, count: 11)
+    /// Source-proven per-input ratios for conditional cards. Unlike
+    /// `weaponSlotActionScales`, these do not change the card's final source
+    /// cap; they only change how many real gameplay inputs are required to
+    /// reach it.
+    @Published private(set) var weaponSlotConditionalStepScales: [Double?] = Array(repeating: nil, count: 11)
     /// Selected item in the equipped stance Mod's combo list.  It is passed to
     /// DamageKit as data; this model does not calculate combo timing or damage.
     @Published var stanceCombo: String?
@@ -455,7 +460,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published var conditionalStacks: [String: Double] = [:]
     /// Corresponds to warframe-damage's “All Mods conditions are met” switch.
     /// A true value writes each currently selected conditional Mod's data-table
-    /// maximum into the same `conditionalStacks` input used by manual editing.
+    /// cap into the same `conditionalStacks` input used by manual editing,
+    /// converted to the actual input count for a source-proven lower-ranked
+    /// card when necessary.
     @Published var allWeaponConditionsMaxed = true
     @Published var initialStatusStacks: [String: Double] = [:]
     /// Mirrors the website's optional manual override for CO/Gun-CO status
@@ -585,7 +592,11 @@ final class NativeDamageCalculatorModel: ObservableObject {
                 let scale = weaponSlotActionScales.indices.contains(slot)
                     ? weaponSlotActionScales[slot]
                     : nil
-                return SlottedMod(slot: slot, name: name, actionScale: scale)
+                let conditionalStepScale = weaponSlotConditionalStepScales.indices.contains(slot)
+                    ? weaponSlotConditionalStepScales[slot]
+                    : nil
+                return SlottedMod(slot: slot, name: name, actionScale: scale,
+                                  conditionalStepScale: conditionalStepScale)
             }
         }
         let shards = currentWarframe?.shards.compactMap { shard -> SlottedMod? in
@@ -813,6 +824,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
         weaponName = name
         weaponSlots = Array(repeating: nil, count: 11)
         weaponSlotActionScales = Array(repeating: nil, count: 11)
+        weaponSlotConditionalStepScales = Array(repeating: nil, count: 11)
         stanceCombo = nil
         incarnonSelections = [:]
         riven = NativeRivenDraft()
@@ -986,6 +998,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
         weaponName = ownedWeapon.calcName
         weaponSlots = config.normalizedSlots
         weaponSlotActionScales = config.normalizedSlotActionScales
+        weaponSlotConditionalStepScales = config.normalizedSlotConditionalStepScales
         ownedProgenitorElements = ownedWeapon.progenitorElements
         ownedConfigIssues = config.issues
         ownedConfigUnresolvedUpgrades = config.unresolvedUpgrades
@@ -1041,11 +1054,17 @@ final class NativeDamageCalculatorModel: ObservableObject {
                 if weaponSlotActionScales.indices.contains(index) {
                     weaponSlotActionScales[index] = nil
                 }
+                if weaponSlotConditionalStepScales.indices.contains(index) {
+                    weaponSlotConditionalStepScales[index] = nil
+                }
             }
         }
         weaponSlots[slot] = name
         if weaponSlotActionScales.indices.contains(slot) {
             weaponSlotActionScales[slot] = nil
+        }
+        if weaponSlotConditionalStepScales.indices.contains(slot) {
+            weaponSlotConditionalStepScales[slot] = nil
         }
         if slot == 9 {
             let validNames = availableStanceCombos.map(\.name)
@@ -1074,6 +1093,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
             weaponSlots[slot] = nil
             if weaponSlotActionScales.indices.contains(slot) {
                 weaponSlotActionScales[slot] = nil
+            }
+            if weaponSlotConditionalStepScales.indices.contains(slot) {
+                weaponSlotConditionalStepScales[slot] = nil
             }
         }
         calculate()
@@ -1110,16 +1132,36 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculate()
     }
 
+    /// Maximum *real gameplay inputs* selectable for a conditional card.  A
+    /// lower-ranked source can contribute less per cast but still have the
+    /// same cap, so this is not always `rule.maxStacks`.
+    func conditionalInputMaximum(for rule: ConditionalEffectRule) -> Double {
+        guard rule.maxStacks > 0 else { return 0 }
+        let importedScale = selectedSlottedMods.first {
+            $0.name.compare(rule.mod, options: [.caseInsensitive]) == .orderedSame
+        }?.conditionalStepScale
+        guard let importedScale, importedScale.isFinite, importedScale > 0 else {
+            return rule.maxStacks
+        }
+        // The scale comes from exact source percentages, but its serialized
+        // floating-point form can make an integral quotient look infinitesimally
+        // larger (for example 4 / (1 / 3)).  Keep that representation detail
+        // from inventing one extra player input.
+        return ceil((rule.maxStacks / importedScale) - 1e-9)
+    }
+
     func setStack(_ stacks: Double, for rule: ConditionalEffectRule) {
         allWeaponConditionsMaxed = false
-        conditionalStacks[rule.mod] = min(max(stacks, 0), rule.maxStacks)
+        conditionalStacks[rule.mod] = min(max(stacks, 0), conditionalInputMaximum(for: rule))
         calculate()
     }
 
     func setAllWeaponConditionsMaxed(_ enabled: Bool) {
         allWeaponConditionsMaxed = enabled
         if enabled {
-            for rule in selectedRules { conditionalStacks[rule.mod] = rule.maxStacks }
+            for rule in selectedRules {
+                conditionalStacks[rule.mod] = conditionalInputMaximum(for: rule)
+            }
         } else {
             for rule in selectedRules { conditionalStacks[rule.mod] = 0 }
         }
@@ -1296,7 +1338,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
         let allowed = Set(rules.map(\.mod))
         conditionalStacks = conditionalStacks.filter { allowed.contains($0.key) }
         if allWeaponConditionsMaxed {
-            for rule in rules { conditionalStacks[rule.mod] = rule.maxStacks }
+            for rule in rules {
+                conditionalStacks[rule.mod] = conditionalInputMaximum(for: rule)
+            }
         }
     }
 }

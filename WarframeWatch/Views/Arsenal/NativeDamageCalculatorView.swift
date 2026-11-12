@@ -678,17 +678,18 @@ struct NativeDamageCalculatorView: View {
                     .foregroundColor(WFTheme.textMuted)
                 if !model.allWeaponConditionsMaxed {
                     ForEach(model.selectedRules, id: \.mod) { rule in
+                        let inputMaximum = model.conditionalInputMaximum(for: rule)
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(model.catalog.local(rule.mod))
                                     .font(.wfBody)
                                     .foregroundColor(WFTheme.textPrimary)
-                                Text("\(rule.maxStacks.cleanNumber) \(rule.inputLabel ?? "层")上限 · \(rule.mode == .totalRelativeToStaticAction ? "满层总值插值" : "满层额外值")")
+                                Text("\(inputMaximum.cleanNumber) \(rule.inputLabel ?? "层")封顶 · \(rule.mode == .totalRelativeToStaticAction ? "满层总值插值" : "满层额外值")")
                                     .font(.wfLabel)
                                     .foregroundColor(WFTheme.textMuted)
                             }
                             Spacer()
-                            Stepper(value: stackBinding(rule), in: 0...rule.maxStacks, step: 1) {
+                            Stepper(value: stackBinding(rule), in: 0...inputMaximum, step: 1) {
                                 Text("\((model.conditionalStacks[rule.mod] ?? 0).cleanNumber) \(rule.inputLabel ?? "层")")
                                     .font(.wfNumSmall)
                                     .foregroundColor(WFTheme.gold)

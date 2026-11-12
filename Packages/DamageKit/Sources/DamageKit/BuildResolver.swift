@@ -165,6 +165,10 @@ public struct BuildResolver: Sendable {
         /// See `SlottedMod.actionScale`. This belongs to the concrete card in
         /// this slot, never to a similarly named card elsewhere in the build.
         var actionScale: Double?
+        /// See `SlottedMod.conditionalStepScale`. This changes how many
+        /// concrete condition inputs reach a source-defined cap; it does not
+        /// lower the cap itself.
+        var conditionalStepScale: Double?
     }
 
     private func orderedBuildInputs(notes: inout [String]) -> [OrderedBuildInput] {
@@ -191,14 +195,16 @@ public struct BuildResolver: Sendable {
             }
             inputs.append(OrderedBuildInput(slot: entry.slot, order: order,
                                             modName: entry.name, riven: nil,
-                                            actionScale: entry.actionScale))
+                                            actionScale: entry.actionScale,
+                                            conditionalStepScale: entry.conditionalStepScale))
         }
 
         if let riven = build.riven {
             inputs.append(OrderedBuildInput(slot: placedRivenSlot ?? Int.max,
                                             order: source.count,
                                             modName: nil, riven: riven,
-                                            actionScale: nil))
+                                            actionScale: nil,
+                                            conditionalStepScale: nil))
         } else if let explicitlyNamedRivenSlot {
             notes.append("槽位 \(explicitlyNamedRivenSlot) 标为紫卡，但没有紫卡词条")
         }
@@ -310,7 +316,9 @@ public struct BuildResolver: Sendable {
             agg.apply(mod: mod,
                       conditionalRule: library.conditionalRule(named: mod.name),
                       weapon: weapon, attack: attack, options: options,
-                      actionScale: input.actionScale, notes: &notes)
+                      actionScale: input.actionScale,
+                      conditionalStepScale: input.conditionalStepScale,
+                      notes: &notes)
         }
 
         // 战甲/同伴/任务环境不是武器配卡的第十一个槽位。调用者必须显式把
@@ -936,7 +944,9 @@ struct ModAggregate {
 
     mutating func apply(mod: ModDefinition, conditionalRule: ConditionalEffectRule?,
                         weapon: Weapon, attack: Attack, options: Options,
-                        actionScale: Double? = nil, notes: inout [String]) {
+                        actionScale: Double? = nil,
+                        conditionalStepScale: Double? = nil,
+                        notes: inout [String]) {
         var action = mod.action ?? [:]
         // FOR_WEAPON 覆盖普通 action 的同名键；例如 Critical Delay 的 bow
         // 版本用 -40% charge time 取代一般的 -20%。
@@ -992,7 +1002,8 @@ struct ModAggregate {
 
         if let conditional, !conditional.isEmpty {
             apply(conditional: conditional, staticAction: action, modName: mod.name,
-                  rule: conditionalRule, attack: attack, options: options, notes: &notes)
+                  rule: conditionalRule, attack: attack, options: options,
+                  conditionalStepScale: conditionalStepScale, notes: &notes)
         }
         if mod.action?["set"] != nil { /* 套装加成未实现 */ }
     }
@@ -1165,15 +1176,30 @@ struct ModAggregate {
 
     mutating func apply(conditional: [String: JSONValue], staticAction: [String: JSONValue],
                         modName: String, rule: ConditionalEffectRule?, attack: Attack? = nil,
-                        options: Options, notes: inout [String]) {
-        let stacks = max(0, options.conditionalStackCount(named: modName))
+                        options: Options, conditionalStepScale: Double? = nil,
+                        notes: inout [String]) {
+        let inputCount = max(0, options.conditionalStackCount(named: modName))
+        let stepScale: Double
+        if let conditionalStepScale {
+            guard conditionalStepScale.isFinite, conditionalStepScale >= 0 else {
+                notes.append("已忽略无效的条件单次倍率: \(modName)")
+                return
+            }
+            stepScale = conditionalStepScale
+        } else {
+            stepScale = 1
+        }
+        // `inputCount` is the actual in-game count picked in the UI (for
+        // example, ability casts). A lower-ranked card can grant less per
+        // input while retaining the source card's final cap.
+        let effectiveStacks = inputCount * stepScale
         var handled = Set<String>()
 
         // 原始站点数据只给出 `WITH_COND` 的满层数字，未标记它是“总值”还是
         // “额外值”。这个差别在 conditional-effects.json 声明；解析器只消费规则
         // 类型与参数，不根据某张 Mod 的名字进入不同公式。
         if let rule, rule.maxStacks > 0 {
-            let scale = min(stacks, rule.maxStacks) / rule.maxStacks
+            let scale = min(effectiveStacks, rule.maxStacks) / rule.maxStacks
             for key in rule.keys {
                 guard let maximum = conditional[key]?.doubleValue else { continue }
                 let value: Double

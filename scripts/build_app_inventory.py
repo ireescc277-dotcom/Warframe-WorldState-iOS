@@ -34,6 +34,9 @@ RIVEN_TAGS = os.path.join(ROOT, "data", "gamedata", "ref", "riven", "riven_tags.
 DAMAGEKIT_MODS = os.path.join(
     ROOT, "Packages", "DamageKit", "Sources", "DamageKit", "Resources", "mods.json"
 )
+DAMAGEKIT_CONDITIONAL_EFFECTS = os.path.join(
+    ROOT, "Packages", "DamageKit", "Sources", "DamageKit", "Resources", "conditional-effects.json"
+)
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
 ICONS = os.path.join(ROOT, "data", "market", "icons.json")
@@ -531,6 +534,24 @@ def simple_damagekit_action_percentages() -> dict[str, float]:
     }
 
 
+def conditional_effect_rules_by_mod() -> dict[str, dict]:
+    """Load the semantic condition declarations used by DamageKit.
+
+    The website mirror intentionally stays a raw upstream copy.  Its action
+    values alone do not say whether a number is a per-cast increment or a
+    final cap, so this separate, tracked declaration is the only source of
+    that interpretation for the inventory builder as well as the Swift core.
+    """
+    rows = load_json(DAMAGEKIT_CONDITIONAL_EFFECTS) if os.path.exists(DAMAGEKIT_CONDITIONAL_EFFECTS) else []
+    if not isinstance(rows, list):
+        return {}
+    return {
+        row["mod"]: row
+        for row in rows
+        if isinstance(row, dict) and isinstance(row.get("mod"), str)
+    }
+
+
 def source_proven_rank_action_scale(name: str, rank: int, maximum: int,
                                     game_mod: dict, simple_actions: dict[str, float]) -> float | None:
     """Return an exact source-data scale for one non-max-rank simple card.
@@ -563,6 +584,74 @@ def source_proven_rank_action_scale(name: str, rank: int, maximum: int,
     if abs(full) <= 1e-12 or abs(abs(full) - action_percent) > 1e-6:
         return None
     scale = equipped / full
+    return scale if 0 <= scale <= 1 else None
+
+
+def source_proven_conditional_step_scale(name: str, rank: int, maximum: int,
+                                         rank_meta: dict, simple_actions: dict[str, float],
+                                         conditional_rules: dict[str, dict]) -> float | None:
+    """Return an exact lower-rank ratio for one in-game condition input.
+
+    This is deliberately *not* an `actionScale`: a card can have a lower
+    per-cast value while retaining the same final cap.  We accept the value
+    only when the local game-data text proves all of the following:
+
+    - DamageKit has exactly one numeric full-rank action for this card;
+    - its semantic condition rule explicitly moves that action into the
+      conditional path and declares a positive full-rank input count;
+    - both the equipped and maximum-rank source texts contain exactly one
+      unchanged percentage equal to that full cap and exactly one other
+      percentage; and
+    - maximum-rank per-input value × declared input count equals that cap.
+
+    The generic proof lets a future card use the same import path without a
+    name-specific formula.  Anything more complicated stays structured as an
+    unresolved slot instead of being silently rounded up to a full-rank card.
+    """
+    if rank < 0 or maximum <= 0 or rank >= maximum or not isinstance(rank_meta, dict):
+        return None
+    rule = conditional_rules.get(name)
+    if not isinstance(rule, dict):
+        return None
+    rule_keys = rule.get("keys")
+    moved_keys = rule.get("conditionalActionKeys")
+    max_stacks = as_number(rule.get("maxStacks"))
+    if (not isinstance(rule_keys, list) or not isinstance(moved_keys, list)
+            or not rule_keys or set(rule_keys) != set(moved_keys)
+            or max_stacks is None or max_stacks <= 0):
+        return None
+    action_percent = simple_actions.get(name)
+    if action_percent is None or action_percent <= 0:
+        return None
+
+    def percentages_at(level: int) -> list[float]:
+        text = " ".join(local_rank_stats(rank_meta, level))
+        return [float(raw) for raw in re.findall(r"([+-]?\d+(?:\.\d+)?)\s*%", text)]
+
+    def cap_and_increment(values: list[float]) -> tuple[float, float] | None:
+        cap_indexes = [
+            index for index, value in enumerate(values)
+            if abs(abs(value) - action_percent) <= 1e-6
+        ]
+        if len(cap_indexes) != 1:
+            return None
+        cap = values[cap_indexes[0]]
+        increments = [value for index, value in enumerate(values) if index not in cap_indexes]
+        if cap <= 0 or len(increments) != 1 or increments[0] <= 0:
+            return None
+        return cap, increments[0]
+
+    equipped = cap_and_increment(percentages_at(rank))
+    full = cap_and_increment(percentages_at(maximum))
+    if equipped is None or full is None:
+        return None
+    equipped_cap, equipped_increment = equipped
+    full_cap, full_increment = full
+    if abs(equipped_cap - full_cap) > 1e-6:
+        return None
+    if abs(full_increment * max_stacks - action_percent) > 1e-6:
+        return None
+    scale = equipped_increment / full_increment
     return scale if 0 <= scale <= 1 else None
 
 
@@ -601,6 +690,13 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     game_mods = game_mods if isinstance(game_mods, dict) else {}
     riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
     simple_action_percents = simple_damagekit_action_percentages()
+    conditional_rules = conditional_effect_rules_by_mod()
+    # Aleca's static definitions are only read while constructing the local
+    # payload. They provide the rank-by-rank player-facing text needed to
+    # prove a conditional card's per-input value; no cache record ships to
+    # the iOS app.
+    local_mods = _rows_by_unique_name(ALECA_MODS)
+    local_arcanes = _rows_by_unique_name(ALECA_ARCANES)
 
     upgrades: dict[str, dict] = {}
     upgrades_by_type: dict[str, list[dict]] = {}
@@ -748,6 +844,8 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                         name = mod_data["n"]
                         maximum = int(as_number(mod_data.get("mx")) or 0)
                         game_mod_data = mod_data
+                    local_meta = local_mods.get(upgrade_type) or local_arcanes.get(upgrade_type) or {}
+                    local_meta = local_meta if isinstance(local_meta, dict) else {}
                     if not direct_type_reference:
                         fp = fingerprint(upgrade.get("UpgradeFingerprint"))
                         raw_rank = as_number((fp or {}).get("lvl"))
@@ -764,7 +862,18 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                         action_scale = source_proven_rank_action_scale(
                             name, rank, maximum, game_mod_data, simple_action_percents
                         )
+                        # A stacking card can keep its full cap while gaining
+                        # less per source input at a lower rank.  This exact
+                        # path is separate from `action_scale`, which would
+                        # incorrectly lower that cap together with the card.
+                        rank_meta = local_meta if local_rank_stats(local_meta, maximum) else game_mod_data
+                        conditional_step_scale = None
                         if action_scale is None:
+                            conditional_step_scale = source_proven_conditional_step_scale(
+                                name, rank, maximum, rank_meta, simple_action_percents,
+                                conditional_rules,
+                            )
+                        if action_scale is None and conditional_step_scale is None:
                             unresolved_upgrades.append({
                                 "s": slot,
                                 "n": name,
@@ -775,10 +884,13 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                             continue
                     else:
                         action_scale = None
+                        conditional_step_scale = None
                     slots[slot] = name
                     metadata = {"r": rank, "m": maximum}
                     if action_scale is not None:
                         metadata["a"] = action_scale
+                    if conditional_step_scale is not None:
+                        metadata["c"] = conditional_step_scale
                     slot_metadata[slot] = metadata
 
                 configs.append({

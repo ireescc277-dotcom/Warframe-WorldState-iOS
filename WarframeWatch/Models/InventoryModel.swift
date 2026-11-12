@@ -195,6 +195,14 @@ public struct InventoryData: Decodable {
                 normalizedSlotMetadata.map { $0?.actionScale }
             }
 
+            /// A concrete lower-ranked condition card can retain its ordinary
+            /// final cap but grant less per gameplay input (for example, per
+            /// ability cast).  This value is independently source-proven by
+            /// the payload builder; it must never be inferred from rank.
+            public var normalizedSlotConditionalStepScales: [Double?] {
+                normalizedSlotMetadata.map { $0?.conditionalStepScale }
+            }
+
             public func metadata(at slot: Int) -> SlotMetadata? {
                 guard normalizedSlotMetadata.indices.contains(slot) else { return nil }
                 return normalizedSlotMetadata[slot]
@@ -220,14 +228,16 @@ public struct InventoryData: Decodable {
                 public let rank: Int?
                 public let maxRank: Int?
                 public let actionScale: Double?
+                public let conditionalStepScale: Double?
 
-                private enum CodingKeys: String, CodingKey { case r, m, a }
+                private enum CodingKeys: String, CodingKey { case r, m, a, c }
 
                 public init(from decoder: Decoder) throws {
                     let c = try decoder.container(keyedBy: CodingKeys.self)
                     rank = try c.decodeIfPresent(Int.self, forKey: .r)
                     maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
                     actionScale = try c.decodeIfPresent(Double.self, forKey: .a)
+                    conditionalStepScale = try c.decodeIfPresent(Double.self, forKey: .c)
                 }
 
                 public var rankLabel: String? {

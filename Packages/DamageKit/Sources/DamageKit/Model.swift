@@ -438,11 +438,24 @@ public struct SlottedMod: Codable, Sendable, Equatable, Hashable {
     /// a scalar only for cards whose whole source action was verified to scale
     /// proportionally; callers must not use it as a guess for arbitrary ranks.
     public var actionScale: Double?
+    /// A source-proven ratio for a *single* condition input on this concrete
+    /// card.  It is intentionally separate from `actionScale`: a ranked
+    /// stacking effect can have a smaller value per ability cast while keeping
+    /// the same final cap.  For example, rank-4 Melee Exposure gains 50%
+    /// Corrosive per cast but still caps at 240%, so treating its complete
+    /// action as 5/6 of the full card would incorrectly reduce that cap.
+    ///
+    /// `nil` means one in-game input has the source table's ordinary full-rank
+    /// value.  The import layer may set this only after it has read and
+    /// cross-checked the exact equipped rank's source text.
+    public var conditionalStepScale: Double?
 
-    public init(slot: Int, name: String, actionScale: Double? = nil) {
+    public init(slot: Int, name: String, actionScale: Double? = nil,
+                conditionalStepScale: Double? = nil) {
         self.slot = slot
         self.name = name
         self.actionScale = actionScale
+        self.conditionalStepScale = conditionalStepScale
     }
 }
 
