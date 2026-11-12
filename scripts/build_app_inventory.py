@@ -19,6 +19,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -534,6 +535,147 @@ def simple_damagekit_action_percentages() -> dict[str, float]:
     }
 
 
+def damagekit_ranked_action_values() -> dict[str, list[float]]:
+    """Return every rank-relevant numeric leaf in the calculator's final action.
+
+    This mirrors ``ModLibrary.byName``: when the raw website table has the
+    same display name twice, the later record is the one the Swift resolver
+    actually uses. ``stances`` describes a selected combo, not a rank-scaled
+    Mod coefficient, and ``set`` has no implemented damage action. Likewise,
+    ``double_crit`` is Vigilante's fixed per-equipped-card set bonus, not a
+    stat printed at a Mod's fusion rank. Those fields are deliberately left
+    out of a whole-card rank multiplier and are preserved unscaled by Swift.
+    """
+    rows = load_json(DAMAGEKIT_MODS) if os.path.exists(DAMAGEKIT_MODS) else []
+    if not isinstance(rows, list):
+        return {}
+
+    def leaves(value, *, key: str | None = None) -> list[float]:
+        if key in {"stances", "set", "double_crit"}:
+            return []
+        if isinstance(value, bool) or value is None:
+            return []
+        if isinstance(value, (int, float)):
+            return [float(value)]
+        if isinstance(value, list):
+            return [number for child in value for number in leaves(child)]
+        if isinstance(value, dict):
+            return [
+                number
+                for child_key, child in value.items()
+                for number in leaves(child, key=child_key)
+            ]
+        return []
+
+    result: dict[str, list[float]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = row.get("name")
+        action = row.get("action")
+        if isinstance(name, str) and isinstance(action, dict):
+            result[name] = leaves(action)
+    return result
+
+
+def source_stat_coefficients(level: object) -> list[float]:
+    """Normalize source-card stat text into DamageKit coefficient units.
+
+    ``+90% Cold`` becomes ``0.9``; a faction line such as ``x1.3 Damage``
+    becomes its additive ``0.3`` bonus; a flat line such as ``+1.5 Punch
+    Through`` stays ``1.5``. We intentionally do not interpret prose beyond
+    these unambiguous number forms.
+    """
+    lines = level if isinstance(level, list) else [level]
+    result: list[float] = []
+    for raw in lines:
+        if not isinstance(raw, str):
+            continue
+        line = compact_stat_line(raw)
+        percents = [
+            float(value) / 100
+            for value in re.findall(r"([+-]?\d+(?:\.\d+)?)\s*%", line)
+        ]
+        result.extend(percents)
+        # Vigilante Fervor explicitly prints one ordinary Fire Rate value and
+        # a second, exactly doubled Bow value. DamageKit represents both
+        # branches, so both source coefficients are needed to prove a shared
+        # rank ratio. This intentionally recognizes only the literal source
+        # form; other prose multipliers remain unparsed rather than guessed.
+        for match in re.finditer(
+            r"([+-]?\d+(?:\.\d+)?)\s*%[^()]*\(\s*x\s*(\d+(?:\.\d+)?)\s+for\s+Bows?\s*\)",
+            line,
+            flags=re.IGNORECASE,
+        ):
+            result.append(float(match.group(1)) / 100 * float(match.group(2)))
+        result.extend(
+            float(value) - 1
+            for value in re.findall(
+                r"\bx\s*(\d+(?:\.\d+)?)\b(?!\s*for\s+Bows?\b)",
+                line,
+                flags=re.IGNORECASE,
+            )
+        )
+        result.extend(
+            float(value)
+            # The trailing lookahead also blocks a backtracking partial match:
+            # without it, `+48%` could be shortened to a false flat `+4`.
+            for value in re.findall(r"(?<![0-9A-Za-z_.])([+-]\d+(?:\.\d+)?)(?![0-9.]*\s*%)", line)
+        )
+    return result
+
+
+def source_proven_whole_action_scale(name: str, rank: int, maximum: int,
+                                     game_mod: dict,
+                                     action_values_by_mod: dict[str, list[float]]) -> float | None:
+    """Return a whole-card rank scale only after an exact source-value proof.
+
+    Unlike the older one-value path, this accepts a multi-stat card only when
+    *every* numeric coefficient consumed by DamageKit is represented in the
+    game's exact max-rank text and all of those coefficients have the same
+    rank/max ratio. A source line that DamageKit does not consume is harmless;
+    an action coefficient with no source counterpart rejects the card. This
+    keeps static set bonuses and weapon-special branches out of a guessed
+    blanket multiplier.
+    """
+    if rank < 0 or maximum <= 0 or rank >= maximum:
+        return None
+    levels = game_mod.get("lv") if isinstance(game_mod, dict) else None
+    if not isinstance(levels, list) or rank >= len(levels) or maximum >= len(levels):
+        return None
+    action_values = [
+        value for value in action_values_by_mod.get(name, [])
+        if abs(value) > 1e-12
+    ]
+    if not action_values:
+        return None
+    equipped_values = source_stat_coefficients(levels[rank])
+    full_values = source_stat_coefficients(levels[maximum])
+    if not equipped_values or len(equipped_values) != len(full_values):
+        return None
+
+    def close(left: float, right: float) -> bool:
+        return abs(left - right) <= 1e-6
+
+    scales: list[float] = []
+    for action_value in action_values:
+        matches = [
+            index for index, full in enumerate(full_values)
+            if close(action_value, full) and abs(full) > 1e-12
+        ]
+        if not matches:
+            return None
+        ratios = [equipped_values[index] / full_values[index] for index in matches]
+        if any(not math.isfinite(ratio) or ratio < 0 or ratio > 1 for ratio in ratios):
+            return None
+        if any(not close(ratio, ratios[0]) for ratio in ratios[1:]):
+            return None
+        scales.append(ratios[0])
+    if any(not close(scale, scales[0]) for scale in scales[1:]):
+        return None
+    return scales[0]
+
+
 def conditional_effect_rules_by_mod() -> dict[str, dict]:
     """Load the semantic condition declarations used by DamageKit.
 
@@ -690,6 +832,7 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     game_mods = game_mods if isinstance(game_mods, dict) else {}
     riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
     simple_action_percents = simple_damagekit_action_percentages()
+    ranked_action_values = damagekit_ranked_action_values()
     conditional_rules = conditional_effect_rules_by_mod()
     # Aleca's static definitions are only read while constructing the local
     # payload. They provide the rank-by-rank player-facing text needed to
@@ -698,17 +841,7 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     local_mods = _rows_by_unique_name(ALECA_MODS)
     local_arcanes = _rows_by_unique_name(ALECA_ARCANES)
 
-    upgrades: dict[str, dict] = {}
-    upgrades_by_type: dict[str, list[dict]] = {}
-    for raw in inv.get("Upgrades") or []:
-        if not isinstance(raw, dict):
-            continue
-        item_id = object_id(raw.get("ItemId"))
-        if item_id:
-            upgrades[item_id] = raw
-        item_type = raw.get("ItemType")
-        if isinstance(item_type, str) and item_type:
-            upgrades_by_type.setdefault(item_type, []).append(raw)
+    upgrades, upgrades_by_type, raw_upgrade_counts = upgrade_indexes(inv)
 
     result: list[dict] = []
     for inventory_category, calculator_category in OWNED_WEAPON_CATEGORIES.items():
@@ -765,27 +898,9 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                     direct_type_reference = upgrade_id.startswith("/")
                     direct_rank_issue: str | None = None
                     if direct_type_reference:
-                        upgrade = {"ItemType": upgrade_id}
-                        candidate_ranks = {
-                            int(raw_rank)
-                            for candidate in upgrades_by_type.get(upgrade_id, [])
-                            for raw_rank in [as_number((fingerprint(candidate.get("UpgradeFingerprint")) or {}).get("lvl"))]
-                            if raw_rank is not None
-                        }
-                        if len(candidate_ranks) == 1:
-                            rank = next(iter(candidate_ranks))
-                        elif not candidate_ranks:
-                            rank = None
-                            direct_rank_issue = (
-                                "配置只记录了 Mod 类型，背包中没有可确定等级的同名 Mod；当前未带入"
-                            )
-                        else:
-                            rank = None
-                            ranks = "/".join(str(value) for value in sorted(candidate_ranks))
-                            direct_rank_issue = (
-                                f"配置只记录了 Mod 类型，而背包中同名 Mod 的等级有 {ranks}；"
-                                "无法判断装备的是哪一张，当前未带入"
-                            )
+                        upgrade, rank, direct_rank_issue = resolve_config_upgrade(
+                            upgrade_id, upgrades, upgrades_by_type, raw_upgrade_counts
+                        )
                     else:
                         upgrade = upgrades.get(upgrade_id)
                         rank = None
@@ -872,6 +987,10 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                             conditional_step_scale = source_proven_conditional_step_scale(
                                 name, rank, maximum, rank_meta, simple_action_percents,
                                 conditional_rules,
+                            )
+                        if action_scale is None and conditional_step_scale is None:
+                            action_scale = source_proven_whole_action_scale(
+                                name, rank, maximum, game_mod_data, ranked_action_values
                             )
                         if action_scale is None and conditional_step_scale is None:
                             unresolved_upgrades.append({
@@ -964,7 +1083,27 @@ def frame_static_catalogues() -> tuple[dict[str, dict], dict[str, dict], dict[st
     return game_mods, local_mods, arcanes, frames
 
 
-def upgrade_indexes(inv: dict) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+def raw_upgrade_type_counts(inv: dict) -> dict[str, int]:
+    """Return positive RawUpgrades counts by type.
+
+    A raw upgrade is an unfused, stackable rank-0 card in the inventory
+    response. Once a card has a non-zero fingerprint it appears in
+    ``Upgrades`` instead. We deliberately keep only positive counts: a stale
+    zero-count row cannot establish that a rank-0 copy exists.
+    """
+    result: dict[str, int] = {}
+    for raw in inv.get("RawUpgrades") or []:
+        if not isinstance(raw, dict):
+            continue
+        item_type = raw.get("ItemType")
+        count = as_number(raw.get("ItemCount"))
+        if not isinstance(item_type, str) or not item_type or count is None or count <= 0:
+            continue
+        result[item_type] = result.get(item_type, 0) + int(count)
+    return result
+
+
+def upgrade_indexes(inv: dict) -> tuple[dict[str, dict], dict[str, list[dict]], dict[str, int]]:
     by_id: dict[str, dict] = {}
     by_type: dict[str, list[dict]] = {}
     for raw in inv.get("Upgrades") or []:
@@ -976,17 +1115,20 @@ def upgrade_indexes(inv: dict) -> tuple[dict[str, dict], dict[str, list[dict]]]:
         item_type = raw.get("ItemType")
         if isinstance(item_type, str) and item_type:
             by_type.setdefault(item_type, []).append(raw)
-    return by_id, by_type
+    return by_id, by_type, raw_upgrade_type_counts(inv)
 
 
 def resolve_config_upgrade(reference: str, upgrades: dict[str, dict],
-                           upgrades_by_type: dict[str, list[dict]]) -> tuple[dict | None, int | None, str | None]:
+                           upgrades_by_type: dict[str, list[dict]],
+                           raw_upgrade_counts: dict[str, int]) -> tuple[dict | None, int | None, str | None]:
     """Resolve one equipped upgrade and its actual rank.
 
     A Config sometimes contains a literal item-type path rather than an owned
-    card instance.  The path proves which card is equipped but not which copy.
-    We recover a rank only when every owned copy has the same rank.  Otherwise
-    the exported config remains visible but its strength contribution is not
+    card instance. The path proves which card is equipped but not which copy.
+    ``RawUpgrades`` proves that an unfused rank-0 copy exists, while
+    ``Upgrades`` carries individually fingerprinted cards. We recover a rank
+    only when all possible inventory representations agree. Otherwise the
+    exported config remains visible but its strength contribution is not
     fabricated as max rank.
     """
     if reference.startswith("/"):
@@ -997,6 +1139,8 @@ def resolve_config_upgrade(reference: str, upgrades: dict[str, dict],
             for raw_rank in [as_number((fingerprint(candidate.get("UpgradeFingerprint")) or {}).get("lvl"))]
             if raw_rank is not None
         }
+        if raw_upgrade_counts.get(item_type, 0) > 0:
+            candidate_ranks.add(0)
         if len(candidate_ranks) == 1:
             return {"ItemType": item_type}, next(iter(candidate_ranks)), None
         if not candidate_ranks:
@@ -1199,6 +1343,7 @@ def equipment_upgrade_metadata(upgrade_type: str, game_mods: dict[str, dict],
 
 def build_equipment_configs(item: dict, upgrades: dict[str, dict],
                             upgrades_by_type: dict[str, list[dict]],
+                            raw_upgrade_counts: dict[str, int],
                             game_mods: dict[str, dict], local_mods: dict[str, dict],
                             arcanes: dict[str, dict]) -> list[dict]:
     """Export a non-weapon equipment body's A/B/C Mods and Arcanes exactly.
@@ -1222,7 +1367,7 @@ def build_equipment_configs(item: dict, upgrades: dict[str, dict],
             if not isinstance(reference, str) or not reference:
                 continue
             upgrade, rank, rank_issue = resolve_config_upgrade(
-                reference, upgrades, upgrades_by_type
+                reference, upgrades, upgrades_by_type, raw_upgrade_counts
             )
             if not isinstance(upgrade, dict):
                 issues.append(f"第 {slot + 1} 槽：{rank_issue or '升级无法解析'}")
@@ -1254,7 +1399,7 @@ def build_owned_equipment(inv: dict, view: dict, categories: tuple[str, ...], *,
                           item_filter=None, output_category: str | None = None) -> list[dict]:
     """Export owned companion or Archwing bodies with their actual configs."""
     game_mods, local_mods, arcanes, _frames = frame_static_catalogues()
-    upgrades, upgrades_by_type = upgrade_indexes(inv)
+    upgrades, upgrades_by_type, raw_upgrade_counts = upgrade_indexes(inv)
     lang = local_language_rows()
     display_rows: dict[str, list[dict]] = {}
     for row in view.get("gear") or []:
@@ -1279,7 +1424,8 @@ def build_owned_equipment(inv: dict, view: dict, categories: tuple[str, ...], *,
                 "z": localized_item_name(item, inventory_category, ordinal, display_rows, lang),
                 "k": output_category or inventory_category,
                 "cfg": build_equipment_configs(
-                    item, upgrades, upgrades_by_type, game_mods, local_mods, arcanes
+                    item, upgrades, upgrades_by_type, raw_upgrade_counts,
+                    game_mods, local_mods, arcanes
                 ),
             })
 
@@ -1357,7 +1503,7 @@ def build_owned_warframes(inv: dict, view: dict) -> list[dict]:
     Helminth override are all source data for later ability resolution.
     """
     game_mods, local_mods, arcanes, frame_defs = frame_static_catalogues()
-    upgrades, upgrades_by_type = upgrade_indexes(inv)
+    upgrades, upgrades_by_type, raw_upgrade_counts = upgrade_indexes(inv)
 
     display_rows = [row for row in view.get("gear") or []
                     if isinstance(row, dict) and row.get("cat") == "Suits"]
@@ -1396,7 +1542,9 @@ def build_owned_warframes(inv: dict, view: dict) -> list[dict]:
             for slot, reference in enumerate(raw_slots):
                 if not isinstance(reference, str) or not reference:
                     continue
-                upgrade, rank, rank_issue = resolve_config_upgrade(reference, upgrades, upgrades_by_type)
+                upgrade, rank, rank_issue = resolve_config_upgrade(
+                    reference, upgrades, upgrades_by_type, raw_upgrade_counts
+                )
                 if not isinstance(upgrade, dict):
                     if rank_issue:
                         issues.append(f"第 {slot + 1} 槽：{rank_issue}")

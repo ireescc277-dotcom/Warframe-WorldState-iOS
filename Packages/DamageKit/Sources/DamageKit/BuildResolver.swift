@@ -1011,9 +1011,15 @@ struct ModAggregate {
     /// Scale numeric leaves while preserving source-data structure. This is
     /// intentionally private: callers may supply an `actionScale` only when
     /// their import layer has verified the complete card action is linear.
+    ///
+    /// Vigilante's `double_crit` is deliberately an exception: it is a fixed
+    /// 5% set contribution for each equipped Vigilante card, not a fusion-rank
+    /// coefficient of that individual card. The snapshot adapter validates
+    /// and scales the printed card stat, while this value must remain intact.
     private static func scaledAction(_ action: [String: JSONValue], by scale: Double) -> [String: JSONValue] {
         Dictionary(uniqueKeysWithValues: action.map { key, value in
-            (key, scaledJSONValue(value, by: scale))
+            let rankIndependent = key == "double_crit" || key == "stances" || key == "set"
+            return (key, rankIndependent ? value : scaledJSONValue(value, by: scale))
         })
     }
 

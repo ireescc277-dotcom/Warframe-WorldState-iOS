@@ -36,4 +36,23 @@ final class RankedModTests: XCTestCase {
 
         XCTAssertEqual(resolved.fireRate, 17.2, accuracy: 1e-12)
     }
+
+    func testRankScaleDoesNotReduceFixedVigilanteSetContribution() {
+        let attack = Attack(name: "Shot", speed: 10, critChance: 1, critMultiplier: 2,
+                            statusChance: 0, damage: [.impact: 1])
+        var weapon = Weapon(name: "Primary", attacks: [attack], magazineSize: 10)
+        weapon.categories = ["primary"]
+
+        // At rank zero Vigilante Armaments has no Multishot contribution if
+        // represented by an action scale of zero, but its per-equipped-card
+        // set contribution remains the source-defined 5%.
+        let ranked = Build(slottedMods: [
+            SlottedMod(slot: 0, name: "Vigilante Armaments", actionScale: 0)
+        ])
+        let resolved = BuildResolver(weapon: weapon, build: ranked, options: Options(),
+                                     faction: .neutral).resolve(attack: attack)
+
+        XCTAssertEqual(resolved.multishot, 1, accuracy: 1e-12)
+        XCTAssertEqual(resolved.doubleCritChance, 0.05, accuracy: 1e-12)
+    }
 }
