@@ -86,7 +86,7 @@ public struct ArsenalView: View {
                 Text("武器")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                Text(catalog.failed ? "资源缺失" : "\(catalog.weapons.count) 把 · 点一把配卡算伤害")
+                Text(catalog.failed ? "武器数据不可用" : "\(catalog.weapons.count) 把 · 点一把配卡算伤害")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             }
@@ -177,7 +177,7 @@ public struct ArsenalView: View {
         let rows = filtered
         return LazyVStack(spacing: 0) {
             if catalog.failed {
-                Text("App 包里没有原生计算数据。构建时先跑 scripts/build_native_damage_data.py。")
+                Text("武器与计算数据未能加载。请重新安装完整版本后再试。")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.red)
                     .padding(.vertical, WFUI.s4)

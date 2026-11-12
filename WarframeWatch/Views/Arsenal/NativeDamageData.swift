@@ -50,14 +50,24 @@ final class NativeDamageCatalog: ObservableObject {
     @Published private(set) var loadError: String?
 
     private(set) var store: DataStore?
+    private var dataRoot: URL?
 
     private init() {
         load()
     }
 
     func load() {
-        guard let root = Bundle.main.url(forResource: "DamageData", withExtension: nil) else {
-            loadError = "App 包里缺少原生计算数据（DamageData）"
+        // Keep the calculator on the exact same resolver as the weapon list.
+        // Folder references exist at `.app/DamageData`; asking Bundle to look
+        // up the directory as a single resource can return nil even when the
+        // directory was copied into the app correctly.
+        guard let root = DamageDataBundle.root() else {
+            store = nil
+            dataRoot = nil
+            weapons = []
+            enemies = []
+            translations = [:]
+            loadError = "计算器数据无法读取。请重新安装完整版本后重试。"
             return
         }
 
@@ -70,10 +80,15 @@ final class NativeDamageCatalog: ObservableObject {
             enemies = try decoder.decode([Enemy].self, from: enemyData)
             translations = try decoder.decode([String: String].self, from: localizationData)
             store = DataStore(root: root)
+            dataRoot = root
             loadError = nil
         } catch {
             store = nil
-            loadError = "原生计算数据读取失败：\(error.localizedDescription)"
+            dataRoot = nil
+            weapons = []
+            enemies = []
+            translations = [:]
+            loadError = "计算器数据无法读取。请重新安装完整版本后重试。"
         }
     }
 
@@ -115,14 +130,14 @@ final class NativeDamageCatalog: ObservableObject {
 
     func localWeaponIcon(named image: String) -> URL? {
         guard !image.isEmpty,
-              let root = Bundle.main.url(forResource: "DamageData", withExtension: nil) else { return nil }
+              let root = dataRoot else { return nil }
         let url = root.appendingPathComponent("icons").appendingPathComponent(image)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     func localModIcon(named image: String?) -> URL? {
         guard let image, !image.isEmpty,
-              let root = Bundle.main.url(forResource: "DamageData", withExtension: nil) else { return nil }
+              let root = dataRoot else { return nil }
         let url = root.appendingPathComponent("mod-icons").appendingPathComponent(image)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }

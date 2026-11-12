@@ -170,7 +170,7 @@ struct NativeDamageCalculatorView: View {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .font(.wfBody)
                 .foregroundColor(WFTheme.red)
-            Text("构建 App 前会由 scripts/build_native_damage_data.py 生成 DamageData。")
+            Text("请重新安装完整版本后再试。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
         }

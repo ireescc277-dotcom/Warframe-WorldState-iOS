@@ -66,6 +66,54 @@ public enum WeaponCategory: String, CaseIterable, Identifiable {
     }
 }
 
+/// App bundle 中 DamageData 的统一定位器。
+///
+/// XcodeGen 把这个目录作为 folder reference 拷入 `.app/DamageData`。系统的
+/// `url(forResource:withExtension:)` 面向单个资源文件，不能可靠地发现这一类
+/// 文件夹引用；因此直接从 bundle 的资源根目录检查真实目录与必需 JSON 文件。
+/// 所有武器列表和计算器入口必须经过这里，避免两个页面各自猜测资源路径。
+enum DamageDataBundle {
+    static func root(in bundle: Bundle = .main) -> URL? {
+        let fileManager = FileManager.default
+        let bases = [bundle.resourceURL, bundle.bundleURL].compactMap { $0 }
+
+        for base in bases {
+            let candidate = base.appendingPathComponent("DamageData", isDirectory: true)
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: candidate.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue else { continue }
+
+            let requiredFiles = [
+                "weapons-list.json",
+                "zh-Hans.json",
+                "data/json/enemies-min.json",
+            ]
+            guard requiredFiles.allSatisfy({
+                fileManager.fileExists(atPath: candidate.appendingPathComponent($0).path)
+            }) else { continue }
+
+            return candidate
+        }
+
+        // Preserve compatibility with a manually flattened resource bundle,
+        // but still require the same complete data set before accepting it.
+        for base in bases {
+            let requiredFiles = [
+                "weapons-list.json",
+                "zh-Hans.json",
+                "data/json/enemies-min.json",
+            ]
+            if requiredFiles.allSatisfy({
+                fileManager.fileExists(atPath: base.appendingPathComponent($0).path)
+            }) {
+                return base
+            }
+        }
+
+        return nil
+    }
+}
+
 /// 从 App 包里读武器表。目录由 project.yml 以 folder reference 打进 bundle，
 /// 名字是 DamageData；它只含 JSON 与图片，不含网页运行时。
 public final class WeaponCatalog: ObservableObject {
@@ -78,14 +126,7 @@ public final class WeaponCatalog: ObservableObject {
 
     /// App 包内计算器根目录。找不到时返回 nil，调用方负责降级。
     public static var bundleRoot: URL? {
-        if let u = Bundle.main.url(forResource: "DamageData", withExtension: nil) {
-            return u
-        }
-        // xcodegen 的 folder reference 偶尔会把目录压平到包根
-        if let u = Bundle.main.url(forResource: "weapons-list", withExtension: "json") {
-            return u.deletingLastPathComponent()
-        }
-        return nil
+        DamageDataBundle.root()
     }
 
     /// 打包进 App 的武器缩略图目录（webp）。
@@ -95,14 +136,16 @@ public final class WeaponCatalog: ObservableObject {
 
     public func load() {
         guard weapons.isEmpty else { return }
+        failed = false
         guard let root = WeaponCatalog.bundleRoot else {
             failed = true
             return
         }
-        let url = root.appendingPathComponent("site").appendingPathComponent("weapons-list.json")
+        let url = root.appendingPathComponent("weapons-list.json")
         do {
             let data = try Data(contentsOf: url)
             weapons = try JSONDecoder().decode([WeaponEntry].self, from: data)
+            failed = weapons.isEmpty
         } catch {
             failed = true
         }
