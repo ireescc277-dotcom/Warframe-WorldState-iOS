@@ -445,9 +445,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
     }
 
     var allEffectSources: EnvironmentEffects {
-        let frames = effects(in: .warframe).map(\.source)
-        let companions = effects(in: .companion).map(\.source)
-        let environment = effects(in: .environment).map(\.source) + manualBuffs.map(\.source)
+        let frames = effects(in: .warframe).map { $0.source() }
+        let companions = effects(in: .companion).map { $0.source() }
+        let environment = effects(in: .environment).map { $0.source() }
+            + manualBuffs.map { $0.source() }
         return EnvironmentEffects(warframeMods: frames, companionMods: companions,
                                   buffs: environment,
                                   initialStatusStacks: initialStatusStacks)
@@ -601,7 +602,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
     }
 
     func addManualBuff() {
-        manualBuffs.append(NativeManualBuffDraft())
+        manualBuffs.append(NativeManualBuffDraft(id: UUID()))
         calculate()
     }
 

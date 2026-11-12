@@ -184,7 +184,7 @@ struct NativeDamageCalculatorView: View {
                     title: "武器",
                     primary: selectedWeaponLabel,
                     secondary: selectedWeaponDetail,
-                    image: selectedWeaponEntry.map { model.catalog.localWeaponIcon(named: $0.img) },
+                    image: selectedWeaponEntry.flatMap { model.catalog.localWeaponIcon(named: $0.img) },
                     remote: selectedWeaponEntry?.iconURL
                 )
             }
@@ -589,9 +589,10 @@ struct NativeDamageCalculatorView: View {
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.gold)
                     }
-                    ForEach($model.externalEffects) { $effect in
-                        if effect.group.wrappedValue == group {
-                            externalEffectRow($effect)
+                    ForEach(model.externalEffects.indices, id: \.self) { index in
+                        let effect = $model.externalEffects[index]
+                        if effect.wrappedValue.group == group {
+                            externalEffectRow(effect)
                         }
                     }
                 }
@@ -605,8 +606,8 @@ struct NativeDamageCalculatorView: View {
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.gold)
                 }
-                ForEach($model.manualBuffs) { $buff in
-                    manualBuffEditor($buff)
+                ForEach(model.manualBuffs.indices, id: \.self) { index in
+                    manualBuffEditor($model.manualBuffs[index])
                 }
             }
         }
@@ -857,7 +858,7 @@ struct NativeDamageCalculatorView: View {
     }
 
     private var customStatControls: some View {
-        DisclosureGroup("网站自定义属性") {
+        DisclosureGroup {
             VStack(alignment: .leading, spacing: WFUI.s3) {
                 Text("数值、单位和顺序与网站 customStats 面板对应；百分号字段输入 50 就是 +50%。这里的输入只传数据，实际结算仍由 DamageKit 统一完成。")
                     .font(.wfLabel)
