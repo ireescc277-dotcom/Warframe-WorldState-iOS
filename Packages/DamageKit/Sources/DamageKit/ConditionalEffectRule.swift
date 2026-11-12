@@ -42,6 +42,11 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
     public var mode: Mode
     /// 本条规则负责的 `WITH_COND` action 键。
     public var keys: [String]
+    /// A source record can place a condition's full value directly in its
+    /// ordinary action (Melee Exposure is one example). These keys are moved
+    /// into the same data-driven conditional path before resolution, keeping
+    /// the mirrored source JSON byte-for-byte faithful to the website.
+    public var conditionalActionKeys: [String]?
     /// 上游数据有时将一张满级卡的常驻属性和触发属性一起放在
     /// `WITH_COND` 中。此处列出的键会先提升为普通 action，不随层数或
     /// “所有条件满足”开关消失。例如满级 Deadhead 的 +30% 爆头倍率是常驻
@@ -63,6 +68,7 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
     }
 
     public init(mod: String, maxStacks: Double, mode: Mode, keys: [String],
+                conditionalActionKeys: [String]? = nil,
                 alwaysActiveKeys: [String]? = nil,
                 perStatusDamage: PerStatusDamage? = nil,
                 inputLabel: String? = nil) {
@@ -70,6 +76,7 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
         self.maxStacks = maxStacks
         self.mode = mode
         self.keys = keys
+        self.conditionalActionKeys = conditionalActionKeys
         self.alwaysActiveKeys = alwaysActiveKeys
         self.perStatusDamage = perStatusDamage
         self.inputLabel = inputLabel

@@ -66,6 +66,7 @@
     "maxStacks" : 4,
     "mode" : "scaledConditionalValue",
     "keys" : ["addCorrosive"],
+    "conditionalActionKeys" : ["addCorrosive"],
     "inputLabel" : "次技能施放"
   },
   {

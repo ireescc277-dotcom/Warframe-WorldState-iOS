@@ -959,7 +959,17 @@ struct ModAggregate {
                 action = Self.scaledAction(action, by: actionScale)
             }
         }
-        var conditional = action.removeValue(forKey: "WITH_COND")?.objectValue
+        // Most upstream records put triggered values under WITH_COND. A small
+        // documented set keeps the same full value in its ordinary action;
+        // the companion rule resource moves only those declared keys into
+        // this shared condition path, without altering the website mirror.
+        var conditionalAction = action.removeValue(forKey: "WITH_COND")?.objectValue ?? [:]
+        for key in conditionalRule?.conditionalActionKeys ?? [] {
+            if let value = action.removeValue(forKey: key) {
+                conditionalAction[key] = value
+            }
+        }
+        var conditional: [String: JSONValue]? = conditionalAction.isEmpty ? nil : conditionalAction
         // A few source records put a full-rank passive and an ordinary stacked
         // trigger in the same WITH_COND object. The resource rule, rather
         // than a Mod-name branch here or in SwiftUI, tells the resolver which
