@@ -17,6 +17,7 @@ from PIL import Image
 CALCULATOR_DATA_SCREENS = {
     "screen_arsenal.png",
     "screen_arsenal_melee.png",
+    "screen_arsenal_config.png",
     "screen_calc.png",
     "screen_calc_result.png",
 }

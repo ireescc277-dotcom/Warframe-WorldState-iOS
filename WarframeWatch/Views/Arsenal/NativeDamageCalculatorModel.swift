@@ -515,6 +515,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     init(initialWeaponName: String? = nil,
          initialOwnedWeapon: InventoryData.OwnedWeapon? = nil,
+         initialOwnedWeaponConfigIndex: Int = 0,
          initialOwnedWarframe: InventoryData.OwnedWarframe? = nil,
          initialWarframeConfigIndex: Int = 0,
          availableWarframes suppliedWarframes: [InventoryData.OwnedWarframe] = [],
@@ -543,8 +544,12 @@ final class NativeDamageCalculatorModel: ObservableObject {
         enemyName = catalog.enemies.first(where: { $0.name == "Corrupted Heavy Gunner" })?.name
             ?? catalog.enemies.first?.name
         reloadSelectedData(resetBuildWhenWeaponChanges: false)
-        if initialOwnedWeapon != nil {
-            applyOwnedConfig(at: 0, recalculate: false)
+        if let initialOwnedWeapon {
+            let selectedIndex = min(
+                max(0, initialOwnedWeaponConfigIndex),
+                max(initialOwnedWeapon.configs.count - 1, 0)
+            )
+            applyOwnedConfig(at: selectedIndex, recalculate: false)
         }
     }
 

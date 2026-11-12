@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import ImageIO
 
-/// 武器库：先列出账号快照里的武器实例，再把选中的 A/B/C 配卡交给计算器。
+/// 军械库：先展示一套账号快照中的整体配置，再允许进入具体装备的 A/B/C 页面。
 ///
 /// 公共武器数据库只提供图标、中文名和空计算器的手动选择器；它不是这个页面的
 /// 列表来源。这样同名武器的不同实例、继承元素和配置不会被合并丢掉。
@@ -10,10 +10,30 @@ public struct ArsenalView: View {
     @ObservedObject private var catalog = WeaponCatalog.shared
     @ObservedObject private var inventory = InventoryFeed.shared
 
+    private enum Page: String, CaseIterable, Identifiable {
+        case loadout
+        case inventory
+
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .loadout: return "配置"
+            case .inventory: return "装备列表"
+            }
+        }
+    }
+
+    @State private var page: Page = ArsenalView.seededPage
     @State private var category: WeaponCategory = ArsenalView.seededCategory
     @State private var query = ""
     @State private var pushedOwned: InventoryData.OwnedWeapon?
     @State private var pushedGeneric: WeaponEntry?
+    @State private var pushedWarframe: InventoryData.OwnedWarframe?
+    @State private var pushedWeaponConfigIndex = 0
+    @State private var pushedWarframeConfigIndex = 0
+    @State private var selectedLoadoutID: String?
+    @State private var showConfiguration = false
+    @State private var showWarframeConfiguration = false
     @State private var showCalc = false
     @State private var openCalc = ArsenalView.seededCalc
 
@@ -31,8 +51,23 @@ public struct ArsenalView: View {
         CommandLine.arguments.contains("-openCalc")
     }
 
-    /// `-calcWeapon Torid`：CI 要一张「从武器列表点进计算器」的图，
-    /// simctl 点不了屏，只能在启动时直接把这一跳做掉。
+    /// Visual CI explicitly asks for a weapon category.  In that case it
+    /// needs the inventory list; ordinary launches start at the whole loadout
+    /// configuration just like the in-game Arsenal.
+    private static var seededPage: Page {
+        CommandLine.arguments.contains("-arsenalCat") ? .inventory : .loadout
+    }
+
+    /// `-arsenalConfigWeapon Torid`：CI 直接打开这把背包武器的配置页。
+    /// `simctl` 点不了屏，因此这只用于截图门禁，不改变正常导航。
+    private static var seededConfigurationWeapon: String? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "-arsenalConfigWeapon"), args.index(after: i) < args.endIndex
+        else { return nil }
+        return args[args.index(after: i)]
+    }
+
+    /// `-calcWeapon Torid`：CI 要一张原生计算器结果图，无法点配置页按钮时直接进入。
     private static var seededWeapon: String? {
         let args = CommandLine.arguments
         guard let i = args.firstIndex(of: "-calcWeapon"), args.index(after: i) < args.endIndex
@@ -48,9 +83,14 @@ public struct ArsenalView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: WFUI.s4) {
                         header
-                        searchBox
-                        categoryBar
-                        list
+                        pagePicker
+                        if page == .loadout {
+                            loadoutContent
+                        } else {
+                            searchBox
+                            categoryBar
+                            list
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 10)
@@ -67,8 +107,14 @@ public struct ArsenalView: View {
                 // stale.  The selected config is still prefilled and its real
                 // calculation remains off the main thread.
                 _ = NativeDamageCatalog.shared
+                selectDefaultLoadoutIfNeeded()
                 await inventory.refresh()
-                if let want = ArsenalView.seededWeapon,
+                selectDefaultLoadoutIfNeeded()
+                if let want = ArsenalView.seededConfigurationWeapon,
+                   pushedOwned == nil,
+                   let owned = ownedWeapons.first(where: { $0.calcName == want }) {
+                    openWeaponConfiguration(owned, from: contextualLoadout(for: owned))
+                } else if let want = ArsenalView.seededWeapon,
                    pushedGeneric == nil,
                    let hit = catalog.weapons.first(where: { $0.n == want }) {
                     pushedGeneric = hit
@@ -76,14 +122,32 @@ public struct ArsenalView: View {
                 }
             }
             // iOS 16 没有 navigationDestination(item:)，用 isPresented + 暂存数据
-            .navigationDestination(isPresented: $showCalc) {
+            .navigationDestination(isPresented: $showConfiguration) {
                 if let owned = pushedOwned {
-                    DamageCalcView(
+                    ArsenalWeaponConfigurationView(
                         ownedWeapon: owned,
                         availableWarframes: inventory.data?.ownedWarframes ?? [],
-                        title: owned.z
+                        initialWeaponConfigIndex: pushedWeaponConfigIndex,
+                        initialWarframe: pushedWarframe,
+                        initialWarframeConfigIndex: pushedWarframeConfigIndex,
+                        calculatorAvailable: canCalculate(owned)
                     )
-                } else if let w = pushedGeneric {
+                } else {
+                    EmptyView()
+                }
+            }
+            .navigationDestination(isPresented: $showWarframeConfiguration) {
+                if let frame = pushedWarframe {
+                    ArsenalWarframeConfigurationView(
+                        warframe: frame,
+                        initialConfigIndex: pushedWarframeConfigIndex
+                    )
+                } else {
+                    EmptyView()
+                }
+            }
+            .navigationDestination(isPresented: $showCalc) {
+                if let w = pushedGeneric {
                     DamageCalcView(
                         weapon: w.n,
                         availableWarframes: inventory.data?.ownedWarframes ?? [],
@@ -115,7 +179,7 @@ public struct ArsenalView: View {
                 Text("军械库")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                Text(weaponSubtitle)
+                Text(arsenalSubtitle)
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             }
@@ -140,6 +204,25 @@ public struct ArsenalView: View {
                 )
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var pagePicker: some View {
+        HStack(spacing: 7) {
+            ForEach(Page.allCases) { candidate in
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { page = candidate }
+                } label: {
+                    Text(candidate.label)
+                        .font(.system(size: 12, weight: page == candidate ? .semibold : .regular))
+                        .foregroundColor(page == candidate ? Color(hex: "1A1408") : WFTheme.textSecondary)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(page == candidate ? WFTheme.gold : WFUI.surface))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
         }
     }
 
@@ -197,14 +280,236 @@ public struct ArsenalView: View {
         inventory.data?.ownedWeapons ?? []
     }
 
-    private var weaponSubtitle: String {
-        if inventory.data == nil {
+    private var ownedWarframes: [InventoryData.OwnedWarframe] {
+        inventory.data?.ownedWarframes ?? []
+    }
+
+    private var loadouts: [InventoryData.Loadout] {
+        inventory.data?.loadouts ?? []
+    }
+
+    private var selectedLoadout: InventoryData.Loadout? {
+        guard let selectedLoadoutID else { return nil }
+        return loadouts.first { $0.id == selectedLoadoutID }
+    }
+
+    private var arsenalSubtitle: String {
+        guard inventory.data != nil else {
             return inventory.fetching ? "正在读取背包快照…" : "尚未取得背包快照"
         }
+        if page == .inventory {
+            return weaponSubtitle
+        }
+        if let loadout = selectedLoadout {
+            let marked = loadout.snapshotMarkedActive ? " · 快照标记" : ""
+            return "配置 \(loadout.name)\(marked) · 进入装备后查看 A/B/C"
+        }
+        return "这份快照没有普通军械库配置"
+    }
+
+    private var weaponSubtitle: String {
         if catalog.failed {
             return "背包 \(ownedWeapons.count) 把 · 计算器数据不可用"
         }
-        return "背包 \(ownedWeapons.count) 把 · 点入后预填 A/B/C 配卡"
+        return "背包 \(ownedWeapons.count) 把 · 先进入配置页，再预填伤害计算"
+    }
+
+    private func selectDefaultLoadoutIfNeeded() {
+        let choices = loadouts
+        guard !choices.isEmpty else {
+            selectedLoadoutID = nil
+            return
+        }
+        if let selectedLoadoutID, choices.contains(where: { $0.id == selectedLoadoutID }) {
+            return
+        }
+        selectedLoadoutID = choices.first(where: { $0.snapshotMarkedActive })?.id ?? choices[0].id
+    }
+
+    private var loadoutContent: some View {
+        Group {
+            if inventory.data == nil {
+                Text(inventory.failed
+                     ? "没有可用的背包快照。下拉重试；装备列表仍可在有快照后使用。"
+                     : "正在读取背包快照…")
+                    .font(.wfBody)
+                    .foregroundColor(inventory.failed ? WFTheme.red : WFTheme.textMuted)
+                    .padding(.vertical, WFUI.s4)
+            } else if let loadout = selectedLoadout {
+                VStack(alignment: .leading, spacing: WFUI.s4) {
+                    loadoutPicker
+                    loadoutCard(loadout)
+                    Text("同伴、物品和空战目前没有被这份账号快照导出；它们不会以空白数据伪装成已带入的配置。")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                        .padding(.horizontal, WFUI.s1)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: WFUI.s2) {
+                    Text("这份账号快照没有普通军械库配置。")
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textMuted)
+                    Text("你仍可切到“装备列表”查看背包武器并进入它们的配置页。")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                .padding(.vertical, WFUI.s4)
+            }
+        }
+    }
+
+    private var loadoutPicker: some View {
+        Menu {
+            ForEach(loadouts) { loadout in
+                Button(loadoutMenuLabel(loadout)) {
+                    selectedLoadoutID = loadout.id
+                }
+            }
+        } label: {
+            HStack(spacing: WFUI.s2) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(WFTheme.gold)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(selectedLoadout?.name ?? "选择配置")
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textPrimary)
+                    Text("普通军械库配置 · 来自账号快照")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(WFTheme.textMuted)
+            }
+            .padding(.horizontal, WFUI.s3)
+            .padding(.vertical, 10)
+            .background(WFUI.surface)
+            .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func loadoutMenuLabel(_ loadout: InventoryData.Loadout) -> String {
+        loadout.snapshotMarkedActive ? "\(loadout.name) · 快照标记" : loadout.name
+    }
+
+    private func loadoutCard(_ loadout: InventoryData.Loadout) -> some View {
+        let roles: [InventoryData.Loadout.Slot.Role] = [.warframe, .primary, .secondary, .melee, .heavy]
+        return VStack(spacing: 0) {
+            ForEach(roles, id: \.self) { role in
+                loadoutEquipmentRow(role, slot: loadout.slot(role), in: loadout)
+                if role != .heavy {
+                    WFHairline().padding(.leading, 48)
+                }
+            }
+        }
+        .background(WFUI.surface)
+        .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
+    }
+
+    private func loadoutEquipmentRow(_ role: InventoryData.Loadout.Slot.Role,
+                                     slot: InventoryData.Loadout.Slot?,
+                                     in loadout: InventoryData.Loadout) -> some View {
+        let frame = role == .warframe ? warframe(for: slot) : nil
+        let weapon = role == .warframe ? nil : weapon(for: slot)
+        let name = frame?.z ?? weapon?.z ?? slot?.displayName ?? "未导入"
+        let config = slot?.configLabel.map { "配置 \($0)" } ?? "没有配置记录"
+        let isAvailable = frame != nil || weapon != nil
+
+        return Button {
+            if let frame {
+                pushedWarframe = frame
+                pushedWarframeConfigIndex = slot?.configIndex ?? 0
+                showWarframeConfiguration = true
+            } else if let weapon {
+                openWeaponConfiguration(weapon, from: loadout)
+            }
+        } label: {
+            HStack(spacing: WFUI.s3) {
+                Image(systemName: symbol(for: role))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(color(for: role))
+                    .frame(width: 28, height: 28)
+                    .background(color(for: role).opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(role.label)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                    Text(name)
+                        .font(.wfTitle)
+                        .foregroundColor(isAvailable ? WFTheme.textPrimary : WFTheme.textMuted)
+                        .lineLimit(1)
+                    Text(slot?.isHidden == true ? "\(config) · 快照标记为隐藏" : config)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: WFUI.s2)
+                Image(systemName: isAvailable ? "chevron.right" : "minus")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(WFTheme.textMuted)
+            }
+            .padding(.horizontal, WFUI.s3)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isAvailable)
+        .opacity(isAvailable ? 1 : 0.58)
+    }
+
+    private func symbol(for role: InventoryData.Loadout.Slot.Role) -> String {
+        switch role {
+        case .warframe: return "person.crop.square"
+        case .primary: return "scope"
+        case .secondary: return "target"
+        case .melee: return "sparkles"
+        case .heavy: return "bolt.horizontal.circle"
+        }
+    }
+
+    private func color(for role: InventoryData.Loadout.Slot.Role) -> Color {
+        switch role {
+        case .warframe: return WFTheme.gold
+        case .primary: return WFTheme.cyan
+        case .secondary: return WFTheme.purple
+        case .melee: return WFTheme.green
+        case .heavy: return WFTheme.red
+        }
+    }
+
+    private func warframe(for slot: InventoryData.Loadout.Slot?) -> InventoryData.OwnedWarframe? {
+        guard let id = slot?.itemID else { return nil }
+        return ownedWarframes.first { $0.id == id }
+    }
+
+    private func weapon(for slot: InventoryData.Loadout.Slot?) -> InventoryData.OwnedWeapon? {
+        guard let id = slot?.itemID else { return nil }
+        return ownedWeapons.first { $0.id == id }
+    }
+
+    private func contextualLoadout(for weapon: InventoryData.OwnedWeapon) -> InventoryData.Loadout? {
+        if let selectedLoadout,
+           selectedLoadout.slots.contains(where: { $0.itemID == weapon.id }) {
+            return selectedLoadout
+        }
+        return loadouts.first { loadout in
+            loadout.slots.contains { $0.itemID == weapon.id }
+        }
+    }
+
+    private func openWeaponConfiguration(_ weapon: InventoryData.OwnedWeapon,
+                                         from loadout: InventoryData.Loadout?) {
+        let weaponSlot = loadout?.slots.first { $0.itemID == weapon.id }
+        let frameSlot = loadout?.slot(.warframe)
+        pushedOwned = weapon
+        pushedWarframe = warframe(for: frameSlot)
+        pushedWeaponConfigIndex = weaponSlot?.configIndex ?? 0
+        pushedWarframeConfigIndex = frameSlot?.configIndex ?? 0
+        showConfiguration = true
     }
 
     private func categoryMatches(_ weapon: InventoryData.OwnedWeapon) -> Bool {
@@ -245,15 +550,11 @@ public struct ArsenalView: View {
             } else {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { idx, w in
                     Button {
-                        guard canCalculate(w) else { return }
-                        pushedOwned = w
-                        pushedGeneric = nil
-                        showCalc = true
+                        openWeaponConfiguration(w, from: contextualLoadout(for: w))
                     } label: {
                         row(w)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canCalculate(w))
                     if idx < rows.count - 1 {
                         WFHairline().padding(.leading, 56)
                     }
@@ -302,20 +603,18 @@ public struct ArsenalView: View {
             Spacer(minLength: WFUI.s2)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(supported ? "预填计算" : "暂不支持")
+                Text(supported ? "配置 · 可计算" : "查看配置")
                     .font(.wfLabel)
                     .foregroundColor(supported ? WFTheme.cyan : WFTheme.textMuted)
-                if supported {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(WFTheme.textMuted.opacity(0.7))
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(WFTheme.textMuted.opacity(0.7))
             }
         }
         .padding(.horizontal, WFUI.s3)
         .padding(.vertical, 9)
         .contentShape(Rectangle())
-        .opacity(supported ? 1 : 0.64)
+        .opacity(supported ? 1 : 0.82)
     }
 }
 

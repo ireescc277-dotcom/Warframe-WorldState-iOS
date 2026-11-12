@@ -216,7 +216,9 @@ jobs:
           capture screen_assets_detail -startTab 2 -assetSet "Hildryn Prime"
           capture screen_arsenal -startTab 3
           capture screen_arsenal_melee -startTab 3 -arsenalCat melee
-          # 从武器列表点进原生计算器的那一跳：simctl 点不了屏，用启动参数直接做掉。
+          # 军械库的中间配置页：先核对背包武器和当前战甲的 A/B/C，才可进入计算器。
+          capture screen_arsenal_config -startTab 3 -arsenalConfigWeapon Torid
+          # simctl 点不了配置页的按钮，计算器结果图由启动参数直接进入。
           # 等 DamageKit 完成首轮时间线计算后再取图。
           xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
           xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid >/dev/null
@@ -238,7 +240,7 @@ jobs:
             dashboard_preview.png screen_watch.png screen_watch_targets.png \
             screen_assets.png screen_assets_relics.png screen_assets_aya.png \
             screen_assets_detail.png screen_arsenal.png screen_arsenal_melee.png \
-            screen_calc.png screen_calc_result.png \
+            screen_arsenal_config.png screen_calc.png screen_calc_result.png \
             screen_more.png
 
       - name: Upload Screenshot Artifact
@@ -255,6 +257,7 @@ jobs:
             screen_assets_detail.png
             screen_arsenal.png
             screen_arsenal_melee.png
+            screen_arsenal_config.png
             screen_calc.png
             screen_calc_result.png
             screen_more.png

@@ -10,6 +10,10 @@ import SwiftUI
 public struct DamageCalcView: View {
     private let weapon: String?
     private let ownedWeapon: InventoryData.OwnedWeapon?
+    /// The concrete A/B/C build selected on the Arsenal configuration page.
+    /// It must travel with the owned instance; defaulting back to A here would
+    /// make a loadout look correct while calculating a different build.
+    private let ownedWeaponConfigIndex: Int
     private let ownedWarframe: InventoryData.OwnedWarframe?
     private let warframeConfigIndex: Int
     private let availableWarframes: [InventoryData.OwnedWarframe]
@@ -17,12 +21,14 @@ public struct DamageCalcView: View {
 
     public init(weapon: String? = nil,
                 ownedWeapon: InventoryData.OwnedWeapon? = nil,
+                ownedWeaponConfigIndex: Int = 0,
                 ownedWarframe: InventoryData.OwnedWarframe? = nil,
                 warframeConfigIndex: Int = 0,
                 availableWarframes: [InventoryData.OwnedWarframe] = [],
                 title: String = "伤害计算") {
         self.weapon = weapon
         self.ownedWeapon = ownedWeapon
+        self.ownedWeaponConfigIndex = ownedWeaponConfigIndex
         self.ownedWarframe = ownedWarframe
         self.warframeConfigIndex = warframeConfigIndex
         self.availableWarframes = availableWarframes
@@ -33,6 +39,7 @@ public struct DamageCalcView: View {
         NativeDamageCalculatorView(
             weapon: weapon,
             ownedWeapon: ownedWeapon,
+            ownedWeaponConfigIndex: ownedWeaponConfigIndex,
             ownedWarframe: ownedWarframe,
             warframeConfigIndex: warframeConfigIndex,
             availableWarframes: availableWarframes,

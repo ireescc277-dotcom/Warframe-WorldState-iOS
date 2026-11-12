@@ -80,6 +80,7 @@ struct NativeDamageCalculatorView: View {
 
     init(weapon: String? = nil,
          ownedWeapon: InventoryData.OwnedWeapon? = nil,
+         ownedWeaponConfigIndex: Int = 0,
          ownedWarframe: InventoryData.OwnedWarframe? = nil,
          warframeConfigIndex: Int = 0,
          availableWarframes: [InventoryData.OwnedWarframe] = [],
@@ -88,6 +89,7 @@ struct NativeDamageCalculatorView: View {
         _model = StateObject(wrappedValue: NativeDamageCalculatorModel(
             initialWeaponName: weapon,
             initialOwnedWeapon: ownedWeapon,
+            initialOwnedWeaponConfigIndex: ownedWeaponConfigIndex,
             initialOwnedWarframe: ownedWarframe,
             initialWarframeConfigIndex: warframeConfigIndex,
             availableWarframes: availableWarframes
