@@ -280,6 +280,8 @@ def main(argv: list[str] | None = None) -> int:
             manifest_raw = json.dumps(manifest, ensure_ascii=False,
                                       separators=(",", ":"), sort_keys=True).encode("utf-8")
             put_then_rename(sftp, client, raw=manifest_raw, destination=remote_manifest)
+            if remote_json(sftp, remote_manifest) != manifest:
+                raise RuntimeError("VPS manifest 回读与刚验证的 payload 指针不一致")
         finally:
             sftp.close()
 

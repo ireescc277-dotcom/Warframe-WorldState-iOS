@@ -255,9 +255,7 @@ public struct InventoryManifest: Codable, Equatable, Sendable {
         schemaVersion == 2
             && snapshotId == contentHash
             && InventoryStore.isSHA256(contentHash)
-            && !payload.isEmpty
-            && !payload.hasPrefix("/")
-            && !payload.contains("..")
+            && payload == "snapshots/\(contentHash).json"
             && (sourceHash == nil || InventoryStore.isSHA256(sourceHash ?? ""))
             && bytes >= 0
     }
