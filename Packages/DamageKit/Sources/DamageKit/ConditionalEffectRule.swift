@@ -50,6 +50,11 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
     /// `base_per_status` 的层数与攻击段适用范围；没有该字段时，本规则只描述
     /// `WITH_COND` 的插值语义。
     public var perStatusDamage: PerStatusDamage?
+    /// The concrete in-game quantity the player is choosing. Most cards use
+    /// ordinary stacks, but an Arcane can instead count ability casts, buffs,
+    /// or another source-defined unit. Keeping this in rule data prevents the
+    /// UI from presenting every mechanism as a mysterious generic "stack".
+    public var inputLabel: String?
 
     /// 是否需要在 UI 中向用户索取层数。常驻 CO 不需要层数输入；`WITH_COND`
     /// 与击杀叠层效果需要。
@@ -59,12 +64,14 @@ public struct ConditionalEffectRule: Codable, Sendable, Equatable {
 
     public init(mod: String, maxStacks: Double, mode: Mode, keys: [String],
                 alwaysActiveKeys: [String]? = nil,
-                perStatusDamage: PerStatusDamage? = nil) {
+                perStatusDamage: PerStatusDamage? = nil,
+                inputLabel: String? = nil) {
         self.mod = mod
         self.maxStacks = maxStacks
         self.mode = mode
         self.keys = keys
         self.alwaysActiveKeys = alwaysActiveKeys
         self.perStatusDamage = perStatusDamage
+        self.inputLabel = inputLabel
     }
 }

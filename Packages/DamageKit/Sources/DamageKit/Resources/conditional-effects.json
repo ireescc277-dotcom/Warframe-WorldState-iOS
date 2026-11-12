@@ -62,6 +62,13 @@
     "keys" : ["base", "reloadTime", "charge_time"]
   },
   {
+    "mod" : "Melee Exposure",
+    "maxStacks" : 4,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["addCorrosive"],
+    "inputLabel" : "次技能施放"
+  },
+  {
     "mod" : "Condition Overload",
     "maxStacks" : 0,
     "mode" : "scaledConditionalValue",

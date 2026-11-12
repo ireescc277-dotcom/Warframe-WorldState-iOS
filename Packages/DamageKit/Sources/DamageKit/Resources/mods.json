@@ -11198,7 +11198,9 @@
   "type": "weapon_mist",
   "info": "On Ability Cast Gain 60% Corrosive Damage on Melee strikes for 25s. Stacks up to 240%.",
   "action": {
-   "addCorrosive": 2.4
+   "WITH_COND": {
+    "addCorrosive": 2.4
+   }
   }
  },
  {

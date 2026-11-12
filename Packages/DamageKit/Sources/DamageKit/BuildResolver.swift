@@ -1412,6 +1412,11 @@ struct ModAggregate {
                 if let v { elements.append((.magnetic, v)) }
             case "addRadiation":
                 if let v { elements.append((.radiation, v)) }
+            // Melee Exposure grants a completed Corrosive component after an
+            // ability cast. It is not two adjacent slot elements, so preserve
+            // it as its own combined type in the slot-order merge.
+            case "addCorrosive":
+                if let v { elements.append((.corrosive, v)) }
             // Stance combo entries are parsed by `MeleeStanceLibrary` after
             // Mod-slot validation.  They are not a damage-stat action here.
             case "stances":

@@ -113,6 +113,8 @@ UPGRADE_ALIASES = {
         ("Primary Deadhead", 5),
     "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee":
         ("Secondary Deadhead", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CorrosiveMeleePerAbilityCast":
+        ("Melee Exposure", 5),
 }
 
 RIVEN_MAXIMUM = 1_073_741_823.0
