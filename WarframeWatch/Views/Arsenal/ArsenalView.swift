@@ -260,7 +260,7 @@ public struct ArsenalView: View {
     private func row(_ w: InventoryData.OwnedWeapon) -> some View {
         let entry = catalogEntry(for: w)
         let supported = canCalculate(w)
-        HStack(spacing: WFUI.s3) {
+        return HStack(spacing: WFUI.s3) {
             WeaponThumb(name: entry?.img, remote: entry?.iconURL, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
