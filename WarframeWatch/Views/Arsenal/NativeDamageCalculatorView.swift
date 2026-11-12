@@ -1066,13 +1066,27 @@ struct NativeDamageCalculatorView: View {
                         Button(companion.z) { model.selectCurrentCompanion(companion.id) }
                     }
                 } label: {
-                    selectionLabel(
-                        icon: "pawprint.fill",
-                        title: model.currentCompanion?.z ?? "不带同伴",
-                        subtitle: model.currentCompanion == nil
-                            ? "不带入同伴 Mod 或同伴赋能"
-                            : "使用其已导入的 A/B/C 配置"
-                    )
+                    HStack(spacing: 8) {
+                        Image(systemName: "pawprint.fill")
+                            .foregroundColor(WFTheme.gold)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(model.currentCompanion?.z ?? "选择背包中的同伴")
+                                .font(.wfBody)
+                                .foregroundColor(WFTheme.textPrimary)
+                            Text(model.currentCompanion == nil
+                                 ? "不带入同伴 Mod 或同伴赋能"
+                                 : "使用它的 A/B/C 配置")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    .padding(10)
+                    .background(WFUI.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
