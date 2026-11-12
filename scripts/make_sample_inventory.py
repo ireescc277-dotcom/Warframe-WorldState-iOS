@@ -75,6 +75,10 @@ def build() -> dict:
         "relics": relics,
         "ownedWeapons": [],
         "ownedWarframes": [],
+        "ownedCompanions": [],
+        "ownedCompanionWeapons": [],
+        "ownedArchwings": [],
+        "equippedGear": [],
         "loadouts": [],
     }
 

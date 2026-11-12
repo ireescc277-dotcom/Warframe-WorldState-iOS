@@ -23,14 +23,28 @@ public struct InventoryData: Decodable {
     /// Owned Warframe instances retain their own A/B/C configurations.  This
     /// is deliberately not collapsed into an app-wide "ability strength".
     public let ownedWarframes: [OwnedWarframe]
-    /// Normal Arsenal presets reference concrete items above by opaque id.
-    /// A snapshot can mark more than one category as active, so `active` is
+    /// Companion bodies retain their own A/B/C Mod and Arcane configuration.
+    /// They are separate from `ownedWeapons`: a companion weapon is still a
+    /// weapon, whereas the Sentinel/Pet itself is a configuration body.
+    public let ownedCompanions: [OwnedEquipment]
+    /// Beast companion weapons are stored by DE in a different account source
+    /// from Sentinel weapons; keep their imported configs separate instead of
+    /// substituting a same-name weapon from another category.
+    public let ownedCompanionWeapons: [OwnedEquipment]
+    /// Archwing bodies retain A/B/C configuration independently of Archguns
+    /// and Arch-melee weapons.
+    public let ownedArchwings: [OwnedEquipment]
+    /// Source-ordered entries from DE's account-level gear wheel.  This is
+    /// not inferred to belong to a particular normal Arsenal preset.
+    public let equippedGear: [EquippedGearItem]
+    /// DE preset families reference concrete items above by opaque id.  A
+    /// snapshot can mark more than one family as active, so `active` is
     /// source evidence, not a claim that we inferred one global preset.
     public let loadouts: [Loadout]
 
     private enum CodingKeys: String, CodingKey {
         case builtAt, source, marketAt, profile, totals, aya, sets, relics, ownedWeapons
-        case ownedWarframes, loadouts
+        case ownedWarframes, ownedCompanions, ownedCompanionWeapons, ownedArchwings, equippedGear, loadouts
     }
 
     public init(from decoder: Decoder) throws {
@@ -48,6 +62,10 @@ public struct InventoryData: Decodable {
         relics = try c.decodeIfPresent([RelicRow].self, forKey: .relics) ?? []
         ownedWeapons = try c.decodeIfPresent([OwnedWeapon].self, forKey: .ownedWeapons) ?? []
         ownedWarframes = try c.decodeIfPresent([OwnedWarframe].self, forKey: .ownedWarframes) ?? []
+        ownedCompanions = try c.decodeIfPresent([OwnedEquipment].self, forKey: .ownedCompanions) ?? []
+        ownedCompanionWeapons = try c.decodeIfPresent([OwnedEquipment].self, forKey: .ownedCompanionWeapons) ?? []
+        ownedArchwings = try c.decodeIfPresent([OwnedEquipment].self, forKey: .ownedArchwings) ?? []
+        equippedGear = try c.decodeIfPresent([EquippedGearItem].self, forKey: .equippedGear) ?? []
         loadouts = try c.decodeIfPresent([Loadout].self, forKey: .loadouts) ?? []
     }
 
@@ -359,24 +377,140 @@ public struct InventoryData: Decodable {
         }
     }
 
-    /// A normal Arsenal preset.  The UI treats it as one whole configuration:
-    /// frame + primary + secondary + melee + heavy, each with an independent
-    /// A/B/C index.  It is not a shortcut straight into a weapon calculator.
+    /// An owned companion or Archwing body.  It has a true account instance
+    /// and A/B/C build, but is intentionally not fed to the weapon calculator
+    /// as if it were a normal gun.
+    public struct OwnedEquipment: Decodable, Identifiable, Hashable {
+        public let id: String
+        public let z: String
+        /// Snapshot category, e.g. `Sentinels`, `KubrowPets`, `MoaPets`, or
+        /// `SpaceSuits`.  It is static equipment taxonomy, not a private ID.
+        public let inventoryCategory: String
+        public let configs: [Config]
+
+        private enum CodingKeys: String, CodingKey { case id, z, k, cfg }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            z = try c.decodeIfPresent(String.self, forKey: .z) ?? "未命名装备"
+            inventoryCategory = try c.decodeIfPresent(String.self, forKey: .k) ?? "Unknown"
+            configs = try c.decodeIfPresent([Config].self, forKey: .cfg) ?? []
+        }
+
+        public func config(at index: Int) -> Config? {
+            guard configs.indices.contains(index) else { return nil }
+            return configs[index]
+        }
+
+        public var categoryLabel: String {
+            switch inventoryCategory {
+            case "Sentinels": return "守护"
+            case "KubrowPets": return "库狛"
+            case "MoaPets": return "恐鸟"
+            case "CompanionWeapons": return "同伴武器"
+            case "SpaceSuits": return "Archwing"
+            default: return inventoryCategory
+            }
+        }
+
+        public struct Config: Decodable, Hashable, Identifiable {
+            public let label: String
+            public let upgrades: [Upgrade]
+            public let isExactImport: Bool
+            public let issues: [String]
+            public var id: String { label }
+
+            private enum CodingKeys: String, CodingKey { case l, u, exact, issues }
+
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                label = try c.decodeIfPresent(String.self, forKey: .l) ?? "A"
+                upgrades = try c.decodeIfPresent([Upgrade].self, forKey: .u) ?? []
+                isExactImport = try c.decodeIfPresent(Bool.self, forKey: .exact) ?? true
+                issues = try c.decodeIfPresent([String].self, forKey: .issues) ?? []
+            }
+        }
+
+        public struct Upgrade: Decodable, Hashable, Identifiable {
+            public let slot: Int
+            public let name: String
+            public let rank: Int?
+            public let maxRank: Int?
+            public let kind: String
+            public var id: Int { slot }
+
+            private enum CodingKeys: String, CodingKey { case s, n, r, m, k }
+
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? -1
+                name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未识别升级"
+                rank = try c.decodeIfPresent(Int.self, forKey: .r)
+                maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
+                kind = try c.decodeIfPresent(String.self, forKey: .k) ?? "Mod"
+            }
+
+            public var rankLabel: String {
+                guard let rank else { return "等级未确认" }
+                guard let maxRank else { return "等级 \(rank)" }
+                return "等级 \(rank)/\(maxRank)"
+            }
+        }
+    }
+
+    /// One source-ordered account gear-wheel entry.  Quantity is optional:
+    /// only a stack record in the snapshot can establish it, while equipment
+    /// such as a deployer must not be presented as having one fabricated use.
+    public struct EquippedGearItem: Decodable, Identifiable, Hashable {
+        public let id: String
+        public let slot: Int
+        public let name: String
+        public let count: Int?
+
+        private enum CodingKeys: String, CodingKey { case id, s, n, c }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? -1
+            name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未命名物品"
+            count = try c.decodeIfPresent(Int.self, forKey: .c)
+        }
+    }
+
+    /// A DE Arsenal preset family.  `normal`, `companion`, and `archwing`
+    /// are distinct source lists; the UI may place them together for an
+    /// Arsenal overview but must not claim an unrecorded cross-family link.
     public struct Loadout: Decodable, Identifiable, Hashable {
         public let id: String
         public let name: String
+        public let kind: Kind
         public let isFavorite: Bool
         public let snapshotMarkedActive: Bool
         public let slots: [Slot]
 
-        private enum CodingKeys: String, CodingKey { case id, n, fav, active, slots }
+        private enum CodingKeys: String, CodingKey { case id, n, t, fav, active, slots }
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             id = try c.decode(String.self, forKey: .id)
             name = try c.decodeIfPresent(String.self, forKey: .n) ?? "配置"
+            kind = try c.decodeIfPresent(Kind.self, forKey: .t) ?? .normal
             isFavorite = try c.decodeIfPresent(Bool.self, forKey: .fav) ?? false
             snapshotMarkedActive = try c.decodeIfPresent(Bool.self, forKey: .active) ?? false
             slots = try c.decodeIfPresent([Slot].self, forKey: .slots) ?? []
+        }
+
+        public enum Kind: String, Decodable, Hashable {
+            case normal, companion, archwing
+
+            public var label: String {
+                switch self {
+                case .normal: return "战甲与武器"
+                case .companion: return "同伴"
+                case .archwing: return "Archwing"
+                }
+            }
         }
 
         public func slot(_ role: Slot.Role) -> Slot? {
@@ -386,6 +520,7 @@ public struct InventoryData: Decodable {
         public struct Slot: Decodable, Hashable, Identifiable {
             public enum Role: String, Decodable, CaseIterable, Hashable {
                 case warframe, primary, secondary, melee, heavy
+                case companion, companionWeapon, archwing, archgun, archmelee
 
                 public var label: String {
                     switch self {
@@ -394,6 +529,11 @@ public struct InventoryData: Decodable {
                     case .secondary: return "副武器"
                     case .melee: return "近战"
                     case .heavy: return "重型武器"
+                    case .companion: return "同伴"
+                    case .companionWeapon: return "同伴武器"
+                    case .archwing: return "Archwing"
+                    case .archgun: return "Archwing 枪械"
+                    case .archmelee: return "Archwing 近战"
                     }
                 }
             }
@@ -403,9 +543,13 @@ public struct InventoryData: Decodable {
             public let displayName: String?
             public let configIndex: Int?
             public let isHidden: Bool
+            /// A preset can reference an instance which is missing from the
+            /// captured inventory rows.  It is a source condition, not an
+            /// invitation to substitute a same-name item.
+            public let sourceIssue: String?
             public var id: Role { role }
 
-            private enum CodingKeys: String, CodingKey { case r, i, z, c, hide }
+            private enum CodingKeys: String, CodingKey { case r, i, z, c, hide, x }
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
                 role = try c.decode(Role.self, forKey: .r)
@@ -413,6 +557,7 @@ public struct InventoryData: Decodable {
                 displayName = try c.decodeIfPresent(String.self, forKey: .z)
                 configIndex = try c.decodeIfPresent(Int.self, forKey: .c)
                 isHidden = try c.decodeIfPresent(Bool.self, forKey: .hide) ?? false
+                sourceIssue = try c.decodeIfPresent(String.self, forKey: .x)
             }
 
             public var configLabel: String? {

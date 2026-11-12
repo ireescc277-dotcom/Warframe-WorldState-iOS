@@ -29,11 +29,16 @@ public struct ArsenalView: View {
     @State private var pushedOwned: InventoryData.OwnedWeapon?
     @State private var pushedGeneric: WeaponEntry?
     @State private var pushedWarframe: InventoryData.OwnedWarframe?
+    @State private var pushedEquipment: InventoryData.OwnedEquipment?
     @State private var pushedWeaponConfigIndex = 0
     @State private var pushedWarframeConfigIndex = 0
+    @State private var pushedEquipmentConfigIndex = 0
     @State private var selectedLoadoutID: String?
+    @State private var selectedCompanionLoadoutID: String?
+    @State private var selectedArchwingLoadoutID: String?
     @State private var showConfiguration = false
     @State private var showWarframeConfiguration = false
+    @State private var showEquipmentConfiguration = false
     @State private var showCalc = false
     @State private var openCalc = ArsenalView.seededCalc
 
@@ -67,6 +72,15 @@ public struct ArsenalView: View {
         return args[args.index(after: i)]
     }
 
+    /// `-arsenalConfigEquipment 名称`：视觉 CI 直接打开同伴/Archwing
+    /// 本体的配置页。和武器 hook 一样，只绕过 simctl 无法点按的问题。
+    private static var seededConfigurationEquipment: String? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "-arsenalConfigEquipment"), args.index(after: i) < args.endIndex
+        else { return nil }
+        return args[args.index(after: i)]
+    }
+
     /// `-calcWeapon Torid`：CI 要一张原生计算器结果图，无法点配置页按钮时直接进入。
     private static var seededWeapon: String? {
         let args = CommandLine.arguments
@@ -96,7 +110,10 @@ public struct ArsenalView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 100)
                 }
-                .refreshable { await inventory.refresh() }
+                .refreshable {
+                    await inventory.refresh()
+                    selectDefaultLoadoutIfNeeded()
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -114,6 +131,11 @@ public struct ArsenalView: View {
                    pushedOwned == nil,
                    let owned = ownedWeapons.first(where: { $0.calcName == want }) {
                     openWeaponConfiguration(owned, from: contextualLoadout(for: owned))
+                } else if let want = ArsenalView.seededConfigurationEquipment,
+                          pushedEquipment == nil,
+                          let equipment = (ownedCompanions + ownedCompanionWeapons + ownedArchwings)
+                            .first(where: { $0.z == want }) {
+                    openEquipmentConfiguration(equipment, initialConfigIndex: 0)
                 } else if let want = ArsenalView.seededWeapon,
                    pushedGeneric == nil,
                    let hit = catalog.weapons.first(where: { $0.n == want }) {
@@ -141,6 +163,16 @@ public struct ArsenalView: View {
                     ArsenalWarframeConfigurationView(
                         warframe: frame,
                         initialConfigIndex: pushedWarframeConfigIndex
+                    )
+                } else {
+                    EmptyView()
+                }
+            }
+            .navigationDestination(isPresented: $showEquipmentConfiguration) {
+                if let equipment = pushedEquipment {
+                    ArsenalEquipmentConfigurationView(
+                        equipment: equipment,
+                        initialConfigIndex: pushedEquipmentConfigIndex
                     )
                 } else {
                     EmptyView()
@@ -284,13 +316,51 @@ public struct ArsenalView: View {
         inventory.data?.ownedWarframes ?? []
     }
 
+    private var ownedCompanions: [InventoryData.OwnedEquipment] {
+        inventory.data?.ownedCompanions ?? []
+    }
+
+    private var ownedCompanionWeapons: [InventoryData.OwnedEquipment] {
+        inventory.data?.ownedCompanionWeapons ?? []
+    }
+
+    private var ownedArchwings: [InventoryData.OwnedEquipment] {
+        inventory.data?.ownedArchwings ?? []
+    }
+
+    private var equippedGear: [InventoryData.EquippedGearItem] {
+        inventory.data?.equippedGear ?? []
+    }
+
     private var loadouts: [InventoryData.Loadout] {
         inventory.data?.loadouts ?? []
     }
 
+    private var normalLoadouts: [InventoryData.Loadout] {
+        loadouts.filter { $0.kind == .normal }
+    }
+
+    private var companionLoadouts: [InventoryData.Loadout] {
+        loadouts.filter { $0.kind == .companion }
+    }
+
+    private var archwingLoadouts: [InventoryData.Loadout] {
+        loadouts.filter { $0.kind == .archwing }
+    }
+
     private var selectedLoadout: InventoryData.Loadout? {
         guard let selectedLoadoutID else { return nil }
-        return loadouts.first { $0.id == selectedLoadoutID }
+        return normalLoadouts.first { $0.id == selectedLoadoutID }
+    }
+
+    private var selectedCompanionLoadout: InventoryData.Loadout? {
+        guard let selectedCompanionLoadoutID else { return nil }
+        return companionLoadouts.first { $0.id == selectedCompanionLoadoutID }
+    }
+
+    private var selectedArchwingLoadout: InventoryData.Loadout? {
+        guard let selectedArchwingLoadoutID else { return nil }
+        return archwingLoadouts.first { $0.id == selectedArchwingLoadoutID }
     }
 
     private var arsenalSubtitle: String {
@@ -304,7 +374,7 @@ public struct ArsenalView: View {
             let marked = loadout.snapshotMarkedActive ? " · 快照标记" : ""
             return "配置 \(loadout.name)\(marked) · 进入装备后查看 A/B/C"
         }
-        return "这份快照没有普通军械库配置"
+        return "军械库配置由账号快照导入"
     }
 
     private var weaponSubtitle: String {
@@ -315,15 +385,30 @@ public struct ArsenalView: View {
     }
 
     private func selectDefaultLoadoutIfNeeded() {
-        let choices = loadouts
-        guard !choices.isEmpty else {
+        let normal = normalLoadouts
+        if normal.isEmpty {
             selectedLoadoutID = nil
-            return
+        } else if selectedLoadoutID == nil || !normal.contains(where: { $0.id == selectedLoadoutID }) {
+            selectedLoadoutID = normal.first(where: { $0.snapshotMarkedActive })?.id ?? normal[0].id
         }
-        if let selectedLoadoutID, choices.contains(where: { $0.id == selectedLoadoutID }) {
-            return
+
+        let companion = companionLoadouts
+        if companion.isEmpty {
+            selectedCompanionLoadoutID = nil
+        } else if selectedCompanionLoadoutID == nil
+                    || !companion.contains(where: { $0.id == selectedCompanionLoadoutID }) {
+            selectedCompanionLoadoutID = companion.first(where: { $0.snapshotMarkedActive })?.id
+                ?? companion[0].id
         }
-        selectedLoadoutID = choices.first(where: { $0.snapshotMarkedActive })?.id ?? choices[0].id
+
+        let archwing = archwingLoadouts
+        if archwing.isEmpty {
+            selectedArchwingLoadoutID = nil
+        } else if selectedArchwingLoadoutID == nil
+                    || !archwing.contains(where: { $0.id == selectedArchwingLoadoutID }) {
+            selectedArchwingLoadoutID = archwing.first(where: { $0.snapshotMarkedActive })?.id
+                ?? archwing[0].id
+        }
     }
 
     private var loadoutContent: some View {
@@ -335,46 +420,150 @@ public struct ArsenalView: View {
                     .font(.wfBody)
                     .foregroundColor(inventory.failed ? WFTheme.red : WFTheme.textMuted)
                     .padding(.vertical, WFUI.s4)
-            } else if let loadout = selectedLoadout {
+            } else {
                 VStack(alignment: .leading, spacing: WFUI.s4) {
-                    loadoutPicker
-                    loadoutCard(loadout)
-                    Text("同伴、物品和空战目前没有被这份账号快照导出；它们不会以空白数据伪装成已带入的配置。")
+                    Text("普通军械库、同伴和 Archwing 是账号快照中的三组独立预设；物品轮是账号级条目。这里按游戏军械库分区展示，不虚构它们之间的预设关联。")
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
                         .padding(.horizontal, WFUI.s1)
+                    normalLoadoutSection
+                    companionLoadoutSection
+                    gearWheelSection
+                    archwingLoadoutSection
                 }
-            } else {
-                VStack(alignment: .leading, spacing: WFUI.s2) {
-                    Text("这份账号快照没有普通军械库配置。")
-                        .font(.wfBody)
-                        .foregroundColor(WFTheme.textMuted)
-                    Text("你仍可切到“装备列表”查看背包武器并进入它们的配置页。")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
-                .padding(.vertical, WFUI.s4)
             }
         }
     }
 
-    private var loadoutPicker: some View {
+    private var normalLoadoutSection: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("战甲与武器", trailing: "普通军械库")
+            if let loadout = selectedLoadout {
+                loadoutPicker(
+                    normalLoadouts,
+                    selection: $selectedLoadoutID,
+                    title: loadout.name,
+                    subtitle: "普通军械库配置 · 来自账号快照",
+                    symbol: "square.grid.2x2"
+                )
+                loadoutCard(loadout)
+            } else {
+                sourceEmptyCard("账号快照没有普通军械库预设。")
+            }
+        }
+    }
+
+    private var companionLoadoutSection: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("同伴", trailing: "独立预设")
+            if let loadout = selectedCompanionLoadout {
+                loadoutPicker(
+                    companionLoadouts,
+                    selection: $selectedCompanionLoadoutID,
+                    title: loadout.name,
+                    subtitle: "同伴预设 · 来自账号快照",
+                    symbol: "hare"
+                )
+                loadoutCard(loadout)
+            } else if let companion = ownedCompanions.first {
+                Text("账号快照没有同伴预设；下方显示已导入的第一个同伴配置。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+                equipmentFallbackRow(companion, role: .companion)
+            } else {
+                sourceEmptyCard("账号快照没有已导入的同伴或同伴预设。")
+            }
+        }
+    }
+
+    private var gearWheelSection: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("物品", trailing: "账号级装备轮")
+            Text("顺序来自快照的 EquippedGear。数量只在同一快照的消耗品堆栈有记录时显示。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            if equippedGear.isEmpty {
+                sourceEmptyCard("账号快照没有装备轮条目。")
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 142), spacing: 7)], spacing: 7) {
+                    ForEach(equippedGear) { gear in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("槽位 \(gear.slot + 1)")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(WFTheme.textMuted)
+                            Text(gear.name)
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textPrimary)
+                                .lineLimit(2)
+                            Text(gear.count.map { "数量 \($0)" } ?? "无堆栈数量记录")
+                                .font(.system(size: 10))
+                                .foregroundColor(gear.count == nil ? WFTheme.textMuted : WFTheme.gold)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 66, alignment: .leading)
+                        .padding(8)
+                        .background(WFUI.raised)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                }
+            }
+        }
+        .wfCardStyle()
+    }
+
+    private var archwingLoadoutSection: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("Archwing", trailing: "独立预设")
+            if let loadout = selectedArchwingLoadout {
+                loadoutPicker(
+                    archwingLoadouts,
+                    selection: $selectedArchwingLoadoutID,
+                    title: loadout.name,
+                    subtitle: "Archwing 预设 · 来自账号快照",
+                    symbol: "airplane"
+                )
+                loadoutCard(loadout)
+            } else if let archwing = ownedArchwings.first {
+                Text("账号快照没有 Archwing 预设；下方显示已导入的第一个 Archwing 配置。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+                equipmentFallbackRow(archwing, role: .archwing)
+            } else {
+                sourceEmptyCard("账号快照没有已导入的 Archwing 或 Archwing 预设。")
+            }
+        }
+    }
+
+    private func sourceEmptyCard(_ text: String) -> some View {
+        Text(text)
+            .font(.wfBody)
+            .foregroundColor(WFTheme.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(WFUI.s3)
+            .background(WFUI.surface)
+            .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
+    }
+
+    private func loadoutPicker(_ choices: [InventoryData.Loadout],
+                               selection: Binding<String?>,
+                               title: String,
+                               subtitle: String,
+                               symbol: String) -> some View {
         Menu {
-            ForEach(loadouts) { loadout in
+            ForEach(choices) { loadout in
                 Button(loadoutMenuLabel(loadout)) {
-                    selectedLoadoutID = loadout.id
+                    selection.wrappedValue = loadout.id
                 }
             }
         } label: {
             HStack(spacing: WFUI.s2) {
-                Image(systemName: "square.grid.2x2")
+                Image(systemName: symbol)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(WFTheme.gold)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(selectedLoadout?.name ?? "选择配置")
+                    Text(title)
                         .font(.wfBody)
                         .foregroundColor(WFTheme.textPrimary)
-                    Text("普通军械库配置 · 来自账号快照")
+                    Text(subtitle)
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
                 }
@@ -392,15 +581,18 @@ public struct ArsenalView: View {
     }
 
     private func loadoutMenuLabel(_ loadout: InventoryData.Loadout) -> String {
-        loadout.snapshotMarkedActive ? "\(loadout.name) · 快照标记" : loadout.name
+        var labels = [loadout.name]
+        if loadout.isFavorite { labels.append("收藏") }
+        if loadout.snapshotMarkedActive { labels.append("快照标记") }
+        return labels.joined(separator: " · ")
     }
 
     private func loadoutCard(_ loadout: InventoryData.Loadout) -> some View {
-        let roles: [InventoryData.Loadout.Slot.Role] = [.warframe, .primary, .secondary, .melee, .heavy]
+        let roles = roles(for: loadout.kind)
         return VStack(spacing: 0) {
-            ForEach(roles, id: \.self) { role in
+            ForEach(Array(roles.enumerated()), id: \.element) { index, role in
                 loadoutEquipmentRow(role, slot: loadout.slot(role), in: loadout)
-                if role != .heavy {
+                if index < roles.count - 1 {
                     WFHairline().padding(.leading, 48)
                 }
             }
@@ -409,20 +601,36 @@ public struct ArsenalView: View {
         .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
     }
 
+    private func roles(for kind: InventoryData.Loadout.Kind) -> [InventoryData.Loadout.Slot.Role] {
+        switch kind {
+        case .normal:
+            return [.warframe, .primary, .secondary, .melee, .heavy]
+        case .companion:
+            return [.companion, .companionWeapon]
+        case .archwing:
+            return [.archwing, .archgun, .archmelee]
+        }
+    }
+
     private func loadoutEquipmentRow(_ role: InventoryData.Loadout.Slot.Role,
                                      slot: InventoryData.Loadout.Slot?,
                                      in loadout: InventoryData.Loadout) -> some View {
         let frame = role == .warframe ? warframe(for: slot) : nil
-        let weapon = role == .warframe ? nil : weapon(for: slot)
-        let name = frame?.z ?? weapon?.z ?? slot?.displayName ?? "未导入"
+        let equipment = equipment(for: slot)
+        let weapon = role == .warframe || equipment != nil ? nil : weapon(for: slot)
+        let name = frame?.z ?? equipment?.z ?? weapon?.z ?? slot?.displayName ?? "未装备"
         let config = slot?.configLabel.map { "配置 \($0)" } ?? "没有配置记录"
-        let isAvailable = frame != nil || weapon != nil
+        let sourceDetail = slot?.sourceIssue
+            ?? (slot?.isHidden == true ? "\(config) · 快照标记为隐藏" : config)
+        let isAvailable = frame != nil || equipment != nil || weapon != nil
 
         return Button {
             if let frame {
                 pushedWarframe = frame
                 pushedWarframeConfigIndex = slot?.configIndex ?? 0
                 showWarframeConfiguration = true
+            } else if let equipment {
+                openEquipmentConfiguration(equipment, initialConfigIndex: slot?.configIndex ?? 0)
             } else if let weapon {
                 openWeaponConfiguration(weapon, from: loadout)
             }
@@ -442,9 +650,9 @@ public struct ArsenalView: View {
                         .font(.wfTitle)
                         .foregroundColor(isAvailable ? WFTheme.textPrimary : WFTheme.textMuted)
                         .lineLimit(1)
-                    Text(slot?.isHidden == true ? "\(config) · 快照标记为隐藏" : config)
+                    Text(sourceDetail)
                         .font(.wfLabel)
-                        .foregroundColor(WFTheme.textSecondary)
+                        .foregroundColor(slot?.sourceIssue == nil ? WFTheme.textSecondary : WFTheme.gold)
                         .lineLimit(1)
                 }
                 Spacer(minLength: WFUI.s2)
@@ -461,6 +669,43 @@ public struct ArsenalView: View {
         .opacity(isAvailable ? 1 : 0.58)
     }
 
+    private func equipmentFallbackRow(_ equipment: InventoryData.OwnedEquipment,
+                                      role: InventoryData.Loadout.Slot.Role) -> some View {
+        Button {
+            openEquipmentConfiguration(equipment, initialConfigIndex: 0)
+        } label: {
+            HStack(spacing: WFUI.s3) {
+                Image(systemName: symbol(for: role))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(color(for: role))
+                    .frame(width: 28, height: 28)
+                    .background(color(for: role).opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(role.label)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                    Text(equipment.z)
+                        .font(.wfTitle)
+                        .foregroundColor(WFTheme.textPrimary)
+                    Text("背包中已导入 · (equipment.configs.count) 套配卡")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textSecondary)
+                }
+                Spacer(minLength: WFUI.s2)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(WFTheme.textMuted)
+            }
+            .padding(.horizontal, WFUI.s3)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(WFUI.surface)
+        .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
+    }
+
     private func symbol(for role: InventoryData.Loadout.Slot.Role) -> String {
         switch role {
         case .warframe: return "person.crop.square"
@@ -468,6 +713,11 @@ public struct ArsenalView: View {
         case .secondary: return "target"
         case .melee: return "sparkles"
         case .heavy: return "bolt.horizontal.circle"
+        case .companion: return "pawprint"
+        case .companionWeapon: return "scope"
+        case .archwing: return "airplane"
+        case .archgun: return "scope"
+        case .archmelee: return "sparkles"
         }
     }
 
@@ -478,6 +728,11 @@ public struct ArsenalView: View {
         case .secondary: return WFTheme.purple
         case .melee: return WFTheme.green
         case .heavy: return WFTheme.red
+        case .companion: return WFTheme.cyan
+        case .companionWeapon: return WFTheme.green
+        case .archwing: return WFTheme.purple
+        case .archgun: return WFTheme.cyan
+        case .archmelee: return WFTheme.green
         }
     }
 
@@ -489,6 +744,20 @@ public struct ArsenalView: View {
     private func weapon(for slot: InventoryData.Loadout.Slot?) -> InventoryData.OwnedWeapon? {
         guard let id = slot?.itemID else { return nil }
         return ownedWeapons.first { $0.id == id }
+    }
+
+    private func equipment(for slot: InventoryData.Loadout.Slot?) -> InventoryData.OwnedEquipment? {
+        guard let slot, let id = slot.itemID else { return nil }
+        switch slot.role {
+        case .companion:
+            return ownedCompanions.first { $0.id == id }
+        case .companionWeapon:
+            return ownedCompanionWeapons.first { $0.id == id }
+        case .archwing:
+            return ownedArchwings.first { $0.id == id }
+        default:
+            return nil
+        }
     }
 
     private func contextualLoadout(for weapon: InventoryData.OwnedWeapon) -> InventoryData.Loadout? {
@@ -510,6 +779,15 @@ public struct ArsenalView: View {
         pushedWeaponConfigIndex = weaponSlot?.configIndex ?? 0
         pushedWarframeConfigIndex = frameSlot?.configIndex ?? 0
         showConfiguration = true
+    }
+
+    private func openEquipmentConfiguration(_ equipment: InventoryData.OwnedEquipment,
+                                            initialConfigIndex: Int) {
+        pushedEquipment = equipment
+        pushedEquipmentConfigIndex = min(
+            max(initialConfigIndex, 0), max(equipment.configs.count - 1, 0)
+        )
+        showEquipmentConfiguration = true
     }
 
     private func categoryMatches(_ weapon: InventoryData.OwnedWeapon) -> Bool {

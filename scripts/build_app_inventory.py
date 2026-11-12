@@ -41,6 +41,7 @@ ALECA = os.path.expandvars(r"%LOCALAPPDATA%\AlecaFrame\cachedData\json")
 ALECA_WARFRAMES = os.path.join(ALECA, "Warframes.json")
 ALECA_MODS = os.path.join(ALECA, "Mods.json")
 ALECA_ARCANES = os.path.join(ALECA, "Arcanes.json")
+ALECA_LANG = os.path.join(ALECA, "lang.json")
 WS_URL = "https://api.warframestat.us/pc?language=zh"
 
 # 精炼档的短键，顺序固定：完整 / 优良 / 无瑕 / 光辉
@@ -64,6 +65,32 @@ OWNED_WEAPON_CATEGORIES = {
     # with the source inventory.
     "OperatorAmps": "Operator",
 }
+
+# These are equipment bodies rather than weapons.  They need their own model
+# because a Sentinel/Pet/Archwing has A/B/C configurations but is not a
+# primary/secondary weapon with a DamageKit definition.
+OWNED_COMPANION_CATEGORIES = ("Sentinels", "KubrowPets", "MoaPets")
+OWNED_ARCHWING_CATEGORIES = ("SpaceSuits",)
+
+# `EquippedGear` contains account-level gear-wheel entries.  Only a stack
+# source can provide a quantity; a gear body elsewhere in the snapshot must
+# not be invented as one consumable charge.
+GEAR_STACK_CATEGORIES = (
+    "Consumables", "MiscItems", "Resources", "SpecialItems", "FlavourItems",
+    "Recipes", "ShipDecorations", "WeaponSkins",
+)
+
+
+def is_companion_special_weapon(item: dict) -> bool:
+    """Pet weapons live in `SpecialItems`, not in `SentinelWeapons`.
+
+    A Sentinel/Pet preset can therefore correctly point at a Vulpaphyla or
+    Kavat weapon instance which is absent from the normal SentinelWeapons
+    list.  Exalted weapons in the same `SpecialItems` source are deliberately
+    excluded: they are not an account-equipped companion weapon.
+    """
+    item_type = item.get("ItemType") if isinstance(item, dict) else None
+    return isinstance(item_type, str) and "/Pets/" in item_type and item_type.endswith("Weapon")
 
 # DamageKit has the same compatibility aliases in InventoryAdapter.swift.
 # Keeping this small table here makes a generated mobile snapshot preserve
@@ -732,11 +759,11 @@ def resolve_config_upgrade(reference: str, upgrades: dict[str, dict],
             return {"ItemType": item_type}, next(iter(candidate_ranks)), None
         if not candidate_ranks:
             return {"ItemType": item_type}, None, (
-                "配置只记录了升级类型，背包中没有可确定等级的同名卡；未将它计入技能强度"
+                "配置只记录了升级类型，背包中没有可确定等级的同名卡"
             )
         ranks = "/".join(str(value) for value in sorted(candidate_ranks))
         return {"ItemType": item_type}, None, (
-            f"配置只记录了升级类型，而背包中同名卡的等级为 {ranks}；未将它计入技能强度"
+            f"配置只记录了升级类型，而背包中同名卡的等级为 {ranks}"
         )
 
     upgrade = upgrades.get(reference)
@@ -746,7 +773,7 @@ def resolve_config_upgrade(reference: str, upgrades: dict[str, dict],
     raw_rank = as_number((fp or {}).get("lvl"))
     rank = int(raw_rank) if raw_rank is not None else None
     if rank is None:
-        return upgrade, None, "该升级在背包快照中没有等级；未将它计入技能强度"
+        return upgrade, None, "该升级在背包快照中没有等级"
     return upgrade, rank, None
 
 
@@ -848,6 +875,209 @@ def strength_terms_from_stats(stats: list[str]) -> tuple[list[dict], list[str]]:
     # historical rank data.  It is still one equipped card term.
     deduped_review = list(dict.fromkeys(review))
     return terms, deduped_review
+
+
+def local_language_rows() -> dict[str, dict]:
+    """Return Aleca's local translated static names when that cache exists.
+
+    This is not an account-data source and never becomes a mobile runtime
+    dependency.  It only turns a static ItemType path into the name already
+    shown by the game/Aleca cache while the local payload is being built.
+    """
+    if not os.path.exists(ALECA_LANG):
+        return {}
+    try:
+        rows = load_json(ALECA_LANG)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+    return rows if isinstance(rows, dict) else {}
+
+
+def localized_item_name(item: dict, inventory_category: str, ordinal: int,
+                        display_rows: dict[str, list[dict]], lang: dict[str, dict]) -> str:
+    """Choose a human name without exporting the raw DE item path.
+
+    A named MOA can have an ItemName in the account snapshot.  That is the
+    player's visible companion name, so prefer it.  For normal equipment use
+    the local Chinese static table, then the already-derived view row, and
+    finally a safe tail-only diagnostic label.
+    """
+    raw_name = item.get("ItemName") if isinstance(item, dict) else None
+    if isinstance(raw_name, str) and raw_name.strip():
+        # Companion names can be encoded as
+        # `/Lotus/Language/Pets/...|VISIBLE NAME`.  The left part is a
+        # localization key, not a label the player should ever see.
+        visible_name = raw_name.rsplit("|", 1)[-1].strip()
+        if visible_name and not visible_name.startswith("/"):
+            return visible_name
+
+    item_type = item.get("ItemType") if isinstance(item, dict) else None
+    if isinstance(item_type, str) and item_type:
+        entry = lang.get(item_type)
+        if isinstance(entry, dict):
+            for language in ("zh", "tc"):
+                locale = entry.get(language)
+                name = locale.get("name") if isinstance(locale, dict) else None
+                if isinstance(name, str) and name.strip():
+                    return name.strip()
+
+    rows = display_rows.get(inventory_category) or []
+    display = rows[ordinal] if ordinal < len(rows) else {}
+    name = display.get("zh") if isinstance(display, dict) else None
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    return short_type_name(item_type) if isinstance(item_type, str) else "未命名装备"
+
+
+def equipment_upgrade_metadata(upgrade_type: str, game_mods: dict[str, dict],
+                               local_mods: dict[str, dict], arcanes: dict[str, dict]) -> tuple[str, int | None, str]:
+    """Resolve an equipped Mod/Arcane name and its catalogue maximum rank.
+
+    This function does not decide whether the rank is usable in a damage
+    formula.  It simply preserves the exact source configuration for the
+    equipment-inspection UI, including lower-ranked cards.
+    """
+    game_meta = game_mods.get(upgrade_type)
+    local_meta = local_mods.get(upgrade_type) or arcanes.get(upgrade_type) or {}
+    game_meta = game_meta if isinstance(game_meta, dict) else {}
+    local_meta = local_meta if isinstance(local_meta, dict) else {}
+    name = game_meta.get("n") if isinstance(game_meta.get("n"), str) else None
+    name = name or local_meta.get("name") or short_type_name(upgrade_type)
+    maximum = as_number(game_meta.get("mx"))
+    if maximum is None:
+        maximum = as_number(local_meta.get("fusionLimit"))
+    if maximum is None:
+        levels = local_meta.get("levelStats")
+        if isinstance(levels, list) and levels:
+            maximum = len(levels) - 1
+    local_type = str(local_meta.get("type") or "").lower()
+    kind = "Arcane" if "arcane" in local_type or "arcane" in upgrade_type.lower() else "Mod"
+    return name, int(maximum) if maximum is not None else None, kind
+
+
+def build_equipment_configs(item: dict, upgrades: dict[str, dict],
+                            upgrades_by_type: dict[str, list[dict]],
+                            game_mods: dict[str, dict], local_mods: dict[str, dict],
+                            arcanes: dict[str, dict]) -> list[dict]:
+    """Export a non-weapon equipment body's A/B/C Mods and Arcanes exactly.
+
+    Unlike a DamageKit weapon import, this function deliberately does not
+    require every card to have a damage rule and never promotes an uncertain
+    rank to max.  The result is an auditable configuration record for
+    companions and Archwings.
+    """
+    raw_configs = item.get("Configs") if isinstance(item.get("Configs"), list) else []
+    if not raw_configs:
+        raw_configs = [{}]
+
+    configs: list[dict] = []
+    for config_index, raw_config in enumerate(raw_configs):
+        config = raw_config if isinstance(raw_config, dict) else {}
+        entries: list[dict] = []
+        issues: list[str] = []
+        raw_slots = config.get("Upgrades") if isinstance(config.get("Upgrades"), list) else []
+        for slot, reference in enumerate(raw_slots):
+            if not isinstance(reference, str) or not reference:
+                continue
+            upgrade, rank, rank_issue = resolve_config_upgrade(
+                reference, upgrades, upgrades_by_type
+            )
+            if not isinstance(upgrade, dict):
+                issues.append(f"第 {slot + 1} 槽：{rank_issue or '升级无法解析'}")
+                continue
+            upgrade_type = upgrade.get("ItemType")
+            if not isinstance(upgrade_type, str) or not upgrade_type:
+                issues.append(f"第 {slot + 1} 槽：升级没有类型信息")
+                continue
+            name, maximum, kind = equipment_upgrade_metadata(
+                upgrade_type, game_mods, local_mods, arcanes
+            )
+            entry: dict = {"s": slot, "n": name, "r": rank, "k": kind}
+            if maximum is not None:
+                entry["m"] = maximum
+            entries.append(entry)
+            if rank_issue:
+                issues.append(f"{name}：{rank_issue}")
+
+        configs.append({
+            "l": config_label(config_index),
+            "u": entries,
+            "exact": not issues,
+            "issues": issues,
+        })
+    return configs
+
+
+def build_owned_equipment(inv: dict, view: dict, categories: tuple[str, ...], *,
+                          item_filter=None, output_category: str | None = None) -> list[dict]:
+    """Export owned companion or Archwing bodies with their actual configs."""
+    game_mods, local_mods, arcanes, _frames = frame_static_catalogues()
+    upgrades, upgrades_by_type = upgrade_indexes(inv)
+    lang = local_language_rows()
+    display_rows: dict[str, list[dict]] = {}
+    for row in view.get("gear") or []:
+        if not isinstance(row, dict):
+            continue
+        category = row.get("cat")
+        if isinstance(category, str):
+            display_rows.setdefault(category, []).append(row)
+
+    result: list[dict] = []
+    for inventory_category in categories:
+        for ordinal, item in enumerate(inv.get(inventory_category) or []):
+            if not isinstance(item, dict):
+                continue
+            if item_filter is not None and not item_filter(item):
+                continue
+            item_type = item.get("ItemType")
+            if not isinstance(item_type, str) or not item_type:
+                continue
+            result.append({
+                "id": opaque_instance_id(item, inventory_category, ordinal),
+                "z": localized_item_name(item, inventory_category, ordinal, display_rows, lang),
+                "k": output_category or inventory_category,
+                "cfg": build_equipment_configs(
+                    item, upgrades, upgrades_by_type, game_mods, local_mods, arcanes
+                ),
+            })
+
+    result.sort(key=lambda row: ((row.get("z") or "").casefold(), row["id"]))
+    return result
+
+
+def gear_stack_counts(inv: dict) -> dict[str, int]:
+    """Return only quantities explicitly represented as inventory stacks."""
+    result: dict[str, int] = {}
+    for category in GEAR_STACK_CATEGORIES:
+        for item in inv.get(category) or []:
+            if not isinstance(item, dict):
+                continue
+            item_type = item.get("ItemType")
+            count = as_number(item.get("ItemCount"))
+            if not isinstance(item_type, str) or not item_type or count is None:
+                continue
+            result[item_type] = result.get(item_type, 0) + int(count)
+    return result
+
+
+def build_equipped_gear(inv: dict) -> list[dict]:
+    """Export the source-ordered account gear wheel, not a fictional loadout."""
+    lang = local_language_rows()
+    counts = gear_stack_counts(inv)
+    result: list[dict] = []
+    for slot, item_type in enumerate(inv.get("EquippedGear") or []):
+        if not isinstance(item_type, str) or not item_type:
+            continue
+        item = {"ItemType": item_type}
+        row: dict = {
+            "id": sha256(f"gear:{slot}:{item_type}".encode("utf-8"))[:20],
+            "s": slot,
+            "n": localized_item_name(item, "EquippedGear", slot, {}, lang),
+        }
+        if item_type in counts:
+            row["c"] = counts[item_type]
+        result.append(row)
+    return result
 
 
 def archon_shards(suit: dict) -> list[dict]:
@@ -1002,22 +1232,38 @@ def build_owned_warframes(inv: dict, view: dict) -> list[dict]:
     return result
 
 
-def build_loadouts(inv: dict, owned_warframes: list[dict], owned_weapons: list[dict]) -> list[dict]:
-    """Keep normal Arsenal presets as a *whole* equipment configuration.
+def build_loadouts(inv: dict, owned_warframes: list[dict], owned_weapons: list[dict],
+                   owned_companions: list[dict], owned_companion_weapons: list[dict],
+                   owned_archwings: list[dict]) -> list[dict]:
+    """Export each DE preset family without pretending it is one global build.
 
-    CurrentLoadOutIds contains several loadout categories at once, so a flag in
-    that list is intentionally exported as `snapshotMarkedActive`, not falsely
-    presented as one uniquely-known global active preset.
+    DE stores normal Arsenal, companion, and Archwing presets as separate
+    lists.  We retain that boundary in `t`: the UI can put the four Arsenal
+    areas on one page, but it must not invent a linkage the source did not
+    provide.  Every slot points at an opaque imported instance ID.  If a
+    preset references an absent instance (which happens in real snapshots),
+    the slot contains a concrete source issue instead of a guessed weapon.
     """
+    all_rows = (owned_warframes + owned_weapons + owned_companions
+                + owned_companion_weapons + owned_archwings)
     names_by_id = {
         row["id"]: row.get("z")
-        for row in owned_warframes + owned_weapons
+        for row in all_rows
         if isinstance(row, dict) and isinstance(row.get("id"), str)
     }
     id_by_raw: dict[str, str] = {}
-    for category in ["Suits", *OWNED_WEAPON_CATEGORIES]:
+    category_specs = [
+        ("Suits", None),
+        *((category, None) for category in OWNED_WEAPON_CATEGORIES),
+        *((category, None) for category in OWNED_COMPANION_CATEGORIES),
+        *((category, None) for category in OWNED_ARCHWING_CATEGORIES),
+        ("SpecialItems", is_companion_special_weapon),
+    ]
+    for category, item_filter in category_specs:
         for ordinal, item in enumerate(inv.get(category) or []):
             if not isinstance(item, dict):
+                continue
+            if item_filter is not None and not item_filter(item):
                 continue
             raw = object_id(item.get("ItemId"))
             if raw:
@@ -1028,37 +1274,53 @@ def build_loadouts(inv: dict, owned_warframes: list[dict], owned_weapons: list[d
         if value
     }
     presets = inv.get("LoadOutPresets") if isinstance(inv.get("LoadOutPresets"), dict) else {}
-    normal = presets.get("NORMAL") if isinstance(presets.get("NORMAL"), list) else []
-    role_keys = [("s", "warframe"), ("l", "primary"), ("p", "secondary"),
-                 ("m", "melee"), ("h", "heavy")]
+    preset_specs = (
+        ("NORMAL", "normal", [
+            ("s", "warframe"), ("l", "primary"), ("p", "secondary"),
+            ("m", "melee"), ("h", "heavy"),
+        ]),
+        ("SENTINEL", "companion", [
+            ("s", "companion"), ("b", "companionWeapon"),
+        ]),
+        ("ARCHWING", "archwing", [
+            ("s", "archwing"), ("l", "archgun"), ("m", "archmelee"),
+        ]),
+    )
     result: list[dict] = []
-    for ordinal, preset in enumerate(normal):
-        if not isinstance(preset, dict):
-            continue
-        raw_preset_id = object_id(preset.get("ItemId")) or f"NORMAL:{ordinal}"
-        slots: list[dict] = []
-        for key, role in role_keys:
-            source = preset.get(key)
-            if not isinstance(source, dict):
+    for source_family, kind, role_keys in preset_specs:
+        family_rows = presets.get(source_family) if isinstance(presets.get(source_family), list) else []
+        for ordinal, preset in enumerate(family_rows):
+            if not isinstance(preset, dict):
                 continue
-            raw_item_id = object_id(source.get("ItemId"))
-            opaque_id = id_by_raw.get(raw_item_id) if raw_item_id else None
-            config_index = as_number(source.get("mod"))
-            slot: dict = {"r": role, "i": opaque_id}
-            if opaque_id and isinstance(names_by_id.get(opaque_id), str):
-                slot["z"] = names_by_id[opaque_id]
-            if config_index is not None:
-                slot["c"] = int(config_index)
-            if source.get("hide") is True:
-                slot["hide"] = True
-            slots.append(slot)
-        result.append({
-            "id": sha256(raw_preset_id.encode("utf-8"))[:20],
-            "n": preset.get("n") if isinstance(preset.get("n"), str) and preset.get("n") else f"配置 {ordinal + 1}",
-            "fav": bool(preset.get("Favorite")),
-            "active": raw_preset_id in current_ids,
-            "slots": slots,
-        })
+            raw_preset_id = object_id(preset.get("ItemId")) or f"{source_family}:{ordinal}"
+            slots: list[dict] = []
+            for key, role in role_keys:
+                source = preset.get(key)
+                if not isinstance(source, dict):
+                    continue
+                raw_item_id = object_id(source.get("ItemId"))
+                opaque_id = id_by_raw.get(raw_item_id) if raw_item_id else None
+                config_index = as_number(source.get("mod"))
+                slot: dict = {"r": role, "i": opaque_id}
+                if opaque_id and isinstance(names_by_id.get(opaque_id), str):
+                    slot["z"] = names_by_id[opaque_id]
+                elif raw_item_id:
+                    slot["x"] = "账号快照引用的装备实例不在已导入的背包条目中"
+                else:
+                    slot["x"] = "账号快照的这个槽没有装备实例引用"
+                if config_index is not None:
+                    slot["c"] = int(config_index)
+                if source.get("hide") is True:
+                    slot["hide"] = True
+                slots.append(slot)
+            result.append({
+                "id": sha256(f"{source_family}:{raw_preset_id}".encode("utf-8"))[:20],
+                "n": preset.get("n") if isinstance(preset.get("n"), str) and preset.get("n") else f"配置 {ordinal + 1}",
+                "t": kind,
+                "fav": bool(preset.get("Favorite")),
+                "active": raw_preset_id in current_ids,
+                "slots": slots,
+            })
     return result
 
 
@@ -1268,6 +1530,14 @@ def build(*, offline: bool = False) -> dict:
     # concrete account instances, never a DE ItemId.
     owned_weapons = build_owned_weapons(inv)
     owned_warframes = build_owned_warframes(inv, view)
+    owned_companions = build_owned_equipment(inv, view, OWNED_COMPANION_CATEGORIES)
+    owned_companion_weapons = build_owned_equipment(
+        inv, view, ("SpecialItems",),
+        item_filter=is_companion_special_weapon,
+        output_category="CompanionWeapons",
+    )
+    owned_archwings = build_owned_equipment(inv, view, OWNED_ARCHWING_CATEGORIES)
+    equipped_gear = build_equipped_gear(inv)
     counts = view["counts"]
     return {
         # Kept for old bundled samples.  It is no longer used to decide which
@@ -1313,7 +1583,14 @@ def build(*, offline: bool = False) -> dict:
         "relics": relics,
         "ownedWeapons": owned_weapons,
         "ownedWarframes": owned_warframes,
-        "loadouts": build_loadouts(inv, owned_warframes, owned_weapons),
+        "ownedCompanions": owned_companions,
+        "ownedCompanionWeapons": owned_companion_weapons,
+        "ownedArchwings": owned_archwings,
+        "equippedGear": equipped_gear,
+        "loadouts": build_loadouts(
+            inv, owned_warframes, owned_weapons, owned_companions,
+            owned_companion_weapons, owned_archwings,
+        ),
     }
 
 
@@ -1375,6 +1652,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"全部可换 {t['allDucats']} Ducats（保留一套后 {t['looseDucats']}）")
     print(f"遗物 {t['relicKinds']} 代号 {t['relicUnits']} 个 · Aya {len(data['aya']['items'])} 项")
     print(f"背包武器 {len(data['ownedWeapons'])} 把 · 账号快照 {data['source']['accountHash'][:12]}")
+    print(f"同伴本体 {len(data['ownedCompanions'])} · 同伴武器 {len(data['ownedCompanionWeapons'])}"
+          f" · Archwing {len(data['ownedArchwings'])} · 装备轮 {len(data['equippedGear'])}")
     print(f"-> {args.out}  {size//1024} KB")
     return 0
 

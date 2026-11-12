@@ -392,6 +392,128 @@ struct ArsenalWeaponConfigurationView: View {
     }
 }
 
+/// Configuration inspection for a companion or Archwing body.  Its Mod/Arcane
+/// layout is imported from the same account snapshot as weapons, but the body
+/// is not incorrectly offered to the normal weapon damage calculator.
+struct ArsenalEquipmentConfigurationView: View {
+    let equipment: InventoryData.OwnedEquipment
+    @State private var configIndex: Int
+
+    init(equipment: InventoryData.OwnedEquipment, initialConfigIndex: Int = 0) {
+        self.equipment = equipment
+        let safeIndex = min(max(initialConfigIndex, 0), max(equipment.configs.count - 1, 0))
+        _configIndex = State(initialValue: safeIndex)
+    }
+
+    private var selectedConfig: InventoryData.OwnedEquipment.Config? {
+        equipment.config(at: configIndex)
+    }
+
+    var body: some View {
+        ZStack {
+            WFTheme.bgPrimary.ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: WFUI.s4) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("\(equipment.categoryLabel) 配置")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(WFTheme.textPrimary)
+                        Text("\(equipment.z) 的 A/B/C 配置来自账号快照。这里展示已装 Mod 和赋能的实际等级，不把它们改写成手填属性。")
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    buildCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 44)
+            }
+        }
+        .navigationTitle(equipment.z)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(WFTheme.bgSecondary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+
+    private var buildCard: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("已导入配置", trailing: equipment.categoryLabel)
+            if equipment.configs.isEmpty {
+                Text("这份快照没有此装备的 A/B/C 配置。")
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.gold)
+            } else {
+                HStack(spacing: 7) {
+                    ForEach(Array(equipment.configs.enumerated()), id: \.offset) { index, config in
+                        Button {
+                            configIndex = index
+                        } label: {
+                            Text(config.label)
+                                .font(.wfBody)
+                                .foregroundColor(index == configIndex ? Color(hex: "1A1408") : WFTheme.textSecondary)
+                                .frame(minWidth: 34)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Capsule().fill(index == configIndex ? WFTheme.gold : WFUI.raised))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                if let config = selectedConfig {
+                    if !config.isExactImport {
+                        Label("有槽位无法从快照确认完整等级；下方保留了来源原因。",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.gold)
+                        ForEach(config.issues, id: \.self) { issue in
+                            Text("• \(issue)")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                    }
+
+                    let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
+                    if upgrades.isEmpty {
+                        Text("这个配置没有已导入的 Mod 或赋能。")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                    } else {
+                        Text("已导入的 Mod / 赋能")
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textSecondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 7)], spacing: 7) {
+                            ForEach(upgrades) { upgrade in
+                                upgradePill(upgrade)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .wfCardStyle()
+    }
+
+    private func upgradePill(_ upgrade: InventoryData.OwnedEquipment.Upgrade) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("槽位 \(upgrade.slot + 1) · \(upgrade.kind)")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(WFTheme.textMuted)
+            Text(upgrade.name)
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textPrimary)
+                .lineLimit(2)
+            Text(upgrade.rankLabel)
+                .font(.system(size: 10))
+                .foregroundColor(WFTheme.gold)
+        }
+        .frame(maxWidth: .infinity, minHeight: 63, alignment: .leading)
+        .padding(8)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
 /// Configuration inspection for the Warframe card in a whole Arsenal preset.
 /// It intentionally does not offer a global manual Ability Strength field:
 /// the calculator receives its strength from this selected build instead.

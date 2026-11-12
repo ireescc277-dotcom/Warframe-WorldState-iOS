@@ -366,4 +366,51 @@ print("✅ InventoryData: \(inventory.sets.count) sets "
       + "\(inventory.relics.count) relics, \(inventory.aya.items.count) aya items, "
       + "\(inventory.totals.loosePlat) p loose")
 
+// 军械库不是只解普通武器：同伴、本体武器、Archwing 与装备轮各来自不同的
+// 快照字段。这里用公开样例衍生一份微型 fixture，验证新字段、预设类别和
+// “源引用未解析”不会因为旧样例缺字段而悄悄失效。
+var arsenalFixture = try JSONSerialization.jsonObject(with: invRaw) as! [String: Any]
+arsenalFixture["ownedCompanions"] = [[
+    "id": "test-companion", "z": "Test Companion", "k": "Sentinels",
+    "cfg": [["l": "A", "u": [["s": 0, "n": "Test Mod", "r": 3, "m": 3, "k": "Mod"]],
+             "exact": true, "issues": []]],
+]]
+arsenalFixture["ownedCompanionWeapons"] = [[
+    "id": "test-companion-weapon", "z": "Test Pet Weapon", "k": "CompanionWeapons",
+    "cfg": [["l": "A", "u": [], "exact": true, "issues": []]],
+]]
+arsenalFixture["ownedArchwings"] = [[
+    "id": "test-archwing", "z": "Test Archwing", "k": "SpaceSuits",
+    "cfg": [["l": "A", "u": [], "exact": true, "issues": []]],
+]]
+arsenalFixture["equippedGear"] = [
+    ["id": "test-gear-1", "s": 0, "n": "Test Restore", "c": 25],
+    ["id": "test-gear-2", "s": 1, "n": "Test Deployer"],
+]
+arsenalFixture["loadouts"] = [
+    ["id": "test-companion-loadout", "n": "Companion", "t": "companion", "fav": false,
+     "active": true, "slots": [
+        ["r": "companion", "i": "test-companion", "z": "Test Companion", "c": 0],
+        ["r": "companionWeapon", "i": "test-companion-weapon", "z": "Test Pet Weapon", "c": 0],
+     ]],
+    ["id": "test-archwing-loadout", "n": "Archwing", "t": "archwing", "fav": false,
+     "active": false, "slots": [
+        ["r": "archwing", "i": "test-archwing", "z": "Test Archwing", "c": 0],
+        ["r": "archgun", "x": "source instance missing"],
+        ["r": "archmelee", "x": "source instance missing"],
+     ]],
+]
+let arsenalFixtureData = try JSONSerialization.data(withJSONObject: arsenalFixture)
+let arsenalInventory = try JSONDecoder().decode(InventoryData.self, from: arsenalFixtureData)
+precondition(arsenalInventory.ownedCompanions.count == 1)
+precondition(arsenalInventory.ownedCompanionWeapons.count == 1)
+precondition(arsenalInventory.ownedArchwings.count == 1)
+precondition(arsenalInventory.equippedGear.count == 2)
+precondition(arsenalInventory.equippedGear[0].count == 25)
+precondition(arsenalInventory.equippedGear[1].count == nil)
+precondition(arsenalInventory.loadouts.map(\.kind) == [.companion, .archwing])
+precondition(arsenalInventory.loadouts[0].slot(.companionWeapon)?.itemID == "test-companion-weapon")
+precondition(arsenalInventory.loadouts[1].slot(.archgun)?.sourceIssue == "source instance missing")
+print("✅ Arsenal snapshot: companion / gear wheel / Archwing source families decode")
+
 print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")

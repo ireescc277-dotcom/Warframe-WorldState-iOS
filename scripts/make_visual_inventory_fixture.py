@@ -126,19 +126,119 @@ def build_fixture(source: Path) -> dict:
             ],
         ),
     ]
-    data["loadouts"] = [{
-        "id": "visual-loadout",
-        "n": "视觉验证配置",
-        "fav": True,
-        "active": True,
-        "slots": [
-            {"r": "warframe", "i": "visual-gauss-prime", "z": "Gauss Prime（视觉测试）", "c": 0},
-            {"r": "primary", "i": "visual-torid", "z": "Torid（视觉测试）", "c": 0},
-            {"r": "secondary", "z": "未装备"},
-            {"r": "melee", "z": "未装备"},
-            {"r": "heavy", "z": "未装备"},
-        ],
+    # Companion and Archwing are separate DE preset families.  Include each
+    # one in the synthetic fixture so visual CI decodes the same model shape
+    # that a real account payload uses, rather than merely compiling defaults.
+    data["ownedCompanions"] = [{
+        "id": "visual-companion",
+        "z": "Carrier Prime（视觉测试）",
+        "k": "Sentinels",
+        "cfg": [{
+            "l": "A",
+            "u": [
+                {"s": 0, "n": "Enhanced Vitality", "r": 10, "m": 10, "k": "Mod"},
+                {"s": 1, "n": "Reinforced Bond", "r": 3, "m": 3, "k": "Mod"},
+            ],
+            "exact": True,
+            "issues": [],
+        }],
     }]
+    data["ownedCompanionWeapons"] = [{
+        "id": "visual-companion-weapon",
+        "z": "Vulklok（视觉测试）",
+        "k": "CompanionWeapons",
+        "cfg": [{
+            "l": "A",
+            "u": [
+                {"s": 0, "n": "Serration", "r": 10, "m": 10, "k": "Mod"},
+                {"s": 1, "n": "Split Chamber", "r": 5, "m": 5, "k": "Mod"},
+            ],
+            "exact": True,
+            "issues": [],
+        }],
+    }]
+    data["ownedArchwings"] = [{
+        "id": "visual-archwing",
+        "z": "Itzal（视觉测试）",
+        "k": "SpaceSuits",
+        "cfg": [{
+            "l": "A",
+            "u": [
+                {"s": 0, "n": "Enhanced Durability", "r": 10, "m": 10, "k": "Mod"},
+                {"s": 1, "n": "Energy Inversion", "r": 3, "m": 3, "k": "Mod"},
+            ],
+            "exact": True,
+            "issues": [],
+        }],
+    }]
+    data["equippedGear"] = [
+        {"id": "visual-gear-1", "s": 0, "n": "大型生命恢复", "c": 200},
+        {"id": "visual-gear-2", "s": 1, "n": "破解器", "c": 50},
+        {"id": "visual-gear-3", "s": 2, "n": "Archwing 发射器"},
+    ]
+    data["ownedWeapons"].extend([
+        {
+            "id": "visual-archgun",
+            "z": "Mausolon（视觉测试）",
+            "c": "Archgun",
+            "k": "SpaceGuns",
+            "p": {},
+            "inc": [],
+            "cfg": [{"l": "A", "s": ["Rubedo-Lined Barrel", None, None, None, None,
+                                          None, None, None, None, None, None],
+                     "exact": True, "issues": []}],
+        },
+        {
+            "id": "visual-archmelee",
+            "z": "Veritux（视觉测试）",
+            "c": "Archmelee",
+            "k": "SpaceMelee",
+            "p": {},
+            "inc": [],
+            "cfg": [{"l": "A", "s": ["Pressure Point", None, None, None, None,
+                                          None, None, None, None, None, None],
+                     "exact": True, "issues": []}],
+        },
+    ])
+    data["loadouts"] = [
+        {
+            "id": "visual-loadout",
+            "n": "视觉验证配置",
+            "t": "normal",
+            "fav": True,
+            "active": True,
+            "slots": [
+                {"r": "warframe", "i": "visual-gauss-prime", "z": "Gauss Prime（视觉测试）", "c": 0},
+                {"r": "primary", "i": "visual-torid", "z": "Torid（视觉测试）", "c": 0},
+                {"r": "secondary", "z": "未装备"},
+                {"r": "melee", "z": "未装备"},
+                {"r": "heavy", "z": "未装备"},
+            ],
+        },
+        {
+            "id": "visual-companion-loadout",
+            "n": "视觉同伴配置",
+            "t": "companion",
+            "fav": False,
+            "active": True,
+            "slots": [
+                {"r": "companion", "i": "visual-companion", "z": "Carrier Prime（视觉测试）", "c": 0},
+                {"r": "companionWeapon", "i": "visual-companion-weapon", "z": "Vulklok（视觉测试）", "c": 0},
+            ],
+        },
+        {
+            "id": "visual-archwing-loadout",
+            "n": "视觉 Archwing 配置",
+            "t": "archwing",
+            "fav": False,
+            "active": True,
+            "slots": [
+                {"r": "archwing", "i": "visual-archwing", "z": "Itzal（视觉测试）", "c": 0},
+                {"r": "archgun", "i": "visual-archgun", "z": "Mausolon（视觉测试）", "c": 0},
+                {"r": "archmelee", "i": "visual-archmelee", "z": "Veritux（视觉测试）", "c": 0},
+            ],
+        },
+    ]
     return data
 
 
