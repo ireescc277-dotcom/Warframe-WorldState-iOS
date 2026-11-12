@@ -8,14 +8,12 @@ private enum NativeCalcSheet: Identifiable {
     case weapon
     case enemy
     case mod(slot: Int)
-    case effect(group: NativeEffectGroup)
 
     var id: String {
         switch self {
         case .weapon: return "weapon"
         case .enemy: return "enemy"
         case .mod(let slot): return "mod-\(slot)"
-        case .effect(let group): return "effect-\(group.rawValue)"
         }
     }
 }
@@ -76,7 +74,11 @@ struct NativeDamageCalculatorView: View {
     /// that an actual result renders after DamageKit has completed, without
     /// changing what a player sees when entering the calculator.
     private let autoRevealResults: Bool
+    /// CI-only screenshot hook for the account-bound companion source card.
+    /// It never selects or enables a companion during ordinary app use.
+    private let autoRevealCompanion: Bool
     private let resultsAnchor = "native-damage-results"
+    private let companionAnchor = "native-damage-companion"
 
     init(weapon: String? = nil,
          ownedWeapon: InventoryData.OwnedWeapon? = nil,
@@ -84,6 +86,7 @@ struct NativeDamageCalculatorView: View {
          ownedWarframe: InventoryData.OwnedWarframe? = nil,
          warframeConfigIndex: Int = 0,
          availableWarframes: [InventoryData.OwnedWarframe] = [],
+         availableCompanions: [InventoryData.OwnedEquipment] = [],
          title: String = "伤害计算") {
         self.title = title
         _model = StateObject(wrappedValue: NativeDamageCalculatorModel(
@@ -92,9 +95,11 @@ struct NativeDamageCalculatorView: View {
             initialOwnedWeaponConfigIndex: ownedWeaponConfigIndex,
             initialOwnedWarframe: ownedWarframe,
             initialWarframeConfigIndex: warframeConfigIndex,
-            availableWarframes: availableWarframes
+            availableWarframes: availableWarframes,
+            availableCompanions: availableCompanions
         ))
         autoRevealResults = CommandLine.arguments.contains("-calcResult")
+        autoRevealCompanion = CommandLine.arguments.contains("-calcCompanion")
     }
 
     var body: some View {
@@ -114,7 +119,7 @@ struct NativeDamageCalculatorView: View {
                             incarnonCard
                             conditionCard
                             warframeCard
-                            companionCard
+                            companionCard.id(companionAnchor)
                             environmentCard
                             advancedCard
                             calculationButton
@@ -130,6 +135,18 @@ struct NativeDamageCalculatorView: View {
                     DispatchQueue.main.async {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             proxy.scrollTo(resultsAnchor, anchor: .top)
+                        }
+                    }
+                }
+                .onAppear {
+                    guard autoRevealCompanion else { return }
+                    if model.currentCompanion == nil,
+                       let companion = model.availableCompanions.first {
+                        model.selectCurrentCompanion(companion.id)
+                    }
+                    DispatchQueue.main.async {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo(companionAnchor, anchor: .top)
                         }
                     }
                 }
@@ -156,11 +173,6 @@ struct NativeDamageCalculatorView: View {
             case .mod(let slot):
                 NativeModPicker(model: model, slot: slot) { name in
                     model.setMod(name, in: slot)
-                    sheet = nil
-                }
-            case .effect(let group):
-                NativeEffectPicker(model: model, group: group) { name in
-                    model.addExternalMod(name, to: group)
                     sheet = nil
                 }
             }
@@ -1020,14 +1032,156 @@ struct NativeDamageCalculatorView: View {
     private var companionCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
             WFSectionHeader("同伴")
-            Text("这里填同伴、哨兵或宠物提供给当前武器的 Mod 和增益；不把它们混进战甲或外部环境。")
+            Text("先选择账号快照中的同伴实例和 A/B/C 配置。只有该配置实际装配、且 DamageKit 已有精确满级作用值的同伴 Mod 才能进入本次结算。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
-            externalEffectsControls(for: .companion,
-                                    title: "同伴 Mod 与赋能",
-                                    empty: "尚未添加会影响当前武器的同伴来源。")
+            companionSelection
+            if let companion = model.currentCompanion {
+                companionConfiguration(companion)
+                companionEffectControls
+            } else {
+                Text(model.availableCompanions.isEmpty
+                     ? "当前账号快照没有可选同伴。"
+                     : "未选择同伴；不会把任意同伴 Mod 当作已生效。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
         }
         .wfCardStyle()
+    }
+
+    private var companionSelection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("当前同伴")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            if model.availableCompanions.isEmpty {
+                Text("从军械库的账号快照进入计算器后，这里会列出已导入的同伴本体。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                Menu {
+                    Button("不带同伴") { model.selectCurrentCompanion(nil) }
+                    ForEach(model.availableCompanions) { companion in
+                        Button(companion.z) { model.selectCurrentCompanion(companion.id) }
+                    }
+                } label: {
+                    selectionLabel(
+                        icon: "pawprint.fill",
+                        title: model.currentCompanion?.z ?? "不带同伴",
+                        subtitle: model.currentCompanion == nil
+                            ? "不带入同伴 Mod 或同伴赋能"
+                            : "使用其已导入的 A/B/C 配置"
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func companionConfiguration(_ companion: InventoryData.OwnedEquipment) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("同伴配置")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            if companion.configs.isEmpty {
+                Text("账号快照没有这名同伴的 A/B/C 配置。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+            } else {
+                Picker("同伴配置", selection: Binding(
+                    get: { model.currentCompanionConfigIndex },
+                    set: { model.selectCurrentCompanionConfig($0) }
+                )) {
+                    ForEach(Array(companion.configs.enumerated()), id: \.offset) { index, config in
+                        Text("配置 \(config.label)").tag(index)
+                    }
+                }
+                .pickerStyle(.segmented)
+                if let config = model.currentCompanionConfig, !config.isExactImport {
+                    ForEach(config.issues, id: \.self) { issue in
+                        Text("• \(issue)")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.gold)
+                    }
+                }
+            }
+        }
+    }
+
+    private var companionEffectControls: some View {
+        let candidates = model.currentCompanionCandidates
+        return VStack(alignment: .leading, spacing: WFUI.s2) {
+            Text("已装且会影响当前武器的同伴 Mod")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            Text("卡装上不等于战斗条件已经触发。开关只表示此刻条件成立；需要数值的条件仍须明确填写，0 不会自动当作满层。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            if candidates.isEmpty {
+                Text("这套同伴配置没有已接入 DamageKit 的玩家武器增益 Mod。其他已导入的同伴 Mod 仍可在军械库配置页查看。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                ForEach(candidates) { candidate in
+                    companionEffectRow(candidate)
+                }
+            }
+        }
+    }
+
+    private func companionEffectRow(_ candidate: CompanionWeaponBuffCandidate) -> some View {
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .top, spacing: WFUI.s2) {
+                if let mod = ModLibrary.shared.mod(named: candidate.modName) {
+                    NativeThumb(local: model.catalog.localModIcon(for: mod),
+                                remote: model.catalog.iconURL(for: mod), size: 30)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.catalog.local(candidate.modName))
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textPrimary)
+                    Text("\(candidate.importedName) · 槽位 \(candidate.slot + 1) · \(candidate.rankLabel)")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                Spacer(minLength: 0)
+                if candidate.canCalculate {
+                    Toggle("启用", isOn: Binding(
+                        get: { model.activeCurrentCompanionBuffIDs.contains(candidate.id) },
+                        set: { model.setCurrentCompanionBuff(candidate.id, active: $0) }
+                    ))
+                    .labelsHidden()
+                    .tint(WFTheme.gold)
+                }
+            }
+            Text(candidate.availability.detail)
+                .font(.wfLabel)
+                .foregroundColor(candidate.canCalculate ? WFTheme.textMuted : WFTheme.gold)
+            if candidate.canCalculate, candidate.requiresConditionValue {
+                DamageNumberField(
+                    "条件值（0=未触发，1=已触发）",
+                    value: companionConditionValue(candidate.id),
+                    suffix: ""
+                )
+                .disabled(!model.activeCurrentCompanionBuffIDs.contains(candidate.id))
+                .opacity(model.activeCurrentCompanionBuffIDs.contains(candidate.id) ? 1 : 0.48)
+            } else if candidate.canCalculate {
+                Text("启用开关表示这张同伴 Mod 的实际触发条件已满足。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
+        }
+        .padding(10)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func companionConditionValue(_ candidateID: String) -> Binding<Double> {
+        Binding(
+            get: { model.currentCompanionConditionValue(for: candidateID) },
+            set: { model.setCurrentCompanionConditionValue($0, for: candidateID) }
+        )
     }
 
     private var environmentCard: some View {
@@ -1056,31 +1210,6 @@ struct NativeDamageCalculatorView: View {
         }
         .onChange(of: model.scenarioEffectDrafts) { _ in model.calculate() }
         .wfCardStyle()
-    }
-
-    private func externalEffectsControls(for group: NativeEffectGroup, title: String,
-                                         empty: String) -> some View {
-        VStack(alignment: .leading, spacing: WFUI.s2) {
-            HStack {
-                Text(title).font(.wfBody).foregroundColor(WFTheme.textSecondary)
-                Spacer()
-                Button("添加") { sheet = .effect(group: group) }
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.gold)
-            }
-            let hasEffects = model.externalEffects.contains { $0.group == group }
-            if !hasEffects {
-                Text(empty)
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-            }
-            ForEach(model.externalEffects.indices, id: \.self) { index in
-                let effect = $model.externalEffects[index]
-                if effect.wrappedValue.group == group {
-                    externalEffectRow(effect)
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -1137,39 +1266,6 @@ struct NativeDamageCalculatorView: View {
         .padding(10)
         .background(WFUI.raised)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func externalEffectRow(_ effect: Binding<NativeEffectDraft>) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                if let mod = ModLibrary.shared.mod(named: effect.wrappedValue.modName) {
-                    NativeThumb(local: model.catalog.localModIcon(for: mod),
-                                remote: model.catalog.iconURL(for: mod), size: 30)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(model.catalog.local(effect.wrappedValue.modName))
-                        .font(.wfBody)
-                        .foregroundColor(WFTheme.textPrimary)
-                    Text(effect.wrappedValue.modName)
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
-                Spacer()
-                Toggle("", isOn: effect.active)
-                    .labelsHidden()
-                    .tint(WFTheme.gold)
-                Button(role: .destructive) { model.removeExternalEffect(effect.wrappedValue.id) } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(WFTheme.red)
-            }
-            DamageNumberField("条件值（0=未满足）", value: conditionValue(effect), suffix: "")
-        }
-        .padding(10)
-        .background(WFUI.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .onChange(of: effect.wrappedValue) { _ in model.calculate() }
     }
 
     private func manualBuffEditor(_ buff: Binding<NativeManualBuffDraft>) -> some View {
@@ -1703,12 +1799,6 @@ struct NativeDamageCalculatorView: View {
         })
     }
 
-    private func conditionValue(_ effect: Binding<NativeEffectDraft>) -> Binding<Double> {
-        Binding(get: { effect.wrappedValue.conditionValue ?? 0 }, set: {
-            effect.wrappedValue.conditionValue = $0 > 0 ? $0 : nil
-        })
-    }
-
     private func currentWarframeBuffBinding(_ candidateID: String) -> Binding<Bool> {
         Binding(
             get: { model.activeCurrentWarframeBuffIDs.contains(candidateID) },
@@ -1995,69 +2085,6 @@ private struct NativeModPicker: View {
         if slot == 8 { return type == "exilus" || type.isEmpty }
         return type != "stance" && type != "arcane" && type != "weapon_mist"
             && type != "aura" && !type.contains("frame") && type != "shard"
-    }
-}
-
-private struct NativeEffectPicker: View {
-    @ObservedObject var model: NativeDamageCalculatorModel
-    let group: NativeEffectGroup
-    let select: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var query = ""
-
-    /// DamageKit's compact upstream table labels these four companion-owned
-    /// effects as `frame_mod`/`aura_mod`.  Put them under their actual source
-    /// in the UI rather than asking the player to remember an implementation
-    /// label or putting a pet Mod in the Warframe section.
-    private static let companionSourceMods: Set<String> = [
-        "Mecha Empowered", "Tek Collateral", "Reinforced Bond", "Tenacious Bond",
-    ]
-
-    private var rows: [ModDefinition] {
-        let term = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return ModLibrary.shared.definitions.filter { mod in
-            guard matchesGroup(mod) else { return false }
-            return term.isEmpty || mod.name.lowercased().contains(term) || model.catalog.local(mod.name).lowercased().contains(term)
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            List(rows, id: \.name) { mod in
-                Button {
-                    select(mod.name)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 10) {
-                        NativeThumb(local: model.catalog.localModIcon(for: mod),
-                                    remote: model.catalog.iconURL(for: mod), size: 36)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(model.catalog.local(mod.name)).foregroundColor(WFTheme.textPrimary)
-                            Text(mod.name).font(.wfLabel).foregroundColor(WFTheme.textSecondary)
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(WFTheme.bgPrimary)
-            .searchable(text: $query, prompt: "搜索 Mod（中英文）")
-            .navigationTitle(group.title)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
-        }
-        .preferredColorScheme(.dark)
-    }
-
-    private func matchesGroup(_ mod: ModDefinition) -> Bool {
-        let type = (mod.type ?? "").lowercased()
-        let tags = Set((mod.tags ?? []).map { $0.lowercased() })
-        switch group {
-        case .companion:
-            return Self.companionSourceMods.contains(mod.name)
-                || type.contains("companion") || tags.contains("companion")
-                || tags.contains("sentinel") || tags.contains("beast")
-        case .environment:
-            return false
-        }
     }
 }
 

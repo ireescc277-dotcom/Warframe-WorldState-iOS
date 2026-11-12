@@ -372,7 +372,12 @@ print("✅ InventoryData: \(inventory.sets.count) sets "
 var arsenalFixture = try JSONSerialization.jsonObject(with: invRaw) as! [String: Any]
 arsenalFixture["ownedCompanions"] = [[
     "id": "test-companion", "z": "Test Companion", "k": "Sentinels",
-    "cfg": [["l": "A", "u": [["s": 0, "n": "Test Mod", "r": 3, "m": 3, "k": "Mod"]],
+    "cfg": [["l": "A", "u": [
+                ["s": 0, "n": "Test Mod", "r": 3, "m": 3, "k": "Mod"],
+                ["s": 1, "n": "Reinforced Bond", "r": 3, "m": 3, "k": "Mod"],
+                ["s": 2, "n": "Tenacious Bond", "r": 2, "m": 3, "k": "Mod"],
+                ["s": 3, "n": "Tek Collateral", "k": "Mod"],
+             ],
              "exact": true, "issues": []]],
 ]]
 arsenalFixture["ownedCompanionWeapons"] = [[
@@ -411,6 +416,27 @@ precondition(arsenalInventory.equippedGear[1].count == nil)
 precondition(arsenalInventory.loadouts.map(\.kind) == [.companion, .archwing])
 precondition(arsenalInventory.loadouts[0].slot(.companionWeapon)?.itemID == "test-companion-weapon")
 precondition(arsenalInventory.loadouts[1].slot(.archgun)?.sourceIssue == "source instance missing")
+let companionCandidates = CompanionWeaponBuffResolver.candidates(
+    for: arsenalInventory.ownedCompanions[0],
+    configIndex: 0
+)
+precondition(companionCandidates.map(\.modName) == ["Reinforced Bond", "Tenacious Bond", "Tek Collateral"])
+let reinforced = companionCandidates.first { $0.modName == "Reinforced Bond" }
+precondition(reinforced?.canCalculate == true && reinforced?.requiresConditionValue == true)
+let lowerRank = companionCandidates.first { $0.modName == "Tenacious Bond" }
+if let lowerRank, case .notMaximum(let rank, let maximum) = lowerRank.availability {
+    precondition(rank == 2 && maximum == 3)
+} else {
+    fatalError("a lower-ranked companion Mod must not be promoted to its max action")
+}
+let unknownRank = companionCandidates.first { $0.modName == "Tek Collateral" }
+precondition(unknownRank?.canCalculate == false)
+if let unknownRank, case .rankUnknown = unknownRank.availability {
+    // Expected: source rank was not established, so no damage effect exists.
+} else {
+    fatalError("a companion Mod with no established rank must not be calculated")
+}
 print("✅ Arsenal snapshot: companion / gear wheel / Archwing source families decode")
+print("✅ Companion source binding: exact max-rank Mods only; lower/unknown ranks stay out of calculation")
 
 print("\n=== ALL TESTS PASSED SUCCESSFULLY ===")

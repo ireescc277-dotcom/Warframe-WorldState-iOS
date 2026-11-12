@@ -4,14 +4,12 @@ import Foundation
 import DamageKit
 
 enum NativeEffectGroup: String, CaseIterable, Identifiable {
-    case companion
     case environment
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .companion: return "同伴"
         case .environment: return "外部环境"
         }
     }
@@ -31,32 +29,6 @@ struct NativeScenarioEffectDraft: Identifiable, Hashable {
         self.effect = effect
         self.enabled = enabled
         self.percent = percent ?? effect.defaultDisplayValue
-    }
-}
-
-/// A selected external Mod together with the state that makes it active now.
-/// The Mod name is resolved through DamageKit; no UI label is interpreted as a
-/// formula.
-struct NativeEffectDraft: Identifiable, Hashable {
-    let id: UUID
-    var group: NativeEffectGroup
-    var modName: String
-    var active: Bool
-    /// Nil means that a conditional external effect is not assumed to be on.
-    var conditionValue: Double?
-
-    init(group: NativeEffectGroup, modName: String, active: Bool = true,
-         conditionValue: Double? = nil) {
-        id = UUID()
-        self.group = group
-        self.modName = modName
-        self.active = active
-        self.conditionValue = conditionValue
-    }
-
-    func source() -> ExternalEffectSource {
-        ExternalEffectSource(name: modName, mod: modName, active: active,
-                             conditionValue: conditionValue)
     }
 }
 
@@ -425,6 +397,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// frame separately; the rest are offered only as explicitly chosen
     /// external casters.
     let availableWarframes: [InventoryData.OwnedWarframe]
+    /// Actual companion bodies from the same account snapshot.  Weapon buffs
+    /// come from the companion body's Mod configuration, not from a free-form
+    /// list of Mod names.
+    let availableCompanions: [InventoryData.OwnedEquipment]
 
     @Published var weaponName: String?
     /// The selected account instance, if this calculator was opened from the
@@ -491,7 +467,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// 勾选的组合才会共用状态时间线。
     @Published private(set) var selectedAttackCombinationIDs: Set<String> = []
 
-    @Published var externalEffects: [NativeEffectDraft] = []
     @Published var manualBuffs: [NativeManualBuffDraft] = []
     /// The equipped Warframe whose own self buffs and shard effects apply to
     /// this weapon.  Its A/B/C configuration is independent of every external
@@ -502,6 +477,15 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// Each row is another actual caster.  This supports e.g. the current
     /// player’s Toxic Lash plus an ally's Roar, without merging their strength.
     @Published var externalWarframeBuffs: [NativeExternalWarframeBuffDraft] = []
+    /// The one companion whose installed Mods are being considered for this
+    /// weapon.  It is deliberately separate from a normal Arsenal loadout:
+    /// DE stores companion presets in a distinct snapshot family.
+    @Published private(set) var currentCompanion: InventoryData.OwnedEquipment?
+    @Published var currentCompanionConfigIndex = 0
+    /// A card being installed is not proof that its in-mission trigger is
+    /// live.  Keep current trigger state separate from the imported build.
+    @Published private(set) var activeCurrentCompanionBuffIDs: Set<String> = []
+    @Published private(set) var currentCompanionConditionValues: [String: Double] = [:]
 
     @Published private(set) var selectedWeapon: Weapon?
     @Published private(set) var selectedEnemy: Enemy?
@@ -519,6 +503,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
          initialOwnedWarframe: InventoryData.OwnedWarframe? = nil,
          initialWarframeConfigIndex: Int = 0,
          availableWarframes suppliedWarframes: [InventoryData.OwnedWarframe] = [],
+         availableCompanions suppliedCompanions: [InventoryData.OwnedEquipment] = [],
          catalog suppliedCatalog: NativeDamageCatalog? = nil) {
         let catalog = suppliedCatalog ?? .shared
         self.catalog = catalog
@@ -528,6 +513,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
             warframes.append(initialOwnedWarframe)
         }
         self.availableWarframes = warframes.sorted {
+            $0.z.localizedStandardCompare($1.z) == .orderedAscending
+        }
+        self.availableCompanions = suppliedCompanions.sorted {
             $0.z.localizedStandardCompare($1.z) == .orderedAscending
         }
         ownedWeapon = initialOwnedWeapon
@@ -631,6 +619,41 @@ final class NativeDamageCalculatorModel: ObservableObject {
         currentWarframe?.shards.sorted { $0.slot < $1.slot } ?? []
     }
 
+    var currentCompanionConfig: InventoryData.OwnedEquipment.Config? {
+        currentCompanion?.config(at: currentCompanionConfigIndex)
+    }
+
+    /// The only companion-owned Mod effects this app currently has an audited
+    /// DamageKit path for.  Other imported Mods remain visible in Arsenal but
+    /// cannot silently become weapon buffs here.
+    var currentCompanionCandidates: [CompanionWeaponBuffCandidate] {
+        guard let currentCompanion else { return [] }
+        return CompanionWeaponBuffResolver.candidates(
+            for: currentCompanion,
+            configIndex: currentCompanionConfigIndex
+        )
+    }
+
+    var activeCurrentCompanionSources: [ExternalEffectSource] {
+        currentCompanionCandidates.compactMap { candidate in
+            guard candidate.canCalculate,
+                  activeCurrentCompanionBuffIDs.contains(candidate.id)
+            else { return nil }
+            return ExternalEffectSource(
+                name: "\(candidate.companionName) · 配置 \(candidate.configurationLabel) · \(candidate.importedName)",
+                mod: candidate.modName,
+                active: true,
+                conditionValue: candidate.requiresConditionValue
+                    ? currentCompanionConditionValues[candidate.id] ?? 0
+                    : nil
+            )
+        }
+    }
+
+    func currentCompanionConditionValue(for candidateID: String) -> Double {
+        currentCompanionConditionValues[candidateID] ?? 0
+    }
+
     var selectedWeaponModSlotCount: Int {
         selectedSlottedMods.count + (riven.enabled && riven.slot != nil ? 1 : 0)
     }
@@ -721,10 +744,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
         }
     }
 
-    func effects(in group: NativeEffectGroup) -> [NativeEffectDraft] {
-        externalEffects.filter { $0.group == group }
-    }
-
     func externalCaster(for draft: NativeExternalWarframeBuffDraft) -> InventoryData.OwnedWarframe? {
         guard let casterID = draft.casterID else { return nil }
         if currentWarframe?.id == casterID { return currentWarframe }
@@ -765,9 +784,8 @@ final class NativeDamageCalculatorModel: ObservableObject {
         // `activeWarframeBuffResolutions`: a generic frame-Mod record without
         // its caster/config would have no defensible Ability Strength.
         let frames = activeWarframeBuffResolutions.compactMap(\.externalSource)
-        let companions = effects(in: .companion).map { $0.source() }
-        let environment = effects(in: .environment).map { $0.source() }
-            + manualBuffs.map { $0.source() }
+        let companions = activeCurrentCompanionSources
+        let environment = manualBuffs.map { $0.source() }
         return EnvironmentEffects(warframeMods: frames, companionMods: companions,
                                   buffs: environment,
                                   initialStatusStacks: initialStatusStacks)
@@ -826,6 +844,62 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculate()
     }
 
+    func selectCurrentCompanion(_ id: String?) {
+        guard let id else {
+            currentCompanion = nil
+            currentCompanionConfigIndex = 0
+            activeCurrentCompanionBuffIDs = []
+            currentCompanionConditionValues = [:]
+            calculate()
+            return
+        }
+        guard let companion = availableCompanions.first(where: { $0.id == id }) else { return }
+        currentCompanion = companion
+        currentCompanionConfigIndex = 0
+        // A different instance/configuration must never inherit trigger state
+        // from another pet merely because a Mod name happens to match.
+        activeCurrentCompanionBuffIDs = []
+        currentCompanionConditionValues = [:]
+        calculate()
+    }
+
+    func selectCurrentCompanionConfig(_ index: Int) {
+        guard let currentCompanion else { return }
+        currentCompanionConfigIndex = clampedConfigIndex(index, for: currentCompanion)
+        reconcileCurrentCompanionBuffSelection()
+        calculate()
+    }
+
+    func setCurrentCompanionBuff(_ candidateID: String, active: Bool) {
+        guard currentCompanionCandidates.contains(where: { $0.id == candidateID && $0.canCalculate }) else {
+            return
+        }
+        if active {
+            activeCurrentCompanionBuffIDs.insert(candidateID)
+        } else {
+            activeCurrentCompanionBuffIDs.remove(candidateID)
+        }
+        calculate()
+    }
+
+    func setCurrentCompanionConditionValue(_ value: Double, for candidateID: String) {
+        guard value.isFinite,
+              currentCompanionCandidates.contains(where: {
+                  $0.id == candidateID && $0.canCalculate && $0.requiresConditionValue
+              })
+        else { return }
+        // The audited companion entries below use `WITH_COND` as a binary
+        // present/not-present branch, not as an unverified stack curve.
+        // Keep the UI value in that proven domain.
+        let clamped = min(max(value, 0), 1)
+        if clamped <= .ulpOfOne {
+            currentCompanionConditionValues.removeValue(forKey: candidateID)
+        } else {
+            currentCompanionConditionValues[candidateID] = clamped
+        }
+        calculate()
+    }
+
     func addExternalWarframeBuff() {
         guard let first = availableWarframes.first else { return }
         var draft = NativeExternalWarframeBuffDraft(casterID: first.id)
@@ -875,9 +949,21 @@ final class NativeDamageCalculatorModel: ObservableObject {
         return min(max(index, 0), frame.configs.count - 1)
     }
 
+    private func clampedConfigIndex(_ index: Int, for companion: InventoryData.OwnedEquipment) -> Int {
+        guard !companion.configs.isEmpty else { return 0 }
+        return min(max(index, 0), companion.configs.count - 1)
+    }
+
     private func reconcileCurrentBuffSelection() {
         let available = Set(currentWarframeCandidates.map(\.id))
         activeCurrentWarframeBuffIDs.formIntersection(available)
+    }
+
+    private func reconcileCurrentCompanionBuffSelection() {
+        let candidates = currentCompanionCandidates
+        let available = Set(candidates.filter(\.canCalculate).map(\.id))
+        activeCurrentCompanionBuffIDs.formIntersection(available)
+        currentCompanionConditionValues = currentCompanionConditionValues.filter { available.contains($0.key) }
     }
 
     private func applyOwnedConfig(at index: Int, recalculate: Bool) {
@@ -1069,17 +1155,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
     func setIncarnonSelection(_ tier: Int, index: Int) {
         incarnonSelections[tier] = index
         pruneConditionState()
-        calculate()
-    }
-
-    func addExternalMod(_ name: String, to group: NativeEffectGroup) {
-        guard !externalEffects.contains(where: { $0.group == group && $0.modName == name }) else { return }
-        externalEffects.append(NativeEffectDraft(group: group, modName: name))
-        calculate()
-    }
-
-    func removeExternalEffect(_ id: UUID) {
-        externalEffects.removeAll { $0.id == id }
         calculate()
     }
 

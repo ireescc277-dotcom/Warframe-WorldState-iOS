@@ -20,6 +20,7 @@ CALCULATOR_DATA_SCREENS = {
     "screen_arsenal_config.png",
     "screen_arsenal_companion_config.png",
     "screen_calc.png",
+    "screen_calc_companion.png",
     "screen_calc_result.png",
 }
 

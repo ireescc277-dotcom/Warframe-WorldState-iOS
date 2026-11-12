@@ -10,6 +10,7 @@ import SwiftUI
 struct ArsenalWeaponConfigurationView: View {
     let ownedWeapon: InventoryData.OwnedWeapon
     let availableWarframes: [InventoryData.OwnedWarframe]
+    let availableCompanions: [InventoryData.OwnedEquipment]
     /// The Arsenal list verifies this against the bundled calculator catalogue.
     /// Keeping it separate from `calcName != nil` avoids offering a button for
     /// an instance whose static definition is not actually in this app build.
@@ -22,6 +23,7 @@ struct ArsenalWeaponConfigurationView: View {
 
     init(ownedWeapon: InventoryData.OwnedWeapon,
          availableWarframes: [InventoryData.OwnedWarframe],
+         availableCompanions: [InventoryData.OwnedEquipment] = [],
          initialWeaponConfigIndex: Int = 0,
          initialWarframe: InventoryData.OwnedWarframe? = nil,
          initialWarframeConfigIndex: Int = 0,
@@ -35,6 +37,9 @@ struct ArsenalWeaponConfigurationView: View {
             frames.append(initialWarframe)
         }
         self.availableWarframes = frames.sorted {
+            $0.z.localizedStandardCompare($1.z) == .orderedAscending
+        }
+        self.availableCompanions = availableCompanions.sorted {
             $0.z.localizedStandardCompare($1.z) == .orderedAscending
         }
 
@@ -100,6 +105,7 @@ struct ArsenalWeaponConfigurationView: View {
                 ownedWarframe: selectedWarframe,
                 warframeConfigIndex: currentWarframeConfigIndex,
                 availableWarframes: availableWarframes,
+                availableCompanions: availableCompanions,
                 title: ownedWeapon.z
             )
         }

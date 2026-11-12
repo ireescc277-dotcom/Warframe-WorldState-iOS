@@ -149,6 +149,7 @@ public struct ArsenalView: View {
                     ArsenalWeaponConfigurationView(
                         ownedWeapon: owned,
                         availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        availableCompanions: inventory.data?.ownedCompanions ?? [],
                         initialWeaponConfigIndex: pushedWeaponConfigIndex,
                         initialWarframe: pushedWarframe,
                         initialWarframeConfigIndex: pushedWarframeConfigIndex,
@@ -183,12 +184,14 @@ public struct ArsenalView: View {
                     DamageCalcView(
                         weapon: w.n,
                         availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        availableCompanions: inventory.data?.ownedCompanions ?? [],
                         title: w.z
                     )
                 } else {
                     DamageCalcView(
                         weapon: nil,
                         availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        availableCompanions: inventory.data?.ownedCompanions ?? [],
                         title: "伤害计算"
                     )
                 }
@@ -197,6 +200,7 @@ public struct ArsenalView: View {
                 DamageCalcView(
                     weapon: nil,
                     availableWarframes: inventory.data?.ownedWarframes ?? [],
+                    availableCompanions: inventory.data?.ownedCompanions ?? [],
                     title: "伤害计算"
                 )
             }

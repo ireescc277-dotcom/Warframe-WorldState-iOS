@@ -138,6 +138,10 @@ def build_fixture(source: Path) -> dict:
             "u": [
                 {"s": 0, "n": "Enhanced Vitality", "r": 10, "m": 10, "k": "Mod"},
                 {"s": 1, "n": "Reinforced Bond", "r": 3, "m": 3, "k": "Mod"},
+                # Deliberately lower rank: visual CI must show that it is
+                # retained but not silently promoted to the table's max-rank
+                # action when the calculator binds a companion source.
+                {"s": 2, "n": "Tenacious Bond", "r": 2, "m": 3, "k": "Mod"},
             ],
             "exact": True,
             "issues": [],

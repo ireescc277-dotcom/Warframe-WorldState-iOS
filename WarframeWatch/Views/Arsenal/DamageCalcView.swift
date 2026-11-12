@@ -17,6 +17,10 @@ public struct DamageCalcView: View {
     private let ownedWarframe: InventoryData.OwnedWarframe?
     private let warframeConfigIndex: Int
     private let availableWarframes: [InventoryData.OwnedWarframe]
+    /// Companion bodies are separate account instances with their own A/B/C
+    /// builds.  They are passed through so the calculator can bind a buff to
+    /// a real source instead of asking for a free-form Mod name.
+    private let availableCompanions: [InventoryData.OwnedEquipment]
     private let title: String
 
     public init(weapon: String? = nil,
@@ -25,6 +29,7 @@ public struct DamageCalcView: View {
                 ownedWarframe: InventoryData.OwnedWarframe? = nil,
                 warframeConfigIndex: Int = 0,
                 availableWarframes: [InventoryData.OwnedWarframe] = [],
+                availableCompanions: [InventoryData.OwnedEquipment] = [],
                 title: String = "伤害计算") {
         self.weapon = weapon
         self.ownedWeapon = ownedWeapon
@@ -32,6 +37,7 @@ public struct DamageCalcView: View {
         self.ownedWarframe = ownedWarframe
         self.warframeConfigIndex = warframeConfigIndex
         self.availableWarframes = availableWarframes
+        self.availableCompanions = availableCompanions
         self.title = title
     }
 
@@ -43,6 +49,7 @@ public struct DamageCalcView: View {
             ownedWarframe: ownedWarframe,
             warframeConfigIndex: warframeConfigIndex,
             availableWarframes: availableWarframes,
+            availableCompanions: availableCompanions,
             title: title
         )
     }

@@ -68,6 +68,7 @@ jobs:
             WarframeWatch/Models/CommunityModels.swift \
             WarframeWatch/Models/FocusModels.swift \
             WarframeWatch/Models/InventoryModel.swift \
+            WarframeWatch/Views/Arsenal/CompanionWeaponBuffResolver.swift \
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
             WarframeWatch/Models/NotificationPlan.swift \
@@ -230,6 +231,9 @@ jobs:
           xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid >/dev/null
           sleep 12
           xcrun simctl io $SIM_UDID screenshot screen_calc.png
+          # 账号绑定的同伴来源：选同伴实例与其 A/B/C 后才会出现实际 Mod；
+          # 该启动参数仅滚到卡片并选择虚构 fixture 的第一个同伴。
+          capture screen_calc_companion -startTab 3 -calcWeapon Torid -calcCompanion
           # `-calcResult` is a calculator-only CI hook: after the native core
           # finishes it scrolls to the rendered results card, so this is not a
           # duplicate capture of the input form.
@@ -246,7 +250,7 @@ jobs:
             dashboard_preview.png screen_watch.png screen_watch_targets.png \
             screen_assets.png screen_assets_relics.png screen_assets_aya.png \
             screen_assets_detail.png screen_arsenal.png screen_arsenal_melee.png \
-            screen_arsenal_config.png screen_arsenal_companion_config.png screen_calc.png screen_calc_result.png \
+            screen_arsenal_config.png screen_arsenal_companion_config.png screen_calc.png screen_calc_companion.png screen_calc_result.png \
             screen_more.png
 
       - name: Upload Screenshot Artifact
@@ -266,6 +270,7 @@ jobs:
             screen_arsenal_config.png
             screen_arsenal_companion_config.png
             screen_calc.png
+            screen_calc_companion.png
             screen_calc_result.png
             screen_more.png
           retention-days: 14
