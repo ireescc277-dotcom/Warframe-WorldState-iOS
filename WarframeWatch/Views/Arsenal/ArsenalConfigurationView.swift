@@ -27,7 +27,7 @@ struct ArsenalWeaponConfigurationView: View {
          initialWarframeConfigIndex: Int = 0,
          calculatorAvailable: Bool? = nil) {
         self.ownedWeapon = ownedWeapon
-        self.calculatorAvailable = calculatorAvailable ?? ownedWeapon.calcName != nil
+        self.calculatorAvailable = calculatorAvailable ?? (ownedWeapon.calcName != nil)
 
         var frames = availableWarframes
         if let initialWarframe,
