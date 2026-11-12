@@ -159,10 +159,21 @@ struct ArsenalWeaponConfigurationView: View {
     private func weaponBuildDetail(_ config: InventoryData.OwnedWeapon.Config) -> some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
             if !config.isExactImport {
-                Label("有槽位未能原样导入；以下是来源记录的具体原因。",
+                Label("以下来源槽位没有写进当前伤害结果；它们不会被当成空槽或满级卡。",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
+                if !config.unresolvedUpgrades.isEmpty {
+                    Text("已从快照读到，但尚未有可验证的计算规则")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textSecondary)
+                    ForEach(config.unresolvedUpgrades) { upgrade in
+                        let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
+                        Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                }
                 ForEach(config.issues, id: \.self) { issue in
                     Text("• \(issue)")
                         .font(.wfLabel)
@@ -184,7 +195,8 @@ struct ArsenalWeaponConfigurationView: View {
                     .foregroundColor(WFTheme.textSecondary)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 7)], spacing: 7) {
                     ForEach(Array(mods.enumerated()), id: \.offset) { _, pair in
-                        buildPill(slotLabel(pair.0), pair.1)
+                        buildPill(slotLabel(pair.0), pair.1,
+                                  detail: config.metadata(at: pair.0)?.rankLabel)
                     }
                     if let riven = config.riven {
                         buildPill("紫卡", riven.name)
@@ -371,7 +383,7 @@ struct ArsenalWeaponConfigurationView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
-    private func buildPill(_ label: String, _ name: String) -> some View {
+    private func buildPill(_ label: String, _ name: String, detail: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
@@ -380,6 +392,11 @@ struct ArsenalWeaponConfigurationView: View {
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textSecondary)
                 .lineLimit(2)
+            if let detail {
+                Text(detail)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(WFTheme.textMuted)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)

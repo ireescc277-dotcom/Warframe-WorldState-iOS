@@ -162,6 +162,9 @@ public struct BuildResolver: Sendable {
         var order: Int
         var modName: String?
         var riven: Riven?
+        /// See `SlottedMod.actionScale`. This belongs to the concrete card in
+        /// this slot, never to a similarly named card elsewhere in the build.
+        var actionScale: Double?
     }
 
     private func orderedBuildInputs(notes: inout [String]) -> [OrderedBuildInput] {
@@ -187,13 +190,15 @@ public struct BuildResolver: Sendable {
                 continue
             }
             inputs.append(OrderedBuildInput(slot: entry.slot, order: order,
-                                            modName: entry.name, riven: nil))
+                                            modName: entry.name, riven: nil,
+                                            actionScale: entry.actionScale))
         }
 
         if let riven = build.riven {
             inputs.append(OrderedBuildInput(slot: placedRivenSlot ?? Int.max,
                                             order: source.count,
-                                            modName: nil, riven: riven))
+                                            modName: nil, riven: riven,
+                                            actionScale: nil))
         } else if let explicitlyNamedRivenSlot {
             notes.append("槽位 \(explicitlyNamedRivenSlot) 标为紫卡，但没有紫卡词条")
         }
@@ -304,7 +309,8 @@ public struct BuildResolver: Sendable {
             acceptedMods.append(mod)
             agg.apply(mod: mod,
                       conditionalRule: library.conditionalRule(named: mod.name),
-                      weapon: weapon, attack: attack, options: options, notes: &notes)
+                      weapon: weapon, attack: attack, options: options,
+                      actionScale: input.actionScale, notes: &notes)
         }
 
         // 战甲/同伴/任务环境不是武器配卡的第十一个槽位。调用者必须显式把
@@ -929,13 +935,28 @@ struct ModAggregate {
     var unsupportedIncarnon: Set<String> = []
 
     mutating func apply(mod: ModDefinition, conditionalRule: ConditionalEffectRule?,
-                        weapon: Weapon, attack: Attack, options: Options, notes: inout [String]) {
+                        weapon: Weapon, attack: Attack, options: Options,
+                        actionScale: Double? = nil, notes: inout [String]) {
         var action = mod.action ?? [:]
         // FOR_WEAPON 覆盖普通 action 的同名键；例如 Critical Delay 的 bow
         // 版本用 -40% charge time 取代一般的 -20%。
         if let perWeapon = action.removeValue(forKey: "FOR_WEAPON")?.objectValue {
             for (tag, raw) in perWeapon where Self.weapon(weapon, matches: tag) {
                 for (key, value) in raw.objectValue ?? [:] { action[key] = value }
+            }
+        }
+        if let actionScale {
+            guard actionScale.isFinite, actionScale >= 0 else {
+                notes.append("已忽略无效的 Mod 等级倍率: \(mod.name)")
+                return
+            }
+            if abs(actionScale - 1) > .ulpOfOne {
+                // The inventory adapter only emits a scale after proving that
+                // the source card's whole action is proportional at this rank.
+                // Keeping the multiplication here makes every subsequent
+                // branch (including a data-table conditional) consume the same
+                // concrete equipped-card value instead of a UI-side estimate.
+                action = Self.scaledAction(action, by: actionScale)
             }
         }
         var conditional = action.removeValue(forKey: "WITH_COND")?.objectValue
@@ -964,6 +985,30 @@ struct ModAggregate {
                   rule: conditionalRule, attack: attack, options: options, notes: &notes)
         }
         if mod.action?["set"] != nil { /* 套装加成未实现 */ }
+    }
+
+    /// Scale numeric leaves while preserving source-data structure. This is
+    /// intentionally private: callers may supply an `actionScale` only when
+    /// their import layer has verified the complete card action is linear.
+    private static func scaledAction(_ action: [String: JSONValue], by scale: Double) -> [String: JSONValue] {
+        Dictionary(uniqueKeysWithValues: action.map { key, value in
+            (key, scaledJSONValue(value, by: scale))
+        })
+    }
+
+    private static func scaledJSONValue(_ value: JSONValue, by scale: Double) -> JSONValue {
+        switch value {
+        case .number(let number):
+            return .number(number * scale)
+        case .array(let values):
+            return .array(values.map { scaledJSONValue($0, by: scale) })
+        case .object(let values):
+            return .object(Dictionary(uniqueKeysWithValues: values.map { key, nested in
+                (key, scaledJSONValue(nested, by: scale))
+            }))
+        case .string, .bool, .null:
+            return value
+        }
     }
 
     mutating func apply(riven: Riven, notes: inout [String]) {

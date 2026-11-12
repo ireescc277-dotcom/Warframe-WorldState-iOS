@@ -31,6 +31,9 @@ SNAPSHOT = os.path.join(ROOT, "data", "inventory", "latest.json.gz")
 SNAPSHOT_META = os.path.join(ROOT, "data", "inventory", "latest.meta.json")
 GAMEDATA = os.path.join(ROOT, "data", "gamedata", "gamedata.json")
 RIVEN_TAGS = os.path.join(ROOT, "data", "gamedata", "ref", "riven", "riven_tags.json")
+DAMAGEKIT_MODS = os.path.join(
+    ROOT, "Packages", "DamageKit", "Sources", "DamageKit", "Resources", "mods.json"
+)
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
 ICONS = os.path.join(ROOT, "data", "market", "icons.json")
@@ -494,6 +497,73 @@ def calculator_slot(raw_slot: int, category: str) -> int:
     return 10 if category != "Melee" and raw_slot == 9 else raw_slot
 
 
+def simple_damagekit_action_percentages() -> dict[str, float]:
+    """Return unambiguous one-value DamageKit Mod actions, in percent units.
+
+    A lower-ranked inventory card must never be approximated by dividing its
+    fusion rank by its maximum: rank curves and multi-effect cards need not be
+    linear.  The narrow catalogue returned here is only for source records
+    where the DamageKit definition contains exactly one numeric action.  The
+    caller still verifies that the *game's own* max-rank text carries that same
+    percent value before emitting a scale.
+    """
+    rows = load_json(DAMAGEKIT_MODS) if os.path.exists(DAMAGEKIT_MODS) else []
+    candidates: dict[str, set[float]] = {}
+    if not isinstance(rows, list):
+        return {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = row.get("name")
+        action = row.get("action")
+        if not isinstance(name, str) or not isinstance(action, dict) or len(action) != 1:
+            continue
+        value = next(iter(action.values()))
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        candidates.setdefault(name, set()).add(round(abs(float(value)) * 100, 9))
+    return {
+        name: next(iter(values))
+        for name, values in candidates.items()
+        if len(values) == 1
+    }
+
+
+def source_proven_rank_action_scale(name: str, rank: int, maximum: int,
+                                    game_mod: dict, simple_actions: dict[str, float]) -> float | None:
+    """Return an exact source-data scale for one non-max-rank simple card.
+
+    `gamedata.json` gives the game's localized rank descriptions.  We accept a
+    scale only when both the equipped and max level each expose one percent
+    number and that max value exactly matches the one numeric DamageKit action.
+    This intentionally declines cards with a second term, a non-percent term,
+    a conditional, or a name that maps to more than one action.
+    """
+    if rank < 0 or maximum <= 0 or rank >= maximum:
+        return None
+    levels = game_mod.get("lv") if isinstance(game_mod, dict) else None
+    if not isinstance(levels, list) or rank >= len(levels) or maximum >= len(levels):
+        return None
+
+    def percentages(value) -> list[float]:
+        strings = value if isinstance(value, list) else [value]
+        text = " ".join(str(item) for item in strings if isinstance(item, str))
+        return [float(raw) for raw in re.findall(r"([+-]?\d+(?:\.\d+)?)\s*%", text)]
+
+    equipped_values = percentages(levels[rank])
+    maximum_values = percentages(levels[maximum])
+    if len(equipped_values) != 1 or len(maximum_values) != 1:
+        return None
+    action_percent = simple_actions.get(name)
+    if action_percent is None:
+        return None
+    equipped, full = equipped_values[0], maximum_values[0]
+    if abs(full) <= 1e-12 or abs(abs(full) - action_percent) > 1e-6:
+        return None
+    scale = equipped / full
+    return scale if 0 <= scale <= 1 else None
+
+
 def config_label(index: int) -> str:
     return chr(ord("A") + index) if 0 <= index < 26 else f"配置 {index + 1}"
 
@@ -528,6 +598,7 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     game_weapons = game_weapons if isinstance(game_weapons, dict) else {}
     game_mods = game_mods if isinstance(game_mods, dict) else {}
     riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
+    simple_action_percents = simple_damagekit_action_percentages()
 
     upgrades: dict[str, dict] = {}
     upgrades_by_type: dict[str, list[dict]] = {}
@@ -567,6 +638,8 @@ def build_owned_weapons(inv: dict) -> list[dict]:
             for config_index, raw_config in enumerate(raw_configs):
                 config = raw_config if isinstance(raw_config, dict) else {}
                 slots: list[str | None] = [None] * 11
+                slot_metadata: list[dict | None] = [None] * 11
+                unresolved_upgrades: list[dict] = []
                 issues: list[str] = []
                 if incarnon_issue:
                     issues.append(incarnon_issue)
@@ -579,6 +652,11 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                     slot = calculator_slot(raw_slot, calculator_category)
                     if not (0 <= slot < len(slots)):
                         issues.append(f"第 {raw_slot + 1} 槽超出当前计算器的槽位范围")
+                        unresolved_upgrades.append({
+                            "s": raw_slot,
+                            "n": "未识别的槽位升级",
+                            "why": "此槽位不属于当前计算器支持的武器槽位",
+                        })
                         continue
 
                     # A literal type path in Configs records *which* Mod is
@@ -614,11 +692,19 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                         upgrade = upgrades.get(upgrade_id)
                         rank = None
                     if not isinstance(upgrade, dict):
-                        issues.append("此槽引用的已装 Mod 在背包快照中找不到，因此没有带入计算")
+                        unresolved_upgrades.append({
+                            "s": slot,
+                            "n": "未识别的已装升级",
+                            "why": "背包快照中找不到这张已装升级，因此不能写入计算",
+                        })
                         continue
                     upgrade_type = upgrade.get("ItemType")
                     if not isinstance(upgrade_type, str) or not upgrade_type:
-                        issues.append("有一个已装升级没有类型信息")
+                        unresolved_upgrades.append({
+                            "s": slot,
+                            "n": "未识别的已装升级",
+                            "why": "快照没有该升级的类型信息，因此不能写入计算",
+                        })
                         continue
 
                     if "Randomized" in upgrade_type:
@@ -640,31 +726,67 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                     alias = UPGRADE_ALIASES.get(upgrade_type)
                     if alias:
                         name, maximum = alias
+                        game_mod_data: dict = {}
                     else:
                         mod_data = game_mods.get(upgrade_type)
                         if not isinstance(mod_data, dict) or not isinstance(mod_data.get("n"), str):
-                            issues.append(f"未映射的武器升级：{short_type_name(upgrade_type)}")
+                            if not direct_type_reference:
+                                fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+                                raw_rank = as_number((fp or {}).get("lvl"))
+                                rank = int(raw_rank) if raw_rank is not None else None
+                            unresolved = {
+                                "s": slot,
+                                "n": short_type_name(upgrade_type),
+                                "why": "DamageKit 尚无该升级的伤害公式",
+                            }
+                            if rank is not None:
+                                unresolved["r"] = rank
+                            unresolved_upgrades.append(unresolved)
                             continue
                         name = mod_data["n"]
                         maximum = int(as_number(mod_data.get("mx")) or 0)
+                        game_mod_data = mod_data
                     if not direct_type_reference:
                         fp = fingerprint(upgrade.get("UpgradeFingerprint"))
                         raw_rank = as_number((fp or {}).get("lvl"))
                         rank = int(raw_rank) if raw_rank is not None else None
                     if rank is None:
-                        issues.append(f"{name}：{direct_rank_issue or '背包快照没有该 Mod 的等级；当前未带入'}")
+                        unresolved_upgrades.append({
+                            "s": slot,
+                            "n": name,
+                            "m": maximum,
+                            "why": direct_rank_issue or "背包快照没有该 Mod 的等级，不能写入计算",
+                        })
                         continue
                     if rank != maximum:
-                        issues.append(f"{name}：快照记录为等级 {rank}/{maximum}；当前导入器只带入满级条目")
-                        continue
+                        action_scale = source_proven_rank_action_scale(
+                            name, rank, maximum, game_mod_data, simple_action_percents
+                        )
+                        if action_scale is None:
+                            unresolved_upgrades.append({
+                                "s": slot,
+                                "n": name,
+                                "r": rank,
+                                "m": maximum,
+                                "why": "已读到实际等级，但该等级的完整伤害公式尚未从来源数据证明",
+                            })
+                            continue
+                    else:
+                        action_scale = None
                     slots[slot] = name
+                    metadata = {"r": rank, "m": maximum}
+                    if action_scale is not None:
+                        metadata["a"] = action_scale
+                    slot_metadata[slot] = metadata
 
                 configs.append({
                     "l": config_label(config_index),
                     "s": slots,
+                    "sm": slot_metadata,
+                    "u": unresolved_upgrades,
                     "r": riven,
                     "rs": riven_slot,
-                    "exact": not issues,
+                    "exact": not issues and not unresolved_upgrades,
                     "issues": issues,
                 })
 

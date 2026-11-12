@@ -162,6 +162,16 @@ public struct InventoryData: Decodable {
             public let label: String
             /// DamageKit's stable slots: 0...8, melee stance 9, Arcane 10.
             public let slots: [String?]
+            /// Actual source ranks for the imported slots. A non-nil
+            /// `actionScale` is emitted only when the snapshot builder proved
+            /// the card's complete DamageKit action scales linearly at that
+            /// rank; it is never a client-side "assume max" fallback.
+            public let slotMetadata: [SlotMetadata?]
+            /// Equipped upgrades the source snapshot did identify but that
+            /// this app cannot yet feed into DamageKit exactly. They stay
+            /// visible with their real slot/rank instead of disappearing as
+            /// an empty slot or being treated as a full-rank card.
+            public let unresolvedUpgrades: [UnresolvedUpgrade]
             public let riven: ImportedRiven?
             public let rivenSlot: Int?
             /// False means at least one source slot could not be brought into
@@ -176,18 +186,93 @@ public struct InventoryData: Decodable {
                 Array(slots.prefix(11)) + Array(repeating: nil, count: max(0, 11 - slots.count))
             }
 
+            public var normalizedSlotMetadata: [SlotMetadata?] {
+                Array(slotMetadata.prefix(11))
+                    + Array(repeating: nil, count: max(0, 11 - slotMetadata.count))
+            }
+
+            public var normalizedSlotActionScales: [Double?] {
+                normalizedSlotMetadata.map { $0?.actionScale }
+            }
+
+            public func metadata(at slot: Int) -> SlotMetadata? {
+                guard normalizedSlotMetadata.indices.contains(slot) else { return nil }
+                return normalizedSlotMetadata[slot]
+            }
+
             private enum CodingKeys: String, CodingKey {
-                case l, s, r, rs, exact, issues
+                case l, s, sm, u, r, rs, exact, issues
             }
 
             public init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: CodingKeys.self)
                 label = try c.decodeIfPresent(String.self, forKey: .l) ?? "A"
                 slots = try c.decodeIfPresent([String?].self, forKey: .s) ?? []
+                slotMetadata = try c.decodeIfPresent([SlotMetadata?].self, forKey: .sm) ?? []
+                unresolvedUpgrades = try c.decodeIfPresent([UnresolvedUpgrade].self, forKey: .u) ?? []
                 riven = try c.decodeIfPresent(ImportedRiven.self, forKey: .r)
                 rivenSlot = try c.decodeIfPresent(Int.self, forKey: .rs)
                 isExactImport = try c.decodeIfPresent(Bool.self, forKey: .exact) ?? true
                 issues = try c.decodeIfPresent([String].self, forKey: .issues) ?? []
+            }
+
+            public struct SlotMetadata: Decodable, Hashable {
+                public let rank: Int?
+                public let maxRank: Int?
+                public let actionScale: Double?
+
+                private enum CodingKeys: String, CodingKey { case r, m, a }
+
+                public init(from decoder: Decoder) throws {
+                    let c = try decoder.container(keyedBy: CodingKeys.self)
+                    rank = try c.decodeIfPresent(Int.self, forKey: .r)
+                    maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
+                    actionScale = try c.decodeIfPresent(Double.self, forKey: .a)
+                }
+
+                public var rankLabel: String? {
+                    switch (rank, maxRank) {
+                    case let (.some(rank), .some(maximum)):
+                        return "等级 \(rank)/\(maximum)"
+                    case let (.some(rank), .none):
+                        return "等级 \(rank)"
+                    default:
+                        return nil
+                    }
+                }
+            }
+
+            public struct UnresolvedUpgrade: Decodable, Hashable, Identifiable {
+                /// DamageKit slot if one exists; otherwise the source slot.
+                public let slot: Int
+                public let name: String
+                public let rank: Int?
+                public let maxRank: Int?
+                public let reason: String
+
+                private enum CodingKeys: String, CodingKey { case s, n, r, m, why }
+
+                public init(from decoder: Decoder) throws {
+                    let c = try decoder.container(keyedBy: CodingKeys.self)
+                    slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? 0
+                    name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未命名升级"
+                    rank = try c.decodeIfPresent(Int.self, forKey: .r)
+                    maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
+                    reason = try c.decodeIfPresent(String.self, forKey: .why) ?? "尚未接入伤害公式"
+                }
+
+                public var id: String { "\(slot):\(name):\(reason)" }
+
+                public var rankLabel: String? {
+                    switch (rank, maxRank) {
+                    case let (.some(rank), .some(maximum)):
+                        return "等级 \(rank)/\(maximum)"
+                    case let (.some(rank), .none):
+                        return "等级 \(rank)"
+                    default:
+                        return nil
+                    }
+                }
             }
         }
 

@@ -432,10 +432,17 @@ public struct Enemy: Codable, Sendable, Equatable {
 public struct SlottedMod: Codable, Sendable, Equatable, Hashable {
     public var slot: Int
     public var name: String
+    /// An inventory import may provide a source-proven multiplier for a
+    /// non-max-rank card. `nil` means the ordinary data-table value is already
+    /// the exact equipped value (normally a max-rank card). This is deliberately
+    /// a scalar only for cards whose whole source action was verified to scale
+    /// proportionally; callers must not use it as a guess for arbitrary ranks.
+    public var actionScale: Double?
 
-    public init(slot: Int, name: String) {
+    public init(slot: Int, name: String, actionScale: Double? = nil) {
         self.slot = slot
         self.name = name
+        self.actionScale = actionScale
     }
 }
 

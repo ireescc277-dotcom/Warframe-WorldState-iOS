@@ -267,10 +267,16 @@ struct NativeDamageCalculatorView: View {
                 }
             }
             if !model.ownedConfigIsExact {
-                Label("以下槽位没有按原样带入；请查看各自原因。",
+                Label("以下来源槽位没有计入当前结果；它们没有被按满级或空槽处理。",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
+                ForEach(model.ownedConfigUnresolvedUpgrades) { upgrade in
+                    let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
+                    Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
                 ForEach(model.ownedConfigIssues, id: \.self) { issue in
                     Text("• \(issue)")
                         .font(.wfLabel)

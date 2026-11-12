@@ -408,10 +408,16 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published private(set) var ownedWeapon: InventoryData.OwnedWeapon?
     @Published private(set) var ownedConfigIndex = 0
     @Published private(set) var ownedConfigIssues: [String] = []
+    @Published private(set) var ownedConfigUnresolvedUpgrades: [InventoryData.OwnedWeapon.Config.UnresolvedUpgrade] = []
     @Published private(set) var ownedConfigIsExact = true
     @Published var enemyName: String?
     @Published var level: Int = 100
     @Published var weaponSlots: [String?] = Array(repeating: nil, count: 11)
+    /// Source-proven non-max-rank values for the corresponding `weaponSlots`.
+    /// A player edit clears this value, because a manually selected card is
+    /// the calculator's normal full-rank data-table input rather than the
+    /// previously imported physical card.
+    @Published private(set) var weaponSlotActionScales: [Double?] = Array(repeating: nil, count: 11)
     /// Selected item in the equipped stance Mod's combo list.  It is passed to
     /// DamageKit as data; this model does not calculate combo timing or damage.
     @Published var stanceCombo: String?
@@ -575,7 +581,12 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     var selectedSlottedMods: [SlottedMod] {
         let weapon = activeWeaponSlots.compactMap { slot in
-            weaponSlots[slot].map { SlottedMod(slot: slot, name: $0) }
+            weaponSlots[slot].map { name in
+                let scale = weaponSlotActionScales.indices.contains(slot)
+                    ? weaponSlotActionScales[slot]
+                    : nil
+                return SlottedMod(slot: slot, name: name, actionScale: scale)
+            }
         }
         let shards = currentWarframe?.shards.compactMap { shard -> SlottedMod? in
             guard (0...4).contains(shard.slot), let name = shard.damageKitName else { return nil }
@@ -796,10 +807,12 @@ final class NativeDamageCalculatorModel: ObservableObject {
         ownedWeapon = nil
         ownedConfigIndex = 0
         ownedConfigIssues = []
+        ownedConfigUnresolvedUpgrades = []
         ownedConfigIsExact = true
         ownedProgenitorElements = [:]
         weaponName = name
         weaponSlots = Array(repeating: nil, count: 11)
+        weaponSlotActionScales = Array(repeating: nil, count: 11)
         stanceCombo = nil
         incarnonSelections = [:]
         riven = NativeRivenDraft()
@@ -972,8 +985,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
         ownedConfigIndex = index
         weaponName = ownedWeapon.calcName
         weaponSlots = config.normalizedSlots
+        weaponSlotActionScales = config.normalizedSlotActionScales
         ownedProgenitorElements = ownedWeapon.progenitorElements
         ownedConfigIssues = config.issues
+        ownedConfigUnresolvedUpgrades = config.unresolvedUpgrades
         ownedConfigIsExact = config.isExactImport
         if let imported = config.riven {
             var draft = NativeRivenDraft(imported: imported)
@@ -1023,9 +1038,15 @@ final class NativeDamageCalculatorModel: ObservableObject {
         if let name {
             for index in weaponSlots.indices where index != slot && weaponSlots[index] == name {
                 weaponSlots[index] = nil
+                if weaponSlotActionScales.indices.contains(index) {
+                    weaponSlotActionScales[index] = nil
+                }
             }
         }
         weaponSlots[slot] = name
+        if weaponSlotActionScales.indices.contains(slot) {
+            weaponSlotActionScales[slot] = nil
+        }
         if slot == 9 {
             let validNames = availableStanceCombos.map(\.name)
             if let existing = stanceCombo, validNames.contains(existing) {
@@ -1051,6 +1072,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
         riven.slot = slot
         if let slot {
             weaponSlots[slot] = nil
+            if weaponSlotActionScales.indices.contains(slot) {
+                weaponSlotActionScales[slot] = nil
+            }
         }
         calculate()
     }
