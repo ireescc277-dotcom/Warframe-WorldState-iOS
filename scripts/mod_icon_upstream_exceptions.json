@@ -1,0 +1,8 @@
+{
+  "unavailable": {
+    "FocusedAcceleration.webp": {
+      "mod": "Focused Acceleration",
+      "reason": "The image name appears in the website's Mod data, but https://warframe-damage.com/data/mods/FocusedAcceleration.webp returns HTTP 404."
+    }
+  }
+}

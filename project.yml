@@ -11,6 +11,9 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     CODE_SIGN_IDENTITY: ""
     DEVELOPMENT_TEAM: ""
+packages:
+  DamageKit:
+    path: Packages/DamageKit
 targets:
   WarframeWatch:
     type: application
@@ -20,11 +23,12 @@ targets:
       - path: WarframeWatch
         excludes:
           - "Info.plist"
-      # 计算器离线包：scripts/build_web_site.py 从 web/app 复制到 ios/DamageCalc，
-      # 以 folder reference 整体打进 bundle（保持目录结构，不走逐文件资源处理）。
-      - path: ios/DamageCalc
+      # 原生计算器数据包：只含武器、敌人、中文表和本地图标；不含网页或 JS 内核。
+      - path: ios/DamageData
         type: folder
         buildPhase: resources
+    dependencies:
+      - package: DamageKit
     info:
       path: WarframeWatch/Info.plist
       properties:
@@ -37,14 +41,11 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
-        NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
         NSUserNotificationsUsageDescription: "用于在蹲守的任务（仲裁、裂隙、周期）出现或即将开始时提醒。"
         UIBackgroundModes:
           - fetch
         BGTaskSchedulerPermittedIdentifiers:
           - com.warframe.watch.refresh
-        NSLocalNetworkUsageDescription: "用于连接局域网开发服务器进行本地数据热调试与实时预览。"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.warframe.watch

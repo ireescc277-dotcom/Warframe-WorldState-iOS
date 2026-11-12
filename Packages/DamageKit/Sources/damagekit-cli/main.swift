@@ -3,7 +3,7 @@ import DamageKit
 
 // damagekit-cli
 //   用法：
-//     damagekit-cli <input.json> [--data-root <dir>] [--compact] [--timing]
+//     damagekit-cli <input.json|-> [--data-root <dir>] [--compact] [--timing]
 //     damagekit-cli --list-mods
 //     damagekit-cli --list-weapons | --list-enemies
 //
@@ -16,7 +16,7 @@ func fail(_ message: String) -> Never {
 
 var args = Array(CommandLine.arguments.dropFirst())
 var inputPath: String?
-var dataRoot = "web/app/site"
+var dataRoot: String?
 var compact = false
 var showTiming = false
 var listMode: String?
@@ -49,18 +49,41 @@ while i < args.count {
         listMode = "enemies"
     case "--help", "-h":
         print("""
-        damagekit-cli <input.json> [--data-root <dir>] [--compact] [--timing]
+        damagekit-cli <input.json|-> [--data-root <dir>] [--compact] [--timing]
         damagekit-cli --list-mods | --list-weapons | --list-enemies
+        传入 - 时，从标准输入读取请求 JSON。
         """)
         exit(0)
     default:
+        if a == "-" {
+            inputPath = a
+            i += 1
+            continue
+        }
         if a.hasPrefix("-") { fail("未知参数 \(a)") }
         inputPath = a
     }
     i += 1
 }
 
-let store = DataStore(root: URL(fileURLWithPath: dataRoot))
+func discoverStore(explicitRoot: String?) -> DataStore? {
+    if let explicitRoot {
+        return DataStore(root: URL(fileURLWithPath: explicitRoot))
+    }
+    let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+    return DataStore.discoverRoot(startingAt: cwd).map(DataStore.init(root:))
+}
+
+func requireStore(explicitRoot: String?) -> DataStore {
+    guard let store = discoverStore(explicitRoot: explicitRoot),
+          DataStore.hasRequiredData(at: store.root) else {
+        if let explicitRoot {
+            fail("数据目录无效: \(explicitRoot)（需要 weapons-list.json 和 data/json/enemies-min.json）")
+        }
+        fail("找不到离线数据目录；请传入 --data-root <web/app/site>")
+    }
+    return store
+}
 
 if let listMode {
     let names: [String]
@@ -68,17 +91,31 @@ if let listMode {
     case "mods":
         names = ModLibrary.shared.definitions.map(\.name).sorted()
     case "weapons":
-        names = (try? store.weaponNames()) ?? []
+        do {
+            names = try requireStore(explicitRoot: dataRoot).weaponNames()
+        } catch {
+            fail("读取武器列表失败: \(error)")
+        }
     default:
-        names = (try? store.enemyNames()) ?? []
+        do {
+            names = try requireStore(explicitRoot: dataRoot).enemyNames()
+        } catch {
+            fail("读取敌人列表失败: \(error)")
+        }
     }
     print(names.joined(separator: "\n"))
     exit(0)
 }
 
 guard let inputPath else { fail("缺少输入文件，-h 看用法") }
-guard let raw = FileManager.default.contents(atPath: inputPath) else {
-    fail("读不到文件 \(inputPath)")
+let raw: Data
+if inputPath == "-" {
+    raw = FileHandle.standardInput.readDataToEndOfFile()
+} else {
+    guard let fileData = FileManager.default.contents(atPath: inputPath) else {
+        fail("读不到文件 \(inputPath)")
+    }
+    raw = fileData
 }
 
 let decoder = JSONDecoder()
@@ -89,10 +126,19 @@ do {
     fail("输入 JSON 解析失败: \(error)")
 }
 
+// 只有名称引用需要离线数据；完整内嵌对象是公开 API，应能独立计算。
+let needsStore = request.weapon?.reference != nil || request.ownedWeapon != nil || request.enemy.reference != nil
+let store = needsStore ? requireStore(explicitRoot: dataRoot) : nil
 let calculator = Calculator(store: store)
 
+let input: DamageInput
+do {
+    input = try request.resolve(using: store)
+} catch {
+    fail("输入解析失败: \(error)")
+}
+
 if dumpResolved {
-    let input = try calculator.store.map { try request.resolve(using: $0) } ?? request.resolve(using: nil)
     for r in calculator.resolvedAttacks(input) {
         let dmg = r.damage.sorted { $0.key.rawValue < $1.key.rawValue }
             .map { "\($0.key.rawValue)=\(String(format: "%.2f", $0.value))" }
@@ -100,18 +146,13 @@ if dumpResolved {
         print("[\(r.name)] dmg: \(dmg)")
         print("  cc=\(String(format: "%.4f", r.critChance)) cdm=\(String(format: "%.3f", r.critMultiplier)) sc=\(String(format: "%.4f", r.statusChance)) ms=\(String(format: "%.3f", r.multishot)) rate=\(String(format: "%.3f", r.fireRate))")
         print("  faction=\(r.factionBonus) statusDmg=\(r.statusDamageBonus) headshot=\(r.headshotMultiplier) mag=\(r.magazine) reload=\(r.reload) lastShotMs=\(r.lastShotMultishot)")
+        // 直接伤害的逐状态乘子：这三项决定 Galvanized Shot / Gun CO 那一路。
+        print("  perStatusType=\(r.directDamagePerStatusType) baseDmgMult=\(r.baseDamageMultiplier) coMult=\(r.conditionalDamageIsMultiplicative)")
+        print("  nonCritBonus=\(r.nonCriticalDamageBonus) nonCritChance=\(r.nonCriticalDamageChance) doubleCrit=\(r.doubleCritChance) slashOnCrit=\(r.slashOnCriticalChance)")
+        print("  dotBase=\(r.dotBaseDamage) dotElem=\(r.dotElementBonuses) dotStatus=\(r.dotStatusBonuses)")
         if !r.notes.isEmpty { print("  notes=\(r.notes)") }
     }
     exit(0)
-}
-
-// 先把数据装上（武器 / 敌人 / mod），计时只算纯计算 ——
-// 验收里的「不加载数据 < 5ms」指的就是这一段。
-let input: DamageInput
-do {
-    input = try request.resolve(using: store)
-} catch {
-    fail("输入解析失败: \(error)")
 }
 
 var result = calculator.evaluate(input)

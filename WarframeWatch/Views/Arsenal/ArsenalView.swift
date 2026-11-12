@@ -4,7 +4,7 @@ import ImageIO
 
 /// 武器库：选一把枪，装进伤害计算器。
 ///
-/// 它本身不算任何东西——计算全在 `DamageCalcView` 的网页内核里。这里只负责
+/// 它本身不算任何东西——计算全在 `DamageCalcView` 的 Swift/DamageKit 内核里。这里只负责
 /// 把 666 把武器按类别摆出来、能搜、带图标，点进去把武器名交给计算器预填。
 /// 顶部另有一个「空计算器」，对应「不从这里选、进去自己配」那条路。
 public struct ArsenalView: View {
@@ -177,7 +177,7 @@ public struct ArsenalView: View {
         let rows = filtered
         return LazyVStack(spacing: 0) {
             if catalog.failed {
-                Text("App 包里没有计算器资源（web/app）。构建时先跑 scripts/build_web_site.py。")
+                Text("App 包里没有原生计算数据。构建时先跑 scripts/build_native_damage_data.py。")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.red)
                     .padding(.vertical, WFUI.s4)
@@ -305,7 +305,7 @@ final class WeaponIconStore {
     }
 }
 
-/// 武器图。包里带了一份（`ios/DamageCalc/icons`，构建时从 assets 复制），
+/// 武器图。包里带了一份（`ios/DamageData/icons`，构建时从 assets 复制），
 /// 优先读本地，读不到再回站点 CDN。两边都没有就画占位块，保证行高不跳。
 struct WeaponThumb: View {
     let name: String?

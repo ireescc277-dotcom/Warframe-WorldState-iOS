@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 
-/// 武器清单。数据来自 `web/app/site/weapons-list.json`，由
-/// `scripts/build_web_site.py` 从站点数据生成——和计算器用的是同一份，
+/// 武器清单。数据来自 `ios/DamageData/weapons-list.json`，由
+/// `scripts/build_native_damage_data.py` 从站点数据生成——和计算器用的是同一份，
 /// 中文名也来自站点自带的 localeLang，不会出现两套译名。
 public struct WeaponEntry: Decodable, Identifiable, Hashable {
     public let n: String        // 英文名，计算器只认这个
@@ -67,7 +67,7 @@ public enum WeaponCategory: String, CaseIterable, Identifiable {
 }
 
 /// 从 App 包里读武器表。目录由 project.yml 以 folder reference 打进 bundle，
-/// 名字是 DamageCalc（见 CI 里 `cp -R web/app WarframeWatch/Resources/DamageCalc`）。
+/// 名字是 DamageData；它只含 JSON 与图片，不含网页运行时。
 public final class WeaponCatalog: ObservableObject {
     public static let shared = WeaponCatalog()
 
@@ -78,11 +78,11 @@ public final class WeaponCatalog: ObservableObject {
 
     /// App 包内计算器根目录。找不到时返回 nil，调用方负责降级。
     public static var bundleRoot: URL? {
-        if let u = Bundle.main.url(forResource: "DamageCalc", withExtension: nil) {
+        if let u = Bundle.main.url(forResource: "DamageData", withExtension: nil) {
             return u
         }
         // xcodegen 的 folder reference 偶尔会把目录压平到包根
-        if let u = Bundle.main.url(forResource: "index", withExtension: "html") {
+        if let u = Bundle.main.url(forResource: "weapons-list", withExtension: "json") {
             return u.deletingLastPathComponent()
         }
         return nil

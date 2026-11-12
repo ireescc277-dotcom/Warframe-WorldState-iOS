@@ -115,15 +115,18 @@ function clearMods() {
 function setEnemy(name, steel, level, eximus, party) {
   const hit = ENEMIES.find(e => e.name === name);
   if (!hit) throw new Error('未知敌人: ' + name);
-  W.currEnemyLvl = W.currEnemyLvl || 1;
-  W.showEnemy(name, !!steel);
   const lv = Math.max(1, Math.min(9999, Number(level) || 1));
+  // The real page sets these globals before calling showEnemy (see its enemy
+  // picker handler). `showEnemy`/`correctEnemyLvl` read them while rebuilding
+  // the resistance table. Setting Eximus afterward left the previous case's
+  // overguard on a non-Eximus enemy in this persistent jsdom harness.
+  const ex = hit.eximusOff ? false : !!eximus;
+  W.currEnemySPStatus = !!steel;
+  W.currEnemyEximusStatus = ex;
   W.currEnemyLvl = lv;
-  try { W.currEnemySPStatus = !!steel; } catch (e) {}
+  W.showEnemy(name, !!steel);
   W.$('#setEnemyLvl').val(String(lv));
   // 有些敌人（爆破型等）没有卓越者形态，站点连勾选框都不渲染
-  const ex = hit.eximusOff ? false : !!eximus;
-  W.currEnemyEximusStatus = ex;
   W.$('#eEximus').prop('checked', ex);
   // 队伍人数只对 showPartyCount 的敌人有意义，correctEnemyLvl 直接读这个输入框
   const pv = W.$('#eParty');
@@ -169,6 +172,69 @@ function applyMods(mods, riven) {
   }
   W.invalidateModStatsCache();
   return lost;
+}
+
+// 灵化节点不是 modsProps 里的普通 Mod；网站界面选择后会把原始武器 JSON
+// 里的 action 直接放进固定的 18...22 槽。对拍入口使用同一形状，而不是
+// 重新解释节点公式。接受 {"19": 1} 或 ["19:1"] 两种便于 fixture 的格式。
+function applyIncarnon(perks) {
+  const raw = W.currWeapon && W.currWeapon.incarnon && W.currWeapon.incarnon[0];
+  if (!raw || !perks) return [];
+
+  const pairs = [];
+  if (Array.isArray(perks)) {
+    for (const value of perks) {
+      const [tier, option] = String(value).split(':');
+      pairs.push([Number(tier), Number(option)]);
+    }
+  } else if (typeof perks === 'object') {
+    for (const [tier, option] of Object.entries(perks)) {
+      pairs.push([Number(tier), Number(option)]);
+    }
+  }
+
+  const lost = [];
+  for (const [tier, option] of pairs) {
+    const choices = raw[tier];
+    const choice = choices && choices[option];
+    if (!Number.isInteger(tier) || !Number.isInteger(option) || !choice) {
+      lost.push({ tier, option });
+      continue;
+    }
+    W.modsPanel[tier] = {
+      name: 'Incarnon',
+      mod_id: tier,
+      prop_id: option,
+      actions: JSON.parse(JSON.stringify(choice.action || {})),
+    };
+  }
+  W.invalidateModStatsCache();
+  return lost;
+}
+
+function normalizeCombination(value) {
+  const list = Array.isArray(value) ? value : String(value).split(',');
+  const members = list.map(Number).filter(Number.isInteger).sort((a, b) => a - b);
+  return members.length > 1 && new Set(members).size === members.length
+    ? members.join(',')
+    : null;
+}
+
+// comb 是网站 UI 的一组 checkbox，初始均未勾选。每一次计算都显式重置
+// 它们，避免同一 jsdom 会话中前一个 case 的选择泄漏到后一个 case。
+function applyCombinedAttacks(requested) {
+  const wanted = new Set((Array.isArray(requested) ? requested : [])
+    .map(normalizeCombination)
+    .filter(Boolean));
+  const selected = [];
+  W.$('.combCxb').each(function () {
+    const checkbox = W.$(this);
+    const id = normalizeCombination(checkbox.parent('.combItem').data('id'));
+    const enabled = !!id && wanted.has(id);
+    checkbox.prop('checked', enabled);
+    if (enabled) selected.push(id.split(',').map(Number));
+  });
+  return selected;
 }
 
 // ---------------------------------------------------------------- 自定义属性
@@ -386,11 +452,20 @@ function applyOpts(o) {
   w.optMadurai = { is_set: !!o.madurai };
 
   // 近战连击 / 重击起始 / 能力连击 / 狙击连击
-  if (o.meleeCombo != null) w.comboСounterVal = Number(o.meleeCombo);
-  if (o.heavyStart != null) {
-    w.combo_counterInitial = Number(o.heavyStart);
-    try { w.comboСounterSettingsVal = Number(o.heavyStart); } catch (e) {}
-  }
+  //
+  // Keep this mapping identical to the site's options handler:
+  //   optHeavy      -> comboСounterVal
+  //   optMeleeCombo -> comboСounterSettingsVal.{is_set,val}
+  // The earlier harness had these two controls reversed (and replaced the
+  // settings object with a number), which made a local comparison request
+  // unlike the actual website UI.  Reset these mutable globals on every run
+  // because the kernel intentionally keeps one loaded website instance.
+  w.combo_counterInitial = 11;
+  w.combo_counter = 11;
+  w.comboСounterVal = o.heavyStart != null ? Number(o.heavyStart) : 12;
+  w.comboСounterSettingsVal = o.meleeCombo != null
+    ? { is_set: true, val: Number(o.meleeCombo) }
+    : { is_set: false, val: 12 };
   w.abilityComboСounterSettings = o.abilityCombo != null
     ? { is_set: true, val: Number(o.abilityCombo) }
     : { is_set: false, val: 12 };
@@ -444,8 +519,10 @@ async function calc(req) {
   setEnemy(req.enemy, req.steel, req.level, req.eximus, req.party);
 
   const lost = applyMods(req.mods, req.riven);
+  const lostIncarnon = applyIncarnon(req.incarnon || req.incarnonPerks);
   applyOpts(req.opts);
   applyCustom(req.custom);
+  const combinedAttacks = applyCombinedAttacks(req.combinedAttacks);
   W.invalidateModStatsCache();
 
   // 近战：架势决定连段命中数，必须在 reCalc 之前选好。
@@ -465,6 +542,7 @@ async function calc(req) {
     eximus: !!W.currEnemyEximusStatus,
     party: (W.$('#eParty').length ? Number(W.$('#eParty').val()) : 1) || 1,
     queueLen: W.queueLength,
+    combinedAttacks,
     stances,
     stance,
     target: {
@@ -479,6 +557,7 @@ async function calc(req) {
     },
     attacks: collect(),
     lostMods: lost,
+    lostIncarnon,
   };
 }
 
