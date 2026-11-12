@@ -96,6 +96,94 @@ final class NativeDamageCatalog: ObservableObject {
         translations[english] ?? english
     }
 
+    /// The upstream site locale covers weapon and Mod names well, but several
+    /// Incarnon evolutions and Archon-shard effect strings are not keys in that
+    /// table.  Keep their Chinese display text in the native client instead of
+    /// making a Chinese UI fall back to an English calculation label.
+    func localIncarnon(_ english: String) -> String {
+        translations[english] ?? Self.incarnonFallbacks[english] ?? english
+    }
+
+    func localShard(_ english: String) -> String {
+        translations[english] ?? Self.shardFallbacks[english] ?? english
+    }
+
+    private static let shardFallbacks: [String: String] = [
+        "+25% Critical Damage": "近战暴击伤害 +25%",
+        "+37.5% Critical Damage": "近战暴击伤害 +37.5%",
+        "+25% Status Chance": "主武器触发几率 +25%",
+        "+37.5% Status Chance": "主武器触发几率 +37.5%",
+        "+25% Critical Chance": "副武器暴击率 +25%",
+        "+37.5% Critical Chance": "副武器暴击率 +37.5%",
+        "+50% Critical Chance": "击杀受火焰异常影响的敌人后：副武器暴击率最多 +50%",
+        "+75% Critical Chance": "击杀受火焰异常影响的敌人后：副武器暴击率最多 +75%",
+        "+50% Critical Damage": "近战暴击伤害 +50%",
+        "+75% Critical Damage": "近战暴击伤害 +75%",
+        "Incr. max stacks of Corrosion +2": "腐蚀异常层数上限 +2",
+        "Incr. max stacks of Corrosion +3": "腐蚀异常层数上限 +3",
+        "Toxin Status +30% more damage": "毒素异常伤害 +30%",
+        "Toxin Status +45% more damage": "毒素异常伤害 +45%",
+        "+30% Primary Electricity Damage": "主武器电击伤害 +30%",
+        "+45% Primary Electricity Damage": "主武器电击伤害 +45%",
+        "+10% Ability Damage affected by Electricity": "对受电击异常影响敌人的技能伤害 +10%",
+        "+15% Ability Damage affected by Electricity": "对受电击异常影响敌人的技能伤害 +15%",
+    ]
+
+    private static let incarnonFallbacks: [String: String] = [
+        "Incarnon Form": "灵化形态",
+        "Incarnon Form: +100% Melee Damage, +20% Sprint Speed, +20% to Bullet Jump": "灵化形态：近战伤害 +100%，冲刺速度 +20%，子弹跳跃 +20%",
+        "Edge of Justice: Increase Damage by +50. With Melee Weapon Equipped: +40% Attack Speed.": "正义之刃：伤害 +50；装备近战武器时攻击速度 +40%",
+        "Guardian's Promise: Increase Damage by +50. With Overshields: +80% Heavy Attack Efficiency.": "守护者的承诺：伤害 +50；拥有超护盾时重击效率 +80%",
+        "Standoff: Combo Timer paused when weapon is holstered.": "对峙：收起武器时连击计时暂停",
+        "Swordsman's Celerity: With Melee Weapon Equipped: +20% Movement Speed": "剑士迅捷：装备近战武器时移动速度 +20%",
+        "Swift Break: +60% Heavy Attack Wind Up Speed": "迅捷破击：重击蓄力速度 +60%",
+        "Absolute Dominion: Increase Status Chance by +20%.": "绝对支配：触发几率 +20%",
+        "Subtle Force: Increase Critical Chance by +6%. Increase Status Chance by +14%.": "微妙之力：暴击率 +6%，触发几率 +14%",
+        "Absolute Valor: Increase Critical Chance by +12%": "绝对勇气：暴击率 +12%",
+        "Attuned Accuracy: +40% Accuracy when Aiming": "调谐精准：瞄准时精准度 +40%",
+        "Kinetic Baffle: -50% Weapon Recoil when Aiming": "动能缓冲：瞄准时武器后坐力 -50%",
+        "Frictionless Flight: +50% Projectile Speed when Aiming": "无阻飞行：瞄准时投射物速度 +50%",
+        "Dual-Mode Chamber: Reload toggles the weapon between +100% Projectile Speed and +4m Punch Through": "双模式膛室：装填时在投射物速度 +100% 与穿透 +4 米之间切换",
+        "Evolved Autoloader: +50% Magazine Reloaded when Holstered": "进化自动装填：收起武器时装填弹匣的 50%",
+        "Mounting Momentum: Reload increases Fire Rate by +10% per shell. Resets on reload": "递增动量：每装填一发，射速 +10%；装填后重置",
+        "Brutal Edge: +10% Critical Chance +10% Status Chance": "残酷锋刃：暴击率 +10%，触发几率 +10%",
+        "Incarnon Catalyst: Headshots build 50% more Incarnon charge": "灵化催化剂：爆头使灵化充能增加 50%",
+        "Wracking Wrath: +20% Status Chance -10% Critical Chance": "撼动怒火：触发几率 +20%，暴击率 -10%",
+        "Devastating Attrition: 50% chance to deal +2000% damage on non-critical hits": "毁灭磨损：非暴击命中有 50% 概率造成 +2000% 伤害",
+        "Ruptured Plenitude: On Punch Through 3 enemies: +70% Ammo Efficiency for 20s": "破裂充盈：穿透 3 个敌人后，弹药效率 +70%，持续 20 秒",
+        "Agile Executor: Gain 50% Ammo Efficiency while Aim Gliding and Sliding": "灵活处决者：瞄准滑翔或滑铲时弹药效率 +50%",
+        "Marksman's Hand: -40% Recoil": "神射手之手：后坐力 -40%",
+        "Rapid Wrath: +20% Fire Rate": "迅疾怒火：射速 +20%",
+        "Raptor's Chase: +50% Movement Speed while Aiming": "猛禽追击：瞄准时移动速度 +50%",
+        "Lethal Rearmament: On Headshot: +30% Reload Speed for 12 seconds. Stacks up to 3 times": "致命再装填：爆头后装填速度 +30%，持续 12 秒，最多 3 层",
+        "Awakened Readiness: 30% Magazine Reloaded per second while Holstered": "觉醒备战：收起时每秒装填弹匣的 30%",
+        "Feather of Justice: Gain 60% Ammo Efficiency while Aim Gliding or Sliding": "正义之羽：瞄准滑翔或滑铲时弹药效率 +60%",
+        "Caput Mortuum: +50% Headshot damage": "死首：爆头伤害 +50%",
+        "Incarnon Efficiency: Headshots build +50% Incarnon Transmutation mode charge": "灵化效率：爆头使灵化转换模式充能 +50%",
+        "Incarnon Efficiency: Headshots Build +50% more incarnation Transmutation charge": "灵化效率：爆头使灵化转换模式充能 +50%",
+        "Elemental Excess: +20% Status Chance. -10% Critical Chance": "元素盈余：触发几率 +20%，暴击率 -10%",
+        "Elemental Excess: +20% Status Chance -10% Critical Chance": "元素盈余：触发几率 +20%，暴击率 -10%",
+        "Devouring Attrition: 50% chance to deal 2000% damage on non-critical hits": "吞噬磨损：非暴击命中有 50% 概率造成 2000% 伤害",
+        "Reaper's Plenty: On Headshot: +40% Ammo Efficiency for 6 seconds": "收割者的丰盈：爆头后弹药效率 +40%，持续 6 秒",
+        "Overwhelming Attrition: On Hit that is neither Critical nor applies a Status Effect: +400% damage for 10 seconds. Stacks up to 3 times": "压倒性磨损：非暴击且未触发异常的命中后，伤害 +400%，持续 10 秒，最多 3 层",
+        "Final Fusillade: Increase damage by +51. +3 multishot on last shot in magazine": "终幕齐射：伤害 +51；弹匣最后一发多重射击 +3",
+        "Plentiful Mayhem: Increase damage by +31. Multishot consumes ammo directly from Capacity and increases Damage by +60%.": "丰沛混沌：伤害 +31；多重射击直接消耗弹药储备，伤害 +60%",
+        "Extended Volley: Increase Magazine Capacity by +9": "延展齐射：弹匣容量 +9",
+        "Renewed Horror: On Reload from Empty: Lingering damage field duration doubles on first shot.": "重燃恐惧：空弹匣装填后，第一发的残留伤害区域持续时间翻倍",
+        "Swift Deliverance: +50% projectile speed": "迅捷投送：投射物速度 +50%",
+        "Swift Deliverance: +80% Projectile Speed": "迅捷投送：投射物速度 +80%",
+        "Elemental Balance: Increase Status Chance by +34%": "元素平衡：触发几率 +34%",
+        "Commodore's Fortune: Increase Critical Chance by +20%": "准将的幸运：暴击率 +20%",
+        "Survivor's Edge: Increase Critical Chance by +15%. Increase Status Chance by +15%": "幸存者之刃：暴击率 +15%，触发几率 +15%",
+        "Survivor's Edge: +10% Critical chance +10% Status Chance": "幸存者之刃：暴击率 +10%，触发几率 +10%",
+        "Void's Guidance: +50% Accuracy and -50% Recoil while Aiming": "虚空指引：瞄准时精准度 +50%，后坐力 -50%",
+        "Retribution's Vessel: +50% Magazine Capacity": "复仇容器：弹匣容量 +50%",
+        "Ready Retaliation: On reload from Empty: +100% Reload Speed for 6 seconds": "蓄势反击：空弹匣装填后装填速度 +100%，持续 6 秒",
+        "Executioner's Fortune: On Headshot kill: 20% chance to instant reload": "处决者的幸运：爆头击杀有 20% 概率立即装填",
+        "Spiteful Defilement: Enemies suffering from fewer than 3 Status Effects will give: +100% Critical Damage": "恶意亵渎：敌人身上的异常少于 3 种时，暴击伤害 +100%",
+        "Lingering Judgement: On 2 headshots within 2 seconds: +50% Headshot damage for 8 seconds": "余留审判：2 秒内两次爆头后，爆头伤害 +50%，持续 8 秒",
+    ]
+
     func weapon(named name: String) throws -> Weapon {
         guard let store else { throw DamageKitError.missingResource("DamageData") }
         return try store.weapon(named: name)

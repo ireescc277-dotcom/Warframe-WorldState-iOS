@@ -55,6 +55,10 @@ OWNED_WEAPON_CATEGORIES = {
     "SentinelWeapons": "Companion",
     "SpaceGuns": "Archgun",
     "SpaceMelee": "Archmelee",
+    # These are weapons in the AlecaFrame account snapshot too.  They may not
+    # all be calculable yet, but hiding them makes the weapon page disagree
+    # with the source inventory.
+    "OperatorAmps": "Operator",
 }
 
 # DamageKit has the same compatibility aliases in InventoryAdapter.swift.
@@ -67,6 +71,8 @@ UPGRADE_ALIASES = {
         ("Secondary Merciless", 5),
     "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageOnKill":
         ("Melee Merciless", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnHeatProc":
+        ("Cascadia Flare", 5),
 }
 
 RIVEN_MAXIMUM = 1_073_741_823.0
@@ -241,6 +247,30 @@ def riven_name(buffs: list[dict], tags: dict[str, dict]) -> str:
     return "".join(pieces) or "Riven"
 
 
+RIVEN_UNRESOLVED_LABELS = {
+    "WeaponAmmoEfficiency": "弹药效率",
+    "WeaponAmmoMaxMod": "最大弹药",
+    "WeaponClipMaxMod": "弹匣容量",
+    "WeaponCorrosiveDamageMod": "腐蚀伤害",
+    "WeaponGasDamageMod": "毒气伤害",
+    "WeaponMeleeComboBonusOnHitMod": "每次命中连击数",
+    "WeaponMeleeComboEfficiencyMod": "连击效率",
+    "WeaponMeleeComboInitialBonusMod": "初始连击",
+    "WeaponMeleeFinisherDamageMod": "处决伤害",
+    "WeaponMeleeRangeIncMod": "近战范围",
+    "WeaponProjectileSpeedMod": "投射物速度",
+    "WeaponPunctureDepthMod": "穿透距离",
+    "WeaponRecoilReductionMod": "后坐力",
+    "WeaponZoomFovMod": "变焦",
+    "ComboDurationMod": "连击持续时间",
+    "SlideAttackCritChanceMod": "滑行攻击暴击率",
+}
+
+def riven_unresolved_label(tag: str) -> str:
+    """Readable name for a raw Riven tag that has no DamageKit rule yet."""
+    return RIVEN_UNRESOLVED_LABELS.get(tag, tag)
+
+
 def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[dict | None, str | None]:
     """Normalize a Riven exactly as DamageKit's InventoryAdapter does.
 
@@ -268,6 +298,7 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
     elements: dict[str, float] = {}
     physical: dict[str, float] = {}
     factions: dict[str, float] = {}
+    unresolved: list[dict[str, str]] = []
 
     scalar_tags = {
         "WeaponProcTimeMod": "statusDuration",
@@ -304,9 +335,14 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         tag = raw.get("Tag")
         if not isinstance(tag, str):
             return
+        supported = tag in scalar_tags or tag in element_tags or tag in physical_tags or tag in faction_tags
+        if not supported:
+            unresolved.append({"tag": tag, "label": riven_unresolved_label(tag)})
+            return
         value = riven_value(raw, curse=curse, disposition=disposition, tags=tags,
                             buff_count=len(buffs), curse_count=len(curses), rank=rank)
         if value is None:
+            unresolved.append({"tag": tag, "label": riven_unresolved_label(tag)})
             return
         if tag in scalar_tags:
             key = scalar_tags[tag]
@@ -334,6 +370,11 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         result["elements"] = elements
     if physical:
         result["physical"] = physical
+    if unresolved:
+        # Preserve every raw tag that was not placed into a DamageKit formula.
+        # A duplicate tag is still one card term for this purpose; it is not
+        # silently turned into a different supported stat.
+        result["unresolved"] = list({row["tag"]: row for row in unresolved}.values())
     return result, None
 
 
@@ -404,12 +445,16 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
 
     upgrades: dict[str, dict] = {}
+    upgrades_by_type: dict[str, list[dict]] = {}
     for raw in inv.get("Upgrades") or []:
         if not isinstance(raw, dict):
             continue
         item_id = object_id(raw.get("ItemId"))
         if item_id:
             upgrades[item_id] = raw
+        item_type = raw.get("ItemType")
+        if isinstance(item_type, str) and item_type:
+            upgrades_by_type.setdefault(item_type, []).append(raw)
 
     result: list[dict] = []
     for inventory_category, calculator_category in OWNED_WEAPON_CATEGORIES.items():
@@ -451,16 +496,45 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                         issues.append(f"第 {raw_slot + 1} 槽超出当前计算器的槽位范围")
                         continue
 
-                    upgrade = {"ItemType": upgrade_id} if upgrade_id.startswith("/") else upgrades.get(upgrade_id)
+                    # A literal type path in Configs records *which* Mod is
+                    # equipped, but not the individual card id.  When every
+                    # owned copy of that same type has one identical rank we
+                    # can still recover the rank exactly; otherwise the
+                    # source is ambiguous and must not be promoted to max.
+                    direct_type_reference = upgrade_id.startswith("/")
+                    direct_rank_issue: str | None = None
+                    if direct_type_reference:
+                        upgrade = {"ItemType": upgrade_id}
+                        candidate_ranks = {
+                            int(raw_rank)
+                            for candidate in upgrades_by_type.get(upgrade_id, [])
+                            for raw_rank in [as_number((fingerprint(candidate.get("UpgradeFingerprint")) or {}).get("lvl"))]
+                            if raw_rank is not None
+                        }
+                        if len(candidate_ranks) == 1:
+                            rank = next(iter(candidate_ranks))
+                        elif not candidate_ranks:
+                            rank = None
+                            direct_rank_issue = (
+                                "配置只记录了 Mod 类型，背包中没有可确定等级的同名 Mod；当前未带入"
+                            )
+                        else:
+                            rank = None
+                            ranks = "/".join(str(value) for value in sorted(candidate_ranks))
+                            direct_rank_issue = (
+                                f"配置只记录了 Mod 类型，而背包中同名 Mod 的等级有 {ranks}；"
+                                "无法判断装备的是哪一张，当前未带入"
+                            )
+                    else:
+                        upgrade = upgrades.get(upgrade_id)
+                        rank = None
                     if not isinstance(upgrade, dict):
-                        issues.append("有一个已装 Mod 在背包快照中找不到，未把它当作满级 Mod 计算")
+                        issues.append("此槽引用的已装 Mod 在背包快照中找不到，因此没有带入计算")
                         continue
                     upgrade_type = upgrade.get("ItemType")
                     if not isinstance(upgrade_type, str) or not upgrade_type:
                         issues.append("有一个已装升级没有类型信息")
                         continue
-                    fp = fingerprint(upgrade.get("UpgradeFingerprint"))
-                    rank = int(as_number((fp or {}).get("lvl")) or 0)
 
                     if "Randomized" in upgrade_type:
                         parsed, error = decode_riven(upgrade, weapon_data, riven_tags)
@@ -470,6 +544,12 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                             issues.append("同一配置含有多个紫卡，当前计算器只能保留一个")
                         else:
                             riven, riven_slot = parsed, slot
+                            unresolved = parsed.get("unresolved") if isinstance(parsed, dict) else None
+                            if isinstance(unresolved, list) and unresolved:
+                                issues.append(
+                                    f"紫卡有 {len(unresolved)} 条词条尚无对应的伤害规则；"
+                                    "已在紫卡区域逐条标出，未写入计算"
+                                )
                         continue
 
                     alias = UPGRADE_ALIASES.get(upgrade_type)
@@ -482,8 +562,15 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                             continue
                         name = mod_data["n"]
                         maximum = int(as_number(mod_data.get("mx")) or 0)
+                    if not direct_type_reference:
+                        fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+                        raw_rank = as_number((fp or {}).get("lvl"))
+                        rank = int(raw_rank) if raw_rank is not None else None
+                    if rank is None:
+                        issues.append(f"{name}：{direct_rank_issue or '背包快照没有该 Mod 的等级；当前未带入'}")
+                        continue
                     if rank != maximum:
-                        issues.append(f"{name} 不是满级（{rank}/{maximum}）；没有把它误当成满级导入")
+                        issues.append(f"{name}：快照记录为等级 {rank}/{maximum}；当前导入器只带入满级条目")
                         continue
                     slots[slot] = name
 
@@ -596,7 +683,11 @@ def build(*, offline: bool = False) -> dict:
     # ---- 套装
     sets = []
     total_loose = 0
-    total_ducats = 0
+    # Both figures are useful, but they answer different questions.  The old
+    # payload exposed only the reserve-aware value below and labelled it as all
+    # exchangeable Ducats, which made it disagree with AlecaFrame.
+    total_ducats_all = 0
+    total_ducats_after_reserve = 0
     for s in view["sets"]:
         parts = []
         parts_value = 0
@@ -610,7 +701,9 @@ def build(*, offline: bool = False) -> dict:
             # 已制成的套装，全部散件都能卖；未制成的要留一件
             sellable = count if s["status"] == "owned" else max(count - 1, 0)
             loose += sellable * unit
-            loose_ducats += sellable * duc(p["id"])
+            unit_ducats = duc(p["id"])
+            total_ducats_all += count * unit_ducats
+            loose_ducats += sellable * unit_ducats
             parts.append({
                 "l": p["label"],
                 "n": count,
@@ -618,7 +711,7 @@ def build(*, offline: bool = False) -> dict:
                 "d": duc(p["id"]),
             })
         total_loose += loose
-        total_ducats += loose_ducats
+        total_ducats_after_reserve += loose_ducats
         pic = icon(s["id"])
         sets.append({
             "id": s["id"],
@@ -714,7 +807,11 @@ def build(*, offline: bool = False) -> dict:
                              and s["total"] - s["have"] <= 2),
             "setsAll": len(sets),
             "loosePlat": total_loose,
-            "looseDucats": total_ducats,
+            # All owned Prime parts, matching AlecaFrame's exchange total.
+            "allDucats": total_ducats_all,
+            # Keep one copy of each required part for every uncrafted set.
+            # Retained under its old field name for old clients.
+            "looseDucats": total_ducats_after_reserve,
             "relicKinds": counts["relicKinds"],
             "relicUnits": counts["relics"],
             "mods": counts["modStacks"],
@@ -783,7 +880,8 @@ def main(argv: list[str] | None = None) -> int:
 
     t = data["totals"]
     print(f"套装 {t['setsAll']}（已制成 {t['setsOwned']} / 可制造 {t['setsReady']}）")
-    print(f"散件可变现 {t['loosePlat']} p · {t['looseDucats']} Ducats")
+    print(f"散件可变现 {t['loosePlat']} p · 全部可换 {t['allDucats']} Ducats"
+          f"（保留一套后 {t['looseDucats']}）")
     print(f"遗物 {t['relicKinds']} 代号 {t['relicUnits']} 个 · Aya {len(data['aya']['items'])} 项")
     print(f"背包武器 {len(data['ownedWeapons'])} 把 · 账号快照 {data['source']['accountHash'][:12]}")
     print(f"-> {args.out}  {size//1024} KB")

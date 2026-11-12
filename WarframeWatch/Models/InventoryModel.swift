@@ -61,6 +61,11 @@ public struct InventoryData: Decodable {
         public let setsClose: Int
         public let setsAll: Int
         public let loosePlat: Int
+        /// Every owned Prime component's exchange value.  This is the number
+        /// AlecaFrame shows when no crafting reserve is applied.
+        public let allDucats: Int?
+        /// Exchange value after retaining one of each part for uncrafted sets.
+        /// Kept for backwards-compatible payload decoding and for comparison.
         public let looseDucats: Int
         public let relicKinds: Int
         public let relicUnits: Int
@@ -111,6 +116,7 @@ public struct InventoryData: Decodable {
             case "Archgun": return "Archwing 枪械"
             case "Archmelee": return "Archwing 近战"
             case "Companion": return "同伴武器"
+            case "Operator": return "指挥官武器"
             default: return category
             }
         }
@@ -121,9 +127,10 @@ public struct InventoryData: Decodable {
             public let slots: [String?]
             public let riven: ImportedRiven?
             public let rivenSlot: Int?
-            /// False means a slot was intentionally not promoted to a max-rank
-            /// Mod.  The app must show that fact rather than silently changing
-            /// a player's build.
+            /// False means at least one source slot could not be brought into
+            /// the calculator exactly.  `issues` says whether the source
+            /// omitted a rank, referenced a missing item, or used an unmapped
+            /// upgrade; it is not a generic "max rank" warning.
             public let isExactImport: Bool
             public let issues: [String]
 
@@ -164,6 +171,17 @@ public struct InventoryData: Decodable {
             public let factionBonuses: [String: Double]?
             public let elements: [String: Double]?
             public let physical: [String: Double]?
+            /// Raw Riven terms retained for inspection when DamageKit has no
+            /// corresponding damage rule.  They are deliberately visible,
+            /// rather than guessed as another stat or silently discarded.
+            public let unresolved: [UnresolvedEffect]?
+
+            public struct UnresolvedEffect: Decodable, Hashable, Identifiable {
+                public let tag: String
+                public let label: String
+
+                public var id: String { tag }
+            }
         }
     }
 }

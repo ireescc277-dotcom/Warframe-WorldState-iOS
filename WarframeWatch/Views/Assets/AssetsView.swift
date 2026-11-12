@@ -123,15 +123,23 @@ public struct AssetsView: View {
 
     private func summary(_ data: InventoryData) -> some View {
         let t = data.totals
+        let allDucats = t.allDucats ?? t.looseDucats
         return VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 0) {
                 bigNumber("\(AssetFormat.plat(t.loosePlat))", unit: "p", label: "散件可变现")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber(AssetFormat.grouped(t.looseDucats), unit: "", label: "可换 Ducats")
+                bigNumber(AssetFormat.grouped(allDucats), unit: "", label: "全部可换 Ducats")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
                 bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已制成")
             }
             .padding(.vertical, 16)
+
+            if allDucats != t.looseDucats {
+                Text("保留每套未制作物品各一件后：\(AssetFormat.grouped(t.looseDucats)) Ducats")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+                    .padding(.bottom, 11)
+            }
 
             WFHairline()
 

@@ -12,9 +12,9 @@ enum NativeEffectGroup: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .warframe: return "战甲 Mod / 赋能"
-        case .companion: return "同伴 Mod"
-        case .environment: return "其他环境效果"
+        case .warframe: return "战甲"
+        case .companion: return "同伴"
+        case .environment: return "外部环境"
         }
     }
 }
@@ -130,6 +130,78 @@ struct NativeManualBuffDraft: Identifiable, Hashable {
     }
 }
 
+/// A real Riven rolls a short list of named effects.  Keeping that list as
+/// explicit rows prevents the UI from looking like a generic weapon-stat panel
+/// and lets an imported card be checked term by term.
+enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
+    case core
+    case status
+    case element
+    case physical
+    case faction
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .core: return "基础词条"
+        case .status: return "暴击与状态"
+        case .element: return "元素伤害"
+        case .physical: return "物理伤害"
+        case .faction: return "阵营伤害"
+        }
+    }
+}
+
+enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
+    case damage, multishot, critChance, critDamage, fireRate, reloadSpeed
+    case statusChance, statusDuration
+    case heat, cold, electricity, toxin
+    case impact, puncture, slash
+    case grineerFaction, corpusFaction, infestedFaction, orokinFaction
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .damage: return "基础伤害"
+        case .multishot: return "多重射击"
+        case .critChance: return "暴击率"
+        case .critDamage: return "暴击伤害"
+        case .fireRate: return "射速 / 攻速"
+        case .reloadSpeed: return "装填速度"
+        case .statusChance: return "触发几率"
+        case .statusDuration: return "状态持续时间"
+        case .heat: return "火焰伤害"
+        case .cold: return "冰冻伤害"
+        case .electricity: return "电击伤害"
+        case .toxin: return "毒素伤害"
+        case .impact: return "冲击伤害"
+        case .puncture: return "穿刺伤害"
+        case .slash: return "切割伤害"
+        case .grineerFaction: return "对 Grineer 伤害"
+        case .corpusFaction: return "对 Corpus 伤害"
+        case .infestedFaction: return "对 Infested 伤害"
+        case .orokinFaction: return "对 Corrupted 伤害"
+        }
+    }
+
+    var group: NativeRivenStatGroup {
+        switch self {
+        case .damage, .multishot, .fireRate, .reloadSpeed:
+            return .core
+        case .critChance, .critDamage, .statusChance, .statusDuration:
+            return .status
+        case .heat, .cold, .electricity, .toxin:
+            return .element
+        case .impact, .puncture, .slash:
+            return .physical
+        case .grineerFaction, .corpusFaction, .infestedFaction, .orokinFaction:
+            return .faction
+        }
+    }
+}
+
 /// Manual Riven fields use user-facing percentage units.  DamageKit receives
 /// the final decimal ratios after this conversion, so build import and manual
 /// editing share the same calculation path.
@@ -138,6 +210,13 @@ struct NativeRivenDraft: Hashable {
     var name = "自定义紫卡"
     /// 紫卡必须占用一个普通 Mod 槽；它决定元素词条参与合成的顺序。
     var slot: Int?
+    /// Which actual Riven terms are present.  Values can be negative for a
+    /// curse; the set deliberately does not encode a fake category hierarchy.
+    var selectedStats: Set<NativeRivenStat> = []
+    /// Terms preserved from the account snapshot that DamageKit does not yet
+    /// have a formula for.  They remain visible to the player and are never
+    /// substituted with a similarly named damage value.
+    var unresolvedEffects: [InventoryData.OwnedWeapon.ImportedRiven.UnresolvedEffect] = []
     var damagePercent = 0.0
     var multishotPercent = 0.0
     var critChancePercent = 0.0
@@ -164,6 +243,66 @@ struct NativeRivenDraft: Hashable {
     var corpusFactionPercent = 0.0
     var infestedFactionPercent = 0.0
     var orokinFactionPercent = 0.0
+
+    func value(for stat: NativeRivenStat) -> Double {
+        switch stat {
+        case .damage: return damagePercent
+        case .multishot: return multishotPercent
+        case .critChance: return critChancePercent
+        case .critDamage: return critDamagePercent
+        case .statusChance: return statusChancePercent
+        case .statusDuration: return statusDurationPercent
+        case .fireRate: return fireRatePercent
+        case .reloadSpeed: return reloadSpeedPercent
+        case .heat: return heatPercent
+        case .cold: return coldPercent
+        case .electricity: return electricityPercent
+        case .toxin: return toxinPercent
+        case .impact: return impactPercent
+        case .puncture: return puncturePercent
+        case .slash: return slashPercent
+        case .grineerFaction: return grineerFactionPercent
+        case .corpusFaction: return corpusFactionPercent
+        case .infestedFaction: return infestedFactionPercent
+        case .orokinFaction: return orokinFactionPercent
+        }
+    }
+
+    mutating func setValue(_ value: Double, for stat: NativeRivenStat) {
+        selectedStats.insert(stat)
+        switch stat {
+        case .damage: damagePercent = value
+        case .multishot: multishotPercent = value
+        case .critChance: critChancePercent = value
+        case .critDamage: critDamagePercent = value
+        case .statusChance: statusChancePercent = value
+        case .statusDuration: statusDurationPercent = value
+        case .fireRate: fireRatePercent = value
+        case .reloadSpeed: reloadSpeedPercent = value
+        case .heat: heatPercent = value
+        case .cold: coldPercent = value
+        case .electricity: electricityPercent = value
+        case .toxin: toxinPercent = value
+        case .impact: impactPercent = value
+        case .puncture: puncturePercent = value
+        case .slash: slashPercent = value
+        case .grineerFaction: grineerFactionPercent = value
+        case .corpusFaction: corpusFactionPercent = value
+        case .infestedFaction: infestedFactionPercent = value
+        case .orokinFaction: orokinFactionPercent = value
+        }
+    }
+
+    mutating func remove(_ stat: NativeRivenStat) {
+        setValue(0, for: stat)
+        selectedStats.remove(stat)
+    }
+
+    mutating func replace(_ old: NativeRivenStat, with new: NativeRivenStat) {
+        let oldValue = value(for: old)
+        remove(old)
+        setValue(oldValue, for: new)
+    }
 
     private func decimal(_ percent: Double) -> Double? {
         let value = percent / 100
@@ -251,6 +390,11 @@ extension NativeRivenDraft {
         corpusFactionPercent = (value.factionBonuses?["Corpus"] ?? 0) * 100
         infestedFactionPercent = (value.factionBonuses?["Infested"] ?? 0) * 100
         orokinFactionPercent = (value.factionBonuses?["Orokin"] ?? 0) * 100
+        unresolvedEffects = value.unresolved ?? []
+
+        for stat in NativeRivenStat.allCases where abs(self.value(for: stat)) > .ulpOfOne {
+            selectedStats.insert(stat)
+        }
     }
 }
 
@@ -282,9 +426,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published var squadSize = 1
     @Published var armorStripPercent = 0.0
     @Published var viralStacks = 0.0
-    /// The single website-wide Strength field, in user-facing percent units.
-    /// It is converted once when Options is constructed; individual external
-    /// Mod rows do not own competing strength values.
+    /// The selected Warframe's final Ability Strength, in user-facing percent
+    /// units.  The formula engine has one shared strength input for sources
+    /// that explicitly scale from it, so external Mod rows do not invent
+    /// competing strength values.
     @Published var abilityStrengthPercent = 100.0
     @Published var stealth = false
     /// These mirror the website's melee controls. They are raw user choices;
@@ -614,6 +759,37 @@ final class NativeDamageCalculatorModel: ObservableObject {
         if let slot {
             weaponSlots[slot] = nil
         }
+        calculate()
+    }
+
+    func setRivenValue(_ value: Double, for stat: NativeRivenStat) {
+        var draft = riven
+        draft.setValue(value, for: stat)
+        riven = draft
+        calculate()
+    }
+
+    func addRivenStat(_ stat: NativeRivenStat) {
+        var draft = riven
+        draft.selectedStats.insert(stat)
+        riven = draft
+        calculate()
+    }
+
+    func removeRivenStat(_ stat: NativeRivenStat) {
+        var draft = riven
+        draft.remove(stat)
+        riven = draft
+        calculate()
+    }
+
+    func replaceRivenStat(_ old: NativeRivenStat, with new: NativeRivenStat) {
+        guard old != new else { return }
+        var draft = riven
+        // Do not combine two same-named effects into a fabricated roll.
+        guard !draft.selectedStats.contains(new) else { return }
+        draft.replace(old, with: new)
+        riven = draft
         calculate()
     }
 

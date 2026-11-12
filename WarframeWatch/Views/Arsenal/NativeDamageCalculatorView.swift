@@ -23,15 +23,24 @@ private enum NativeCalcSheet: Identifiable {
 }
 
 private extension ScenarioEffectID {
+    var nativeGroup: NativeEffectGroup {
+        switch self {
+        case .roar, .eclipse, .nourish, .xata, .toxicLash:
+            return .warframe
+        case .flatCriticalChance, .madurai:
+            return .environment
+        }
+    }
+
     var nativeDisplayName: String {
         switch self {
-        case .roar: return "Roar（Rhino）"
-        case .eclipse: return "Eclipse（Mirage）"
-        case .nourish: return "Nourish（Grendel）"
-        case .xata: return "Xata's Whisper（虚空低语）"
-        case .toxicLash: return "Toxic Lash（毒鞭）"
+        case .roar: return "咆哮（Rhino）"
+        case .eclipse: return "日蚀（Mirage）"
+        case .nourish: return "滋养（Grendel）"
+        case .xata: return "虚空低语（Xata）"
+        case .toxicLash: return "毒鞭（Saryn）"
         case .flatCriticalChance: return "绝对暴击率"
-        case .madurai: return "Madurai"
+        case .madurai: return "马杜莱学派"
         }
     }
 
@@ -95,8 +104,9 @@ struct NativeDamageCalculatorView: View {
                             buildCard
                             incarnonCard
                             conditionCard
+                            warframeCard
+                            companionCard
                             environmentCard
-                            scenarioCard
                             advancedCard
                             calculationButton
                             resultsCard.id(resultsAnchor)
@@ -241,7 +251,7 @@ struct NativeDamageCalculatorView: View {
                 }
             }
             if !model.ownedConfigIsExact {
-                Label("此配置有未被自动导入的槽位，当前结果不会把它们误算成满级。",
+                Label("以下槽位没有按原样带入；请查看各自原因。",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
@@ -350,7 +360,6 @@ struct NativeDamageCalculatorView: View {
                     stanceComboControls
                 }
                 rivenControls
-                archonShardControls
             }
         }
         .wfCardStyle()
@@ -426,7 +435,7 @@ struct NativeDamageCalculatorView: View {
 
     private var rivenControls: some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
-            Toggle("启用紫卡（手动最终词条）", isOn: $model.riven.enabled)
+            Toggle("紫卡（占用一个武器 Mod 槽）", isOn: $model.riven.enabled)
                 .tint(WFTheme.gold)
                 .font(.wfBody)
                 .foregroundColor(WFTheme.textSecondary)
@@ -439,75 +448,105 @@ struct NativeDamageCalculatorView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(WFTheme.gold)
-            VStack(spacing: WFUI.s2) {
-                    TextField("紫卡名称", text: $model.riven.name)
-                        .textFieldStyle(.roundedBorder)
-                    HStack(spacing: WFUI.s2) {
-                        DamageNumberField("伤害", value: $model.riven.damagePercent, suffix: "%")
-                        DamageNumberField("多重", value: $model.riven.multishotPercent, suffix: "%")
-                    }
-                    HStack(spacing: WFUI.s2) {
-                        DamageNumberField("暴击率", value: $model.riven.critChancePercent, suffix: "%")
-                        DamageNumberField("暴伤", value: $model.riven.critDamagePercent, suffix: "%")
-                    }
-                    HStack(spacing: WFUI.s2) {
-                        DamageNumberField("状态率", value: $model.riven.statusChancePercent, suffix: "%")
-                        DamageNumberField("状态时长", value: $model.riven.statusDurationPercent, suffix: "%")
-                    }
-                    HStack(spacing: WFUI.s2) {
-                        DamageNumberField("射速", value: $model.riven.fireRatePercent, suffix: "%")
-                        DamageNumberField("装填", value: $model.riven.reloadSpeedPercent, suffix: "%")
-                        DamageNumberField("派系", value: $model.riven.factionPercent, suffix: "%")
-                    }
-                    DisclosureGroup("元素、物理与派系词条") {
-                        VStack(spacing: WFUI.s2) {
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("火", value: $model.riven.heatPercent, suffix: "%")
-                                DamageNumberField("冰", value: $model.riven.coldPercent, suffix: "%")
-                            }
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("电", value: $model.riven.electricityPercent, suffix: "%")
-                                DamageNumberField("毒", value: $model.riven.toxinPercent, suffix: "%")
-                            }
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("冲击", value: $model.riven.impactPercent, suffix: "%")
-                                DamageNumberField("穿刺", value: $model.riven.puncturePercent, suffix: "%")
-                                DamageNumberField("切割", value: $model.riven.slashPercent, suffix: "%")
-                            }
-                            Text("组合元素（按紫卡所在 Mod 槽进入伤害向量）")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.textMuted)
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("病毒", value: $model.riven.viralPercent, suffix: "%")
-                                DamageNumberField("腐蚀", value: $model.riven.corrosivePercent, suffix: "%")
-                                DamageNumberField("辐射", value: $model.riven.radiationPercent, suffix: "%")
-                            }
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("磁力", value: $model.riven.magneticPercent, suffix: "%")
-                                DamageNumberField("毒气", value: $model.riven.gasPercent, suffix: "%")
-                                DamageNumberField("爆炸", value: $model.riven.blastPercent, suffix: "%")
-                            }
-                            Text("派系伤害")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.textMuted)
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("Grineer", value: $model.riven.grineerFactionPercent, suffix: "%")
-                                DamageNumberField("Corpus", value: $model.riven.corpusFactionPercent, suffix: "%")
-                            }
-                            HStack(spacing: WFUI.s2) {
-                                DamageNumberField("Infested", value: $model.riven.infestedFactionPercent, suffix: "%")
-                                DamageNumberField("Orokin", value: $model.riven.orokinFactionPercent, suffix: "%")
-                            }
-                        }
-                        .padding(.top, 6)
-                    }
-                    Text("紫卡会占用这个槽位；元素词条也按该槽位参与合成。这里填写最终数值：60 表示 +60%，不会重复套 disposition。")
+                TextField("紫卡名称", text: $model.riven.name)
+                    .textFieldStyle(.roundedBorder)
+                if model.riven.selectedStats.isEmpty {
+                    Text("尚未添加词条。导入背包中的紫卡后，会把已解析的实际词条逐条列在这里。")
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
                 }
+                ForEach(model.riven.selectedStats.sorted { $0.rawValue < $1.rawValue }, id: \.self) { stat in
+                    rivenStatEditor(stat)
+                }
+                if !model.riven.unresolvedEffects.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("以下紫卡原始词条已读取，但当前没有对应的伤害规则，因此没有写入计算：",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.gold)
+                        ForEach(model.riven.unresolvedEffects) { effect in
+                            Text("• \(effect.label)（\(effect.tag)）")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                    }
+                    .padding(9)
+                    .background(WFUI.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                Menu {
+                    ForEach(NativeRivenStatGroup.allCases) { group in
+                        let choices = rivenAvailableStats(in: group)
+                        if !choices.isEmpty {
+                            Section(group.title) {
+                                ForEach(choices, id: \.self) { stat in
+                                    Button(stat.title) { model.addRivenStat(stat) }
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Label("添加紫卡词条", systemImage: "plus.circle")
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.gold)
+                }
+                Text("每一行就是一条实际紫卡词条；可填负数作为负面。元素、物理与阵营词条都和其他词条处在同一层级。不会额外捏造“任意元素”或“泛用派系”输入；背包导入的特殊原始词条会单独显示。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
             }
         }
         .onChange(of: model.riven) { _ in model.calculate() }
+    }
+
+    private func rivenAvailableStats(in group: NativeRivenStatGroup) -> [NativeRivenStat] {
+        NativeRivenStat.allCases.filter {
+            $0.group == group && !model.riven.selectedStats.contains($0)
+        }
+    }
+
+    private func rivenStatEditor(_ stat: NativeRivenStat) -> some View {
+        HStack(alignment: .bottom, spacing: WFUI.s2) {
+            Menu {
+                ForEach(NativeRivenStatGroup.allCases) { group in
+                    let choices = NativeRivenStat.allCases.filter {
+                        $0.group == group && ($0 == stat || !model.riven.selectedStats.contains($0))
+                    }
+                    if !choices.isEmpty {
+                        Section(group.title) {
+                            ForEach(choices, id: \.self) { candidate in
+                                Button(candidate.title) { model.replaceRivenStat(stat, with: candidate) }
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(stat.title)
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textPrimary)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 9)
+                .background(WFUI.raised)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            DamageNumberField("数值", value: rivenStatBinding(stat), suffix: "%", allowsNegative: true)
+                .frame(width: 106)
+            Button(role: .destructive) { model.removeRivenStat(stat) } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(WFTheme.red)
+            .padding(.bottom, 9)
+        }
+        .padding(9)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var archonShardControls: some View {
@@ -553,7 +592,7 @@ struct NativeDamageCalculatorView: View {
                 Text("石槽 \(slot + 1)")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
-                Text(selected.map(model.catalog.local) ?? "选择执政官石")
+                Text(selected.map(model.catalog.localShard) ?? "选择执政官石")
                     .font(.wfBody)
                     .foregroundColor(selected == nil ? WFTheme.textSecondary : WFTheme.textPrimary)
                     .lineLimit(1)
@@ -575,11 +614,29 @@ struct NativeDamageCalculatorView: View {
                 ForEach(tiers, id: \.tier) { tier in
                     Picker("第 \(tier.tier) 层", selection: incarnonBinding(tier.tier)) {
                         ForEach(Array(tier.options.enumerated()), id: \.offset) { index, option in
-                            Text(option.name.isEmpty ? "选项 \(index + 1)" : option.name).tag(index)
+                            Text(option.name.isEmpty
+                                 ? "选项 \(index + 1)"
+                                 : model.catalog.localIncarnon(option.name))
+                                .font(.wfBody)
+                                .tag(index)
                         }
                     }
                     .pickerStyle(.menu)
                     .tint(WFTheme.gold)
+                    let selectedIndex = model.incarnonSelections[tier.tier] ?? 0
+                    if tier.options.indices.contains(selectedIndex) {
+                        let selected = tier.options[selectedIndex].name
+                        if !selected.isEmpty {
+                            Text(model.catalog.localIncarnon(selected))
+                                .font(.wfBody)
+                                .foregroundColor(WFTheme.textSecondary)
+                            if model.catalog.localIncarnon(selected) != selected {
+                                Text(selected)
+                                    .font(.wfLabel)
+                                    .foregroundColor(WFTheme.textMuted)
+                            }
+                        }
+                    }
                 }
             }
             .wfCardStyle()
@@ -624,74 +681,115 @@ struct NativeDamageCalculatorView: View {
         }
     }
 
-    private var environmentCard: some View {
+    private var warframeCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("战甲、同伴与环境")
-            HStack(spacing: WFUI.s2) {
-                DamageNumberField("技能强度（全局）", value: $model.abilityStrengthPercent, suffix: "%")
-            }
-            .onChange(of: model.abilityStrengthPercent) { _ in model.calculate() }
-            Text("对应 warframe-damage 的全局 Strength：所有标记为随技能强度缩放的战甲、同伴和武器数据共用这一项。")
+            WFSectionHeader("战甲")
+            Text("这里填当前战甲的配卡、赋能、执政官石和技能。技能强度是这套战甲配卡后的最终数值，不是外部环境 Buff。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
-            ForEach(NativeEffectGroup.allCases) { group in
-                VStack(alignment: .leading, spacing: WFUI.s2) {
-                    HStack {
-                        Text(group.title).font(.wfBody).foregroundColor(WFTheme.textSecondary)
-                        Spacer()
-                        Button("添加") { sheet = .effect(group: group) }
-                            .font(.wfLabel)
-                            .foregroundColor(WFTheme.gold)
-                    }
-                    ForEach(model.externalEffects.indices, id: \.self) { index in
-                        let effect = $model.externalEffects[index]
-                        if effect.wrappedValue.group == group {
-                            externalEffectRow(effect)
-                        }
-                    }
-                }
-                if group != NativeEffectGroup.allCases.last { WFHairline() }
-            }
+            DamageNumberField("战甲配卡后的技能强度", value: $model.abilityStrengthPercent, suffix: "%")
+            .onChange(of: model.abilityStrengthPercent) { _ in model.calculate() }
+            Text("计算时，所有明确写为“随技能强度缩放”的战甲技能、战甲增益和同伴增益共用这个当前战甲的最终强度。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            archonShardControls
+            WFHairline()
+            externalEffectsControls(for: .warframe,
+                                    title: "战甲 Mod 与赋能",
+                                    empty: "尚未添加会影响当前武器的战甲 Mod 或赋能。")
+            scenarioEffectsControls(in: .warframe, title: "战甲技能")
+        }
+        .wfCardStyle()
+    }
+
+    private var companionCard: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("同伴")
+            Text("这里填同伴、哨兵或宠物提供给当前武器的 Mod 和增益；不把它们混进战甲或外部环境。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            externalEffectsControls(for: .companion,
+                                    title: "同伴 Mod 与赋能",
+                                    empty: "尚未添加会影响当前武器的同伴来源。")
+        }
+        .wfCardStyle()
+    }
+
+    private var environmentCard: some View {
+        VStack(alignment: .leading, spacing: WFUI.s3) {
+            WFSectionHeader("外部环境")
+            Text("这里放不属于武器、战甲或同伴的来源：网站的独立环境选项，或你明确知道数值的手动 Buff。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            scenarioEffectsControls(in: .environment, title: "环境选项")
+            WFHairline()
             VStack(alignment: .leading, spacing: WFUI.s2) {
                 HStack {
-                    Text("任意手动 Buff").font(.wfBody).foregroundColor(WFTheme.textSecondary)
+                    Text("手动 Buff").font(.wfBody).foregroundColor(WFTheme.textSecondary)
                     Spacer()
                     Button("添加") { model.addManualBuff() }
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.gold)
                 }
+                Text("只在来源没有可选的战甲或同伴 Mod 时使用。每一项都直接写出其提供的数值。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
                 ForEach(model.manualBuffs.indices, id: \.self) { index in
                     manualBuffEditor($model.manualBuffs[index])
                 }
             }
         }
+        .onChange(of: model.scenarioEffectDrafts) { _ in model.calculate() }
         .wfCardStyle()
     }
 
-    /// The website has a separate environment-options panel in addition to
-    /// Mod/companion sources. Keep named effects here so a user does not have
-    /// to translate Roar, Nourish, or flat critical chance into a made-up Mod.
-    private var scenarioCard: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("网站环境选项", trailing: "逐例对拍")
-            Text("这些不是手动 Buff 的别名：它们按网站同名选项的结算位置传给 DamageKit。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-            ForEach(model.scenarioEffectDrafts.indices, id: \.self) { index in
-                let effect = model.scenarioEffectDrafts[index].effect
-                scenarioRow(
-                    title: effect.nativeDisplayName,
-                    detail: effect.nativeDisplayDetail,
-                    enabled: $model.scenarioEffectDrafts[index].enabled,
-                    value: effect.acceptsDisplayPercentage
-                        ? $model.scenarioEffectDrafts[index].percent
-                        : nil,
-                    suffix: effect.nativeDisplayUnit
-                )
+    private func externalEffectsControls(for group: NativeEffectGroup, title: String,
+                                         empty: String) -> some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            HStack {
+                Text(title).font(.wfBody).foregroundColor(WFTheme.textSecondary)
+                Spacer()
+                Button("添加") { sheet = .effect(group: group) }
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+            }
+            let hasEffects = model.externalEffects.contains { $0.group == group }
+            if !hasEffects {
+                Text(empty)
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
+            ForEach(model.externalEffects.indices, id: \.self) { index in
+                let effect = $model.externalEffects[index]
+                if effect.wrappedValue.group == group {
+                    externalEffectRow(effect)
+                }
             }
         }
-        .onChange(of: model.scenarioEffectDrafts) { _ in model.calculate() }
-        .wfCardStyle()
+    }
+
+    @ViewBuilder
+    private func scenarioEffectsControls(in group: NativeEffectGroup, title: String) -> some View {
+        let indexes = model.scenarioEffectDrafts.indices.filter {
+            model.scenarioEffectDrafts[$0].effect.nativeGroup == group
+        }
+        if !indexes.isEmpty {
+            VStack(alignment: .leading, spacing: WFUI.s2) {
+                Text(title).font(.wfBody).foregroundColor(WFTheme.textSecondary)
+                ForEach(indexes, id: \.self) { index in
+                    let effect = model.scenarioEffectDrafts[index].effect
+                    scenarioRow(
+                        title: effect.nativeDisplayName,
+                        detail: effect.nativeDisplayDetail,
+                        enabled: $model.scenarioEffectDrafts[index].enabled,
+                        value: effect.acceptsDisplayPercentage
+                            ? $model.scenarioEffectDrafts[index].percent
+                            : nil,
+                        suffix: effect.nativeDisplayUnit
+                    )
+                }
+            }
+        }
     }
 
     private func scenarioRow(title: String, detail: String, enabled: Binding<Bool>,
@@ -1263,6 +1361,10 @@ struct NativeDamageCalculatorView: View {
         Binding(get: { model.riven.slot }, set: { model.setRivenSlot($0) })
     }
 
+    private func rivenStatBinding(_ stat: NativeRivenStat) -> Binding<Double> {
+        Binding(get: { model.riven.value(for: stat) }, set: { model.setRivenValue($0, for: stat) })
+    }
+
     private var stanceComboBinding: Binding<String> {
         Binding(
             get: { model.stanceCombo ?? model.availableStanceCombos.first?.name ?? "" },
@@ -1325,11 +1427,13 @@ private struct DamageNumberField: View {
     let title: String
     @Binding var value: Double
     let suffix: String
+    let allowsNegative: Bool
 
-    init(_ title: String, value: Binding<Double>, suffix: String) {
+    init(_ title: String, value: Binding<Double>, suffix: String, allowsNegative: Bool = false) {
         self.title = title
         _value = value
         self.suffix = suffix
+        self.allowsNegative = allowsNegative
     }
 
     var body: some View {
@@ -1337,7 +1441,7 @@ private struct DamageNumberField: View {
             Text(title).font(.wfLabel).foregroundColor(WFTheme.textMuted)
             HStack(spacing: 3) {
                 TextField("0", value: $value, format: .number.precision(.fractionLength(0...2)))
-                    .keyboardType(.decimalPad)
+                    .keyboardType(allowsNegative ? .numbersAndPunctuation : .decimalPad)
                     .font(.wfBody.monospacedDigit())
                     .foregroundColor(WFTheme.textPrimary)
                 if !suffix.isEmpty {
@@ -1573,7 +1677,7 @@ private struct NativeShardPicker: View {
         return ModLibrary.shared.definitions.filter { mod in
             guard mod.type?.lowercased() == "shard" else { return false }
             return term.isEmpty || mod.name.lowercased().contains(term)
-                || model.catalog.local(mod.name).lowercased().contains(term)
+                || model.catalog.localShard(mod.name).lowercased().contains(term)
         }
     }
 
@@ -1595,10 +1699,11 @@ private struct NativeShardPicker: View {
                             NativeThumb(local: model.catalog.localModIcon(for: mod),
                                         remote: model.catalog.iconURL(for: mod), size: 36)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(model.catalog.local(mod.name)).foregroundColor(WFTheme.textPrimary)
-                                Text(mod.name).font(.wfLabel).foregroundColor(WFTheme.textSecondary)
-                                if let info = mod.info, !info.isEmpty {
-                                    Text(info).font(.wfLabel).foregroundColor(WFTheme.textMuted).lineLimit(1)
+                                Text(model.catalog.localShard(mod.name))
+                                    .font(.wfBody)
+                                    .foregroundColor(WFTheme.textPrimary)
+                                if model.catalog.localShard(mod.name) != mod.name {
+                                    Text(mod.name).font(.wfLabel).foregroundColor(WFTheme.textMuted)
                                 }
                             }
                         }
@@ -1621,6 +1726,14 @@ private struct NativeEffectPicker: View {
     let select: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+
+    /// DamageKit's compact upstream table labels these four companion-owned
+    /// effects as `frame_mod`/`aura_mod`.  Put them under their actual source
+    /// in the UI rather than asking the player to remember an implementation
+    /// label or putting a pet Mod in the Warframe section.
+    private static let companionSourceMods: Set<String> = [
+        "Mecha Empowered", "Tek Collateral", "Reinforced Bond", "Tenacious Bond",
+    ]
 
     private var rows: [ModDefinition] {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -1661,11 +1774,14 @@ private struct NativeEffectPicker: View {
         let tags = Set((mod.tags ?? []).map { $0.lowercased() })
         switch group {
         case .warframe:
-            return type.contains("frame") || ["aura", "shard"].contains(type)
+            return (type.contains("frame") || type == "aura_mod")
+                && !Self.companionSourceMods.contains(mod.name)
         case .companion:
-            return type.contains("companion") || tags.contains("companion") || tags.contains("sentinel") || tags.contains("beast")
+            return Self.companionSourceMods.contains(mod.name)
+                || type.contains("companion") || tags.contains("companion")
+                || tags.contains("sentinel") || tags.contains("beast")
         case .environment:
-            return true
+            return false
         }
     }
 }

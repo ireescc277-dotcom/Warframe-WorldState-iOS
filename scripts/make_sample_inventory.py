@@ -40,6 +40,7 @@ def build() -> dict:
     relics = doc["relics"][:RELICS]
     aya = doc["aya"]
     aya["items"] = aya["items"][:AYA]
+    sample_ducats = sum(p["n"] * p["d"] for s in sets for p in s["parts"])
 
     return {
         # 样例不携带真实快照的 hash 或武器实例；远端版本切换只看 manifest，
@@ -55,7 +56,8 @@ def build() -> dict:
                              and s["total"] - s["have"] <= 2),
             "setsAll": len(sets),
             "loosePlat": sum(s["loose"] for s in sets),
-            "looseDucats": sum(p["n"] * p["d"] for s in sets for p in s["parts"]),
+            "allDucats": sample_ducats,
+            "looseDucats": sample_ducats,
             "relicKinds": len(relics),
             "relicUnits": sum(r["n"] for r in relics),
             "mods": 0,
