@@ -268,7 +268,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// Website-named scenario effects whose formula locations are owned by
     /// DamageKit. This UI state contains only IDs, selection state, and display
     /// values; it does not encode named damage formulae.
-    @Published var scenarioEffectDrafts = ScenarioEffectID.allCases.map(NativeScenarioEffectDraft.init)
+    @Published var scenarioEffectDrafts = ScenarioEffectID.allCases.map {
+        NativeScenarioEffectDraft(effect: $0)
+    }
     @Published var distance: Double?
     @Published var window = 20.0
     @Published var conditionalStacks: [String: Double] = [:]
@@ -303,7 +305,8 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     private var calculationGeneration = UUID()
 
-    init(initialWeaponName: String? = nil, catalog: NativeDamageCatalog = .shared) {
+    init(initialWeaponName: String? = nil, catalog suppliedCatalog: NativeDamageCatalog? = nil) {
+        let catalog = suppliedCatalog ?? .shared
         self.catalog = catalog
         weaponName = initialWeaponName
         enemyName = catalog.enemies.first(where: { $0.name == "Corrupted Heavy Gunner" })?.name
