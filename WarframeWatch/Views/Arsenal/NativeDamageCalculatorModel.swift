@@ -4,7 +4,6 @@ import Foundation
 import DamageKit
 
 enum NativeEffectGroup: String, CaseIterable, Identifiable {
-    case warframe
     case companion
     case environment
 
@@ -12,7 +11,6 @@ enum NativeEffectGroup: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .warframe: return "战甲"
         case .companion: return "同伴"
         case .environment: return "外部环境"
         }
@@ -59,6 +57,27 @@ struct NativeEffectDraft: Identifiable, Hashable {
     func source() -> ExternalEffectSource {
         ExternalEffectSource(name: modName, mod: modName, active: active,
                              conditionValue: conditionValue)
+    }
+}
+
+/// One externally cast Warframe weapon buff.  It identifies the caster and
+/// that caster's A/B/C configuration; it deliberately has no strength field.
+/// The selected ability is resolved against the source configuration every
+/// time the calculator runs.
+struct NativeExternalWarframeBuffDraft: Identifiable, Hashable {
+    let id: UUID
+    var casterID: String?
+    var configIndex: Int
+    var candidateID: String?
+    var active: Bool
+
+    init(casterID: String? = nil, configIndex: Int = 0,
+         candidateID: String? = nil, active: Bool = true) {
+        id = UUID()
+        self.casterID = casterID
+        self.configIndex = configIndex
+        self.candidateID = candidateID
+        self.active = active
     }
 }
 
@@ -401,6 +420,11 @@ extension NativeRivenDraft {
 @MainActor
 final class NativeDamageCalculatorModel: ObservableObject {
     let catalog: NativeDamageCatalog
+    /// Account-owned frames made available by the inventory snapshot.  A
+    /// calculator opened from an Arsenal configuration receives its selected
+    /// frame separately; the rest are offered only as explicitly chosen
+    /// external casters.
+    let availableWarframes: [InventoryData.OwnedWarframe]
 
     @Published var weaponName: String?
     /// The selected account instance, if this calculator was opened from the
@@ -415,9 +439,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
     /// Selected item in the equipped stance Mod's combo list.  It is passed to
     /// DamageKit as data; this model does not calculate combo timing or damage.
     @Published var stanceCombo: String?
-    /// Site-equivalent Archon Shard positions are 23...27. They are separate
-    /// from weapon Mod slots and remain when the equipped weapon changes.
-    @Published var archonShardSlots: [String?] = Array(repeating: nil, count: 5)
     @Published var incarnonSelections: [Int: Int] = [:]
     @Published var riven = NativeRivenDraft()
 
@@ -426,11 +447,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published var squadSize = 1
     @Published var armorStripPercent = 0.0
     @Published var viralStacks = 0.0
-    /// The selected Warframe's final Ability Strength, in user-facing percent
-    /// units.  The formula engine has one shared strength input for sources
-    /// that explicitly scale from it, so external Mod rows do not invent
-    /// competing strength values.
-    @Published var abilityStrengthPercent = 100.0
     @Published var stealth = false
     /// These mirror the website's melee controls. They are raw user choices;
     /// DamageKit determines whether a selected attack is actually melee and
@@ -448,12 +464,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published var sniperComboMultiplier = 1.5
     @Published var headshot = false
     @Published var weakPoint = false
-    /// Website-named scenario effects whose formula locations are owned by
-    /// DamageKit. This UI state contains only IDs, selection state, and display
-    /// values; it does not encode named damage formulae.
-    @Published var scenarioEffectDrafts = ScenarioEffectID.allCases.map {
-        NativeScenarioEffectDraft(effect: $0)
-    }
+    /// Only genuinely source-free environment choices remain here.  Warframe
+    /// abilities are resolved from `currentWarframe` / `externalWarframeBuffs`
+    /// so they cannot borrow an arbitrary manually entered percentage.
+    @Published var scenarioEffectDrafts = [NativeScenarioEffectDraft(effect: .madurai)]
     @Published var distance: Double?
     @Published var window = 20.0
     @Published var conditionalStacks: [String: Double] = [:]
@@ -479,6 +493,15 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     @Published var externalEffects: [NativeEffectDraft] = []
     @Published var manualBuffs: [NativeManualBuffDraft] = []
+    /// The equipped Warframe whose own self buffs and shard effects apply to
+    /// this weapon.  Its A/B/C configuration is independent of every external
+    /// caster configured below.
+    @Published private(set) var currentWarframe: InventoryData.OwnedWarframe?
+    @Published var currentWarframeConfigIndex = 0
+    @Published private(set) var activeCurrentWarframeBuffIDs: Set<String> = []
+    /// Each row is another actual caster.  This supports e.g. the current
+    /// player’s Toxic Lash plus an ally's Roar, without merging their strength.
+    @Published var externalWarframeBuffs: [NativeExternalWarframeBuffDraft] = []
 
     @Published private(set) var selectedWeapon: Weapon?
     @Published private(set) var selectedEnemy: Enemy?
@@ -492,10 +515,30 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     init(initialWeaponName: String? = nil,
          initialOwnedWeapon: InventoryData.OwnedWeapon? = nil,
+         initialOwnedWarframe: InventoryData.OwnedWarframe? = nil,
+         initialWarframeConfigIndex: Int = 0,
+         availableWarframes suppliedWarframes: [InventoryData.OwnedWarframe] = [],
          catalog suppliedCatalog: NativeDamageCatalog? = nil) {
         let catalog = suppliedCatalog ?? .shared
         self.catalog = catalog
+        var warframes = suppliedWarframes
+        if let initialOwnedWarframe,
+           !warframes.contains(where: { $0.id == initialOwnedWarframe.id }) {
+            warframes.append(initialOwnedWarframe)
+        }
+        self.availableWarframes = warframes.sorted {
+            $0.z.localizedStandardCompare($1.z) == .orderedAscending
+        }
         ownedWeapon = initialOwnedWeapon
+        currentWarframe = initialOwnedWarframe
+        if let initialOwnedWarframe, !initialOwnedWarframe.configs.isEmpty {
+            currentWarframeConfigIndex = min(
+                max(0, initialWarframeConfigIndex),
+                initialOwnedWarframe.configs.count - 1
+            )
+        } else {
+            currentWarframeConfigIndex = 0
+        }
         weaponName = initialOwnedWeapon?.calcName ?? initialWeaponName
         enemyName = catalog.enemies.first(where: { $0.name == "Corrupted Heavy Gunner" })?.name
             ?? catalog.enemies.first?.name
@@ -541,10 +584,46 @@ final class NativeDamageCalculatorModel: ObservableObject {
         let weapon = activeWeaponSlots.compactMap { slot in
             weaponSlots[slot].map { SlottedMod(slot: slot, name: $0) }
         }
-        let shards = archonShardSlots.enumerated().compactMap { index, name in
-            name.map { SlottedMod(slot: 23 + index, name: $0) }
+        let shards = currentWarframe?.shards.compactMap { shard -> SlottedMod? in
+            guard (0...4).contains(shard.slot), let name = shard.damageKitName else { return nil }
+            return SlottedMod(slot: 23 + shard.slot, name: name)
         }
-        return weapon + shards
+        return weapon + (shards ?? [])
+    }
+
+    var currentWarframeConfig: InventoryData.OwnedWarframe.Config? {
+        currentWarframe?.config(at: currentWarframeConfigIndex)
+    }
+
+    var currentWarframeStrength: WarframeStrengthResolution {
+        guard let currentWarframe else {
+            return .init(multiplier: 1, contributions: [], inactiveConditionalTerms: [], importIssues: [])
+        }
+        return WarframeStrengthResolver.resolve(
+            currentWarframe,
+            configIndex: currentWarframeConfigIndex
+        )
+    }
+
+    var currentWarframeCandidates: [WarframeWeaponBuffCandidate] {
+        guard let currentWarframe else { return [] }
+        return WarframeWeaponBuffResolver.candidates(
+            for: currentWarframe,
+            configIndex: currentWarframeConfigIndex,
+            audience: .selfOnly
+        )
+    }
+
+    var activeCurrentWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
+        guard let currentWarframe else { return [] }
+        return currentWarframeCandidates
+            .filter { activeCurrentWarframeBuffIDs.contains($0.id) }
+            .map { WarframeWeaponBuffResolver.resolve($0, caster: currentWarframe,
+                                                      configIndex: currentWarframeConfigIndex) }
+    }
+
+    var importedWarframeShards: [InventoryData.OwnedWarframe.Shard] {
+        currentWarframe?.shards.sorted { $0.slot < $1.slot } ?? []
     }
 
     var selectedWeaponModSlotCount: Int {
@@ -641,8 +720,46 @@ final class NativeDamageCalculatorModel: ObservableObject {
         externalEffects.filter { $0.group == group }
     }
 
+    func externalCaster(for draft: NativeExternalWarframeBuffDraft) -> InventoryData.OwnedWarframe? {
+        guard let casterID = draft.casterID else { return nil }
+        if currentWarframe?.id == casterID { return currentWarframe }
+        return availableWarframes.first { $0.id == casterID }
+    }
+
+    func externalCandidates(for draft: NativeExternalWarframeBuffDraft) -> [WarframeWeaponBuffCandidate] {
+        guard let caster = externalCaster(for: draft) else { return [] }
+        return WarframeWeaponBuffResolver.candidates(
+            for: caster,
+            configIndex: draft.configIndex,
+            audience: .selfAndAllies
+        )
+    }
+
+    func externalCandidate(for draft: NativeExternalWarframeBuffDraft) -> WarframeWeaponBuffCandidate? {
+        guard let candidateID = draft.candidateID else { return nil }
+        return externalCandidates(for: draft).first { $0.id == candidateID }
+    }
+
+    var activeExternalWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
+        externalWarframeBuffs.compactMap { draft in
+            guard draft.active,
+                  let caster = externalCaster(for: draft),
+                  let candidate = externalCandidate(for: draft)
+            else { return nil }
+            return WarframeWeaponBuffResolver.resolve(candidate, caster: caster,
+                                                      configIndex: draft.configIndex)
+        }
+    }
+
+    private var activeWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
+        activeCurrentWarframeBuffResolutions + activeExternalWarframeBuffResolutions
+    }
+
     var allEffectSources: EnvironmentEffects {
-        let frames = effects(in: .warframe).map { $0.source() }
+        // Warframe effects are source-bound and therefore arrive only through
+        // `activeWarframeBuffResolutions`: a generic frame-Mod record without
+        // its caster/config would have no defensible Ability Strength.
+        let frames = activeWarframeBuffResolutions.compactMap(\.externalSource)
         let companions = effects(in: .companion).map { $0.source() }
         let environment = effects(in: .environment).map { $0.source() }
             + manualBuffs.map { $0.source() }
@@ -671,6 +788,91 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     func selectOwnedConfig(_ index: Int) {
         applyOwnedConfig(at: index, recalculate: true)
+    }
+
+    func selectCurrentWarframe(_ id: String?) {
+        guard let id else {
+            currentWarframe = nil
+            currentWarframeConfigIndex = 0
+            activeCurrentWarframeBuffIDs = []
+            calculate()
+            return
+        }
+        guard let frame = availableWarframes.first(where: { $0.id == id }) else { return }
+        currentWarframe = frame
+        currentWarframeConfigIndex = 0
+        activeCurrentWarframeBuffIDs = []
+        calculate()
+    }
+
+    func selectCurrentWarframeConfig(_ index: Int) {
+        guard let currentWarframe else { return }
+        currentWarframeConfigIndex = clampedConfigIndex(index, for: currentWarframe)
+        reconcileCurrentBuffSelection()
+        calculate()
+    }
+
+    func setCurrentWarframeBuff(_ candidateID: String, active: Bool) {
+        if active {
+            activeCurrentWarframeBuffIDs.insert(candidateID)
+        } else {
+            activeCurrentWarframeBuffIDs.remove(candidateID)
+        }
+        calculate()
+    }
+
+    func addExternalWarframeBuff() {
+        guard let first = availableWarframes.first else { return }
+        var draft = NativeExternalWarframeBuffDraft(casterID: first.id)
+        draft.candidateID = externalCandidates(for: draft).first?.id
+        externalWarframeBuffs.append(draft)
+        calculate()
+    }
+
+    func removeExternalWarframeBuff(_ id: UUID) {
+        externalWarframeBuffs.removeAll { $0.id == id }
+        calculate()
+    }
+
+    func setExternalCaster(_ casterID: String?, for draftID: UUID) {
+        guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
+        externalWarframeBuffs[index].casterID = casterID
+        externalWarframeBuffs[index].configIndex = 0
+        externalWarframeBuffs[index].candidateID = externalCandidates(for: externalWarframeBuffs[index]).first?.id
+        calculate()
+    }
+
+    func setExternalCasterConfig(_ configIndex: Int, for draftID: UUID) {
+        guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }),
+              let caster = externalCaster(for: externalWarframeBuffs[index]) else { return }
+        externalWarframeBuffs[index].configIndex = clampedConfigIndex(configIndex, for: caster)
+        let candidates = externalCandidates(for: externalWarframeBuffs[index])
+        if !candidates.contains(where: { $0.id == externalWarframeBuffs[index].candidateID }) {
+            externalWarframeBuffs[index].candidateID = candidates.first?.id
+        }
+        calculate()
+    }
+
+    func setExternalWarframeBuffCandidate(_ candidateID: String?, for draftID: UUID) {
+        guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
+        externalWarframeBuffs[index].candidateID = candidateID
+        calculate()
+    }
+
+    func setExternalWarframeBuffActive(_ active: Bool, for draftID: UUID) {
+        guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
+        externalWarframeBuffs[index].active = active
+        calculate()
+    }
+
+    private func clampedConfigIndex(_ index: Int, for frame: InventoryData.OwnedWarframe) -> Int {
+        guard !frame.configs.isEmpty else { return 0 }
+        return min(max(index, 0), frame.configs.count - 1)
+    }
+
+    private func reconcileCurrentBuffSelection() {
+        let available = Set(currentWarframeCandidates.map(\.id))
+        activeCurrentWarframeBuffIDs.formIntersection(available)
     }
 
     private func applyOwnedConfig(at index: Int, recalculate: Bool) {
@@ -793,12 +995,6 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculate()
     }
 
-    func setArchonShard(_ name: String?, in slot: Int) {
-        guard archonShardSlots.indices.contains(slot) else { return }
-        archonShardSlots[slot] = name
-        calculate()
-    }
-
     func setStack(_ stacks: Double, for rule: ConditionalEffectRule) {
         allWeaponConditionsMaxed = false
         conditionalStacks[rule.mod] = min(max(stacks, 0), rule.maxStacks)
@@ -850,10 +1046,19 @@ final class NativeDamageCalculatorModel: ObservableObject {
     }
 
     var resolvedScenarioEffects: ScenarioEffects {
-        ScenarioEffects(values: Dictionary(uniqueKeysWithValues: scenarioEffectDrafts.compactMap { draft in
+        var values = Dictionary(uniqueKeysWithValues: scenarioEffectDrafts.compactMap { draft -> (ScenarioEffectID, Double)? in
             guard draft.enabled else { return nil }
             return (draft.effect, draft.effect.inputValue(fromDisplayValue: draft.percent))
-        }))
+        })
+        // DamageKit deliberately has one value per named ability route.  If
+        // several source records provide the same non-stacking squad buff, the
+        // strongest active instance is the relevant one; no caller can make
+        // two Roars/Nourishes stack merely by adding duplicate UI rows.
+        for source in activeWarframeBuffResolutions {
+            guard let effect = source.scenarioEffect else { continue }
+            values[effect.effect] = max(values[effect.effect] ?? 0, effect.value)
+        }
+        return ScenarioEffects(values: values)
     }
 
     func setIncarnonSelection(_ tier: Int, index: Int) {
@@ -917,7 +1122,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
                     ? min(max(manualStatusCount, 0), 50)
                     : nil,
                 allModConditionsMet: allWeaponConditionsMaxed,
-                abilityStrength: max(0, abilityStrengthPercent / 100),
+                // Ability Strength is resolved from the selected current
+                // Warframe configuration.  Externally cast abilities supply
+                // their own source-specific override in ExternalEffectSource.
+                abilityStrength: currentWarframeStrength.multiplier,
                 forceMultiplicativePerStatusDamage: forceMultiplicativePerStatusDamage,
                 customStats: resolvedCustomStats,
                 scenarioEffects: resolvedScenarioEffects,

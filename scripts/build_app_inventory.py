@@ -20,6 +20,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import sys
 import urllib.request
 from datetime import datetime, timezone
@@ -37,6 +38,9 @@ OUT = os.path.join(ROOT, "WarframeWatch", "Resources", "InventoryData.json")
 CACHE = os.path.join(ROOT, "data", "inventory", "aya_cache.json")
 
 ALECA = os.path.expandvars(r"%LOCALAPPDATA%\AlecaFrame\cachedData\json")
+ALECA_WARFRAMES = os.path.join(ALECA, "Warframes.json")
+ALECA_MODS = os.path.join(ALECA, "Mods.json")
+ALECA_ARCANES = os.path.join(ALECA, "Arcanes.json")
 WS_URL = "https://api.warframestat.us/pc?language=zh"
 
 # 精炼档的短键，顺序固定：完整 / 优良 / 无瑕 / 光辉
@@ -78,6 +82,54 @@ UPGRADE_ALIASES = {
 RIVEN_MAXIMUM = 1_073_741_823.0
 RIVEN_BUFF_ATTENUATION = [0, 1, 0.66000003, 0.5, 0.40000001, 0.34999999]
 RIVEN_CURSE_ATTENUATION = [0, 1, 0.33000001, 0.5, 1.25, 1.5]
+
+
+# These names are the stable, public-facing effects that DamageKit already
+# understands as Archon-shard inputs.  The account snapshot tells us which
+# crystal is installed; it does *not* justify asking the player to select a
+# second, unrelated shard in the calculator.
+ARCHON_SHARD_EFFECTS = {
+    "ArchonCrystalUpgradeWarframeAbilityStrength": {
+        "name": "赤红执政官石 · 技能强度 +10%",
+        "abilityStrength": 0.10,
+    },
+    "ArchonCrystalUpgradeWarframeAbilityStrengthMythic": {
+        "name": "赤红执政官石（满铸）· 技能强度 +15%",
+        "abilityStrength": 0.15,
+    },
+    "ArchonCrystalUpgradePrimaryStatusChance": {
+        "name": "赤红执政官石 · 主武器状态几率 +25%",
+        "damageKitName": "+25% Status Chance",
+    },
+    "ArchonCrystalUpgradePrimaryStatusChanceMythic": {
+        "name": "赤红执政官石（满铸）· 主武器状态几率 +37.5%",
+        "damageKitName": "+37.5% Status Chance",
+    },
+    "ArchonCrystalUpgradeSecondaryCritChance": {
+        "name": "赤红执政官石 · 副武器暴击率 +25%",
+        "damageKitName": "+25% Critical Chance",
+    },
+    "ArchonCrystalUpgradeSecondaryCritChanceMythic": {
+        "name": "赤红执政官石（满铸）· 副武器暴击率 +37.5%",
+        "damageKitName": "+37.5% Critical Chance",
+    },
+    "ArchonCrystalUpgradeWarframeCorrosiveStack": {
+        "name": "绿宝石执政官石 · 腐蚀层数上限 +2",
+        "damageKitName": "Incr. max stacks of Corrosion +2",
+    },
+    "ArchonCrystalUpgradeWarframeCorrosiveStackMythic": {
+        "name": "绿宝石执政官石（满铸）· 腐蚀层数上限 +3",
+        "damageKitName": "Incr. max stacks of Corrosion +3",
+    },
+    "ArchonCrystalUpgradeWarframeToxinDamage": {
+        "name": "绿宝石执政官石 · 毒素状态伤害 +30%",
+        "damageKitName": "Toxin Status +30% more damage",
+    },
+    "ArchonCrystalUpgradeWarframeToxinDamageMythic": {
+        "name": "绿宝石执政官石（满铸）· 毒素状态伤害 +45%",
+        "damageKitName": "Toxin Status +45% more damage",
+    },
+}
 
 
 def now_iso() -> str:
@@ -598,6 +650,418 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     return result
 
 
+# ---- 战甲、战甲配置与整套军械库 ---------------------------------------------
+
+
+def opaque_instance_id(item: dict, inventory_category: str, ordinal: int) -> str:
+    """Stable app-only id for one account item, never the DE instance id."""
+    item_type = item.get("ItemType") if isinstance(item, dict) else None
+    raw = object_id(item.get("ItemId")) if isinstance(item, dict) else None
+    raw = raw or f"{inventory_category}:{ordinal}:{item_type or ''}"
+    return sha256(raw.encode("utf-8"))[:20]
+
+
+def _rows_by_unique_name(path: str) -> dict[str, dict]:
+    """Load Aleca's public game-data rows without making them an app runtime API."""
+    if not os.path.exists(path):
+        return {}
+    try:
+        rows = load_json(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+    if not isinstance(rows, list):
+        return {}
+    return {
+        row["uniqueName"]: row
+        for row in rows
+        if isinstance(row, dict) and isinstance(row.get("uniqueName"), str)
+    }
+
+
+def frame_static_catalogues() -> tuple[dict[str, dict], dict[str, dict], dict[str, dict], dict[str, dict]]:
+    """Return only static game definitions used while *building* the payload.
+
+    Warframes.json / Mods.json / Arcanes.json are AlecaFrame's local data files,
+    not a login or process-memory source.  The mobile payload copies only the
+    names, ranks, equipped slots, and concise strength terms needed by the
+    UI; no raw account identifiers or arbitrary cache records are exported.
+    """
+    game_data = load_json(GAMEDATA)
+    game_mods = game_data.get("mods") if isinstance(game_data, dict) else {}
+    game_mods = game_mods if isinstance(game_mods, dict) else {}
+    local_mods = _rows_by_unique_name(ALECA_MODS)
+    arcanes = _rows_by_unique_name(ALECA_ARCANES)
+    frames = _rows_by_unique_name(ALECA_WARFRAMES)
+    return game_mods, local_mods, arcanes, frames
+
+
+def upgrade_indexes(inv: dict) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+    by_id: dict[str, dict] = {}
+    by_type: dict[str, list[dict]] = {}
+    for raw in inv.get("Upgrades") or []:
+        if not isinstance(raw, dict):
+            continue
+        item_id = object_id(raw.get("ItemId"))
+        if item_id:
+            by_id[item_id] = raw
+        item_type = raw.get("ItemType")
+        if isinstance(item_type, str) and item_type:
+            by_type.setdefault(item_type, []).append(raw)
+    return by_id, by_type
+
+
+def resolve_config_upgrade(reference: str, upgrades: dict[str, dict],
+                           upgrades_by_type: dict[str, list[dict]]) -> tuple[dict | None, int | None, str | None]:
+    """Resolve one equipped upgrade and its actual rank.
+
+    A Config sometimes contains a literal item-type path rather than an owned
+    card instance.  The path proves which card is equipped but not which copy.
+    We recover a rank only when every owned copy has the same rank.  Otherwise
+    the exported config remains visible but its strength contribution is not
+    fabricated as max rank.
+    """
+    if reference.startswith("/"):
+        item_type = reference
+        candidate_ranks = {
+            int(raw_rank)
+            for candidate in upgrades_by_type.get(item_type, [])
+            for raw_rank in [as_number((fingerprint(candidate.get("UpgradeFingerprint")) or {}).get("lvl"))]
+            if raw_rank is not None
+        }
+        if len(candidate_ranks) == 1:
+            return {"ItemType": item_type}, next(iter(candidate_ranks)), None
+        if not candidate_ranks:
+            return {"ItemType": item_type}, None, (
+                "配置只记录了升级类型，背包中没有可确定等级的同名卡；未将它计入技能强度"
+            )
+        ranks = "/".join(str(value) for value in sorted(candidate_ranks))
+        return {"ItemType": item_type}, None, (
+            f"配置只记录了升级类型，而背包中同名卡的等级为 {ranks}；未将它计入技能强度"
+        )
+
+    upgrade = upgrades.get(reference)
+    if not isinstance(upgrade, dict):
+        return None, None, "此槽引用的升级在背包快照中找不到"
+    fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+    raw_rank = as_number((fp or {}).get("lvl"))
+    rank = int(raw_rank) if raw_rank is not None else None
+    if rank is None:
+        return upgrade, None, "该升级在背包快照中没有等级；未将它计入技能强度"
+    return upgrade, rank, None
+
+
+def local_rank_stats(meta: dict, rank: int | None) -> list[str]:
+    """Return the exact rank's display lines from the local static catalogue."""
+    if rank is None:
+        return []
+    rows = meta.get("levelStats") if isinstance(meta.get("levelStats"), list) else None
+    if rows is not None:
+        if not (0 <= rank < len(rows)) or not isinstance(rows[rank], dict):
+            return []
+        stats = rows[rank].get("stats")
+        return [value for value in stats if isinstance(value, str)] if isinstance(stats, list) else []
+
+    rows = meta.get("lv") if isinstance(meta.get("lv"), list) else None
+    if rows is None or not (0 <= rank < len(rows)):
+        return []
+    return [value for value in rows[rank] if isinstance(value, str)] if isinstance(rows[rank], list) else []
+
+
+def compact_stat_line(value: str) -> str:
+    # The local descriptions contain markup such as <LOWER_IS_BETTER>.
+    # Keep human text, but do not leak renderer tokens into the app.
+    value = re.sub(r"<[^>]+>", "", value.replace("\\n", " "))
+    return re.sub(r"\s+", " ", value).strip()
+
+
+_PLAIN_STRENGTH = re.compile(r"^([+-]?\d+(?:\.\d+)?)%\s+Ability Strength$", re.IGNORECASE)
+_FOURTH_ABILITY_STRENGTH = re.compile(
+    r"^([+-]?\d+(?:\.\d+)?)%\s+Ability Strength for your 4th Ability$", re.IGNORECASE
+)
+_PERSONAL_STRENGTH_LOSS = re.compile(
+    r"^You lose .*?(\d+(?:\.\d+)?)%\s+Ability Strength", re.IGNORECASE
+)
+_WEAPON_BUFF_PERCENT = re.compile(
+    r"\badditional\s+(\d+(?:\.\d+)?)%.*?\bDamage\s+to\s+their\s+attacks\b",
+    re.IGNORECASE,
+)
+
+
+def weapon_buff_scale_from_stats(upgrade_name: str, stats: list[str]) -> float | None:
+    """Return this equipped augment's exact weapon-buff ratio.
+
+    DamageKit's compact action table stores Shock Trooper and Venom Dose at
+    their max-rank coefficient of 1.0.  A Config, however, can contain a
+    lower-ranked copy.  Export the number printed on *that exact rank* so the
+    iOS client can multiply the action rather than silently promoting it to
+    max rank.  This is intentionally limited to the two actions currently
+    represented in DamageKit; other Augments remain visible but do not acquire
+    a guessed calculation rule.
+    """
+    if upgrade_name not in {"Shock Trooper", "Venom Dose"}:
+        return None
+    for raw in stats:
+        for fragment in raw.replace("\\n", "\n").splitlines():
+            line = compact_stat_line(fragment)
+            match = _WEAPON_BUFF_PERCENT.search(line)
+            if match:
+                return float(match.group(1)) / 100
+    return None
+
+
+def strength_terms_from_stats(stats: list[str]) -> tuple[list[dict], list[str]]:
+    """Extract only unconditionally exact Ability-Strength terms.
+
+    Every other line that mentions Ability Strength is retained in `review`.
+    It is deliberately *not* promoted to a guessed passive bonus: stacks,
+    next-cast effects, health thresholds, and squad auras each need their own
+    game-state control in the client.
+    """
+    terms: list[dict] = []
+    review: list[str] = []
+    for raw in stats:
+        for fragment in raw.replace("\\n", "\n").splitlines():
+            line = compact_stat_line(fragment)
+            if not line or "ability strength" not in line.lower():
+                continue
+            match = _PLAIN_STRENGTH.fullmatch(line)
+            if match:
+                value = float(match.group(1)) / 100
+                terms.append({"l": f"{value * 100:+g}% 技能强度", "v": value, "k": "base"})
+                continue
+            match = _FOURTH_ABILITY_STRENGTH.fullmatch(line)
+            if match:
+                value = float(match.group(1)) / 100
+                terms.append({
+                    "l": f"第 4 技能 {value * 100:+g}% 技能强度",
+                    "v": value,
+                    "k": "ability4",
+                })
+                continue
+            match = _PERSONAL_STRENGTH_LOSS.match(line)
+            if match:
+                value = -float(match.group(1)) / 100
+                terms.append({"l": f"{value * 100:+g}% 技能强度", "v": value, "k": "base"})
+                continue
+            review.append(line)
+    # One display string can occur in a row twice because a static cache keeps
+    # historical rank data.  It is still one equipped card term.
+    deduped_review = list(dict.fromkeys(review))
+    return terms, deduped_review
+
+
+def archon_shards(suit: dict) -> list[dict]:
+    result: list[dict] = []
+    raw_shards = suit.get("ArchonCrystalUpgrades")
+    if not isinstance(raw_shards, list):
+        return result
+    for slot, raw in enumerate(raw_shards):
+        if not isinstance(raw, dict):
+            continue
+        item_type = raw.get("UpgradeType")
+        if not isinstance(item_type, str) or not item_type:
+            continue
+        key = short_type_name(item_type)
+        known = ARCHON_SHARD_EFFECTS.get(key)
+        row: dict = {
+            "s": slot,
+            "n": known.get("name") if known else f"执政官石 · {key}",
+        }
+        if known and isinstance(known.get("abilityStrength"), (int, float)):
+            row["as"] = known["abilityStrength"]
+        if known and isinstance(known.get("damageKitName"), str):
+            row["dk"] = known["damageKitName"]
+        if key.endswith("Mythic"):
+            row["tau"] = True
+        result.append(row)
+    return result
+
+
+def build_owned_warframes(inv: dict, view: dict) -> list[dict]:
+    """Export owned Warframe instances with their real A/B/C configuration.
+
+    This is intentionally separate from `build_owned_weapons`: a Warframe is
+    not a generic percentage field.  Its Mod ranks, its Archon Shards, and a
+    Helminth override are all source data for later ability resolution.
+    """
+    game_mods, local_mods, arcanes, frame_defs = frame_static_catalogues()
+    upgrades, upgrades_by_type = upgrade_indexes(inv)
+
+    display_rows = [row for row in view.get("gear") or []
+                    if isinstance(row, dict) and row.get("cat") == "Suits"]
+    ability_by_path: dict[str, dict] = {}
+    for frame in frame_defs.values():
+        for ability in frame.get("abilities") or []:
+            if isinstance(ability, dict) and isinstance(ability.get("uniqueName"), str):
+                ability_by_path.setdefault(ability["uniqueName"], ability)
+
+    result: list[dict] = []
+    for ordinal, suit in enumerate(inv.get("Suits") or []):
+        if not isinstance(suit, dict):
+            continue
+        item_type = suit.get("ItemType")
+        if not isinstance(item_type, str) or not item_type:
+            continue
+        frame_def = frame_defs.get(item_type, {})
+        display = display_rows[ordinal] if ordinal < len(display_rows) else {}
+        name = display.get("zh") if isinstance(display.get("zh"), str) else None
+        name = name or frame_def.get("name") or short_type_name(item_type)
+
+        abilities = []
+        for ability_index, ability in enumerate(frame_def.get("abilities") or [], start=1):
+            if isinstance(ability, dict) and isinstance(ability.get("name"), str):
+                abilities.append({"o": ability_index, "n": ability["name"]})
+
+        configs: list[dict] = []
+        raw_configs = suit.get("Configs") if isinstance(suit.get("Configs"), list) else []
+        if not raw_configs:
+            raw_configs = [{}]
+        for config_index, raw_config in enumerate(raw_configs):
+            config = raw_config if isinstance(raw_config, dict) else {}
+            entries: list[dict] = []
+            issues: list[str] = []
+            raw_slots = config.get("Upgrades") if isinstance(config.get("Upgrades"), list) else []
+            for slot, reference in enumerate(raw_slots):
+                if not isinstance(reference, str) or not reference:
+                    continue
+                upgrade, rank, rank_issue = resolve_config_upgrade(reference, upgrades, upgrades_by_type)
+                if not isinstance(upgrade, dict):
+                    if rank_issue:
+                        issues.append(f"第 {slot + 1} 槽：{rank_issue}")
+                    continue
+                upgrade_type = upgrade.get("ItemType")
+                if not isinstance(upgrade_type, str) or not upgrade_type:
+                    issues.append(f"第 {slot + 1} 槽：升级没有类型信息")
+                    continue
+
+                game_meta = game_mods.get(upgrade_type)
+                local_meta = local_mods.get(upgrade_type) or arcanes.get(upgrade_type) or {}
+                game_meta = game_meta if isinstance(game_meta, dict) else {}
+                local_meta = local_meta if isinstance(local_meta, dict) else {}
+                upgrade_name = game_meta.get("n") if isinstance(game_meta.get("n"), str) else None
+                upgrade_name = upgrade_name or local_meta.get("name") or short_type_name(upgrade_type)
+                maximum = as_number(game_meta.get("mx"))
+                if maximum is None:
+                    maximum = as_number(local_meta.get("fusionLimit"))
+                if maximum is None:
+                    levels = local_meta.get("levelStats")
+                    if isinstance(levels, list) and levels:
+                        maximum = len(levels) - 1
+                stats = local_rank_stats(local_meta or game_meta, rank)
+                strength_terms, strength_review = strength_terms_from_stats(stats)
+                weapon_buff_scale = weapon_buff_scale_from_stats(upgrade_name, stats)
+                kind = "Arcane" if "arcane" in str(local_meta.get("type") or "").lower() else "Mod"
+                entry: dict = {
+                    "s": slot,
+                    "n": upgrade_name,
+                    "r": rank,
+                    "m": int(maximum) if maximum is not None else None,
+                    "k": kind,
+                }
+                if strength_terms:
+                    entry["st"] = strength_terms
+                if strength_review:
+                    entry["sr"] = strength_review
+                if weapon_buff_scale is not None:
+                    entry["wb"] = weapon_buff_scale
+                entries.append(entry)
+                if rank_issue:
+                    issues.append(f"{upgrade_name}：{rank_issue}")
+
+            helminth = None
+            raw_override = config.get("AbilityOverride")
+            if isinstance(raw_override, dict):
+                raw_ability = raw_override.get("Ability")
+                ability = ability_by_path.get(raw_ability) if isinstance(raw_ability, str) else None
+                raw_index = as_number(raw_override.get("Index"))
+                helminth = {
+                    "o": int(raw_index) if raw_index is not None else None,
+                    "n": ability.get("name") if isinstance(ability, dict) else short_type_name(raw_ability)
+                    if isinstance(raw_ability, str) else "未识别的 Helminth 技能",
+                }
+
+            row: dict = {
+                "l": config_label(config_index),
+                "u": entries,
+                "exact": not issues,
+                "issues": issues,
+            }
+            if helminth:
+                row["h"] = helminth
+            configs.append(row)
+
+        result.append({
+            "id": opaque_instance_id(suit, "Suits", ordinal),
+            "z": name,
+            "a": abilities,
+            "cfg": configs,
+            "sh": archon_shards(suit),
+        })
+
+    result.sort(key=lambda row: ((row.get("z") or "").casefold(), row["id"]))
+    return result
+
+
+def build_loadouts(inv: dict, owned_warframes: list[dict], owned_weapons: list[dict]) -> list[dict]:
+    """Keep normal Arsenal presets as a *whole* equipment configuration.
+
+    CurrentLoadOutIds contains several loadout categories at once, so a flag in
+    that list is intentionally exported as `snapshotMarkedActive`, not falsely
+    presented as one uniquely-known global active preset.
+    """
+    names_by_id = {
+        row["id"]: row.get("z")
+        for row in owned_warframes + owned_weapons
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    }
+    id_by_raw: dict[str, str] = {}
+    for category in ["Suits", *OWNED_WEAPON_CATEGORIES]:
+        for ordinal, item in enumerate(inv.get(category) or []):
+            if not isinstance(item, dict):
+                continue
+            raw = object_id(item.get("ItemId"))
+            if raw:
+                id_by_raw[raw] = opaque_instance_id(item, category, ordinal)
+
+    current_ids = {
+        value for value in (object_id(row) for row in inv.get("CurrentLoadOutIds") or [])
+        if value
+    }
+    presets = inv.get("LoadOutPresets") if isinstance(inv.get("LoadOutPresets"), dict) else {}
+    normal = presets.get("NORMAL") if isinstance(presets.get("NORMAL"), list) else []
+    role_keys = [("s", "warframe"), ("l", "primary"), ("p", "secondary"),
+                 ("m", "melee"), ("h", "heavy")]
+    result: list[dict] = []
+    for ordinal, preset in enumerate(normal):
+        if not isinstance(preset, dict):
+            continue
+        raw_preset_id = object_id(preset.get("ItemId")) or f"NORMAL:{ordinal}"
+        slots: list[dict] = []
+        for key, role in role_keys:
+            source = preset.get(key)
+            if not isinstance(source, dict):
+                continue
+            raw_item_id = object_id(source.get("ItemId"))
+            opaque_id = id_by_raw.get(raw_item_id) if raw_item_id else None
+            config_index = as_number(source.get("mod"))
+            slot: dict = {"r": role, "i": opaque_id}
+            if opaque_id and isinstance(names_by_id.get(opaque_id), str):
+                slot["z"] = names_by_id[opaque_id]
+            if config_index is not None:
+                slot["c"] = int(config_index)
+            if source.get("hide") is True:
+                slot["hide"] = True
+            slots.append(slot)
+        result.append({
+            "id": sha256(raw_preset_id.encode("utf-8"))[:20],
+            "n": preset.get("n") if isinstance(preset.get("n"), str) and preset.get("n") else f"配置 {ordinal + 1}",
+            "fav": bool(preset.get("Favorite")),
+            "active": raw_preset_id in current_ids,
+            "slots": slots,
+        })
+    return result
+
+
 def fetch_aya(*, offline: bool = False) -> dict:
     """当期 Varzia 的 Aya 遗物。拿不到就用上次缓存，不阻断构建。"""
     if offline:
@@ -682,10 +1146,16 @@ def build(*, offline: bool = False) -> dict:
 
     # ---- 套装
     sets = []
+    # Sum every owned Prime component's price directly.  This is the only
+    # inventory-wide Platinum headline; it never silently reserves a part for
+    # an unfinished set.
+    total_plat_all = 0
     total_loose = 0
-    # Both figures are useful, but they answer different questions.  The old
-    # payload exposed only the reserve-aware value below and labelled it as all
-    # exchangeable Ducats, which made it disagree with AlecaFrame.
+    prime_part_units = 0
+    priced_prime_part_units = 0
+    # Both Ducat figures are useful, but they answer different questions.  The
+    # old payload exposed only the reserve-aware value below and labelled it as
+    # all exchangeable Ducats, which made it disagree with AlecaFrame.
     total_ducats_all = 0
     total_ducats_after_reserve = 0
     for s in view["sets"]:
@@ -698,6 +1168,10 @@ def build(*, offline: bool = False) -> dict:
             unit = pl(q)
             parts_value += unit
             count = int(p.get("count") or 0)
+            prime_part_units += count
+            if unit > 0:
+                priced_prime_part_units += count
+                total_plat_all += count * unit
             # 已制成的套装，全部散件都能卖；未制成的要留一件
             sellable = count if s["status"] == "owned" else max(count - 1, 0)
             loose += sellable * unit
@@ -789,6 +1263,11 @@ def build(*, offline: bool = False) -> dict:
         "sync": source.get("accountSync"),
     }
 
+    # Weapons and Warframes share the same snapshot and must be built before
+    # loadout presets: a preset only transports opaque references to these
+    # concrete account instances, never a DE ItemId.
+    owned_weapons = build_owned_weapons(inv)
+    owned_warframes = build_owned_warframes(inv, view)
     counts = view["counts"]
     return {
         # Kept for old bundled samples.  It is no longer used to decide which
@@ -806,6 +1285,14 @@ def build(*, offline: bool = False) -> dict:
             "setsClose": sum(1 for s in sets if s["status"] == "missing" and s["loose"] == 0
                              and s["total"] - s["have"] <= 2),
             "setsAll": len(sets),
+            # Sum(count × listed online price) for every owned Prime component.
+            # Components without an online quote stay visible through the two
+            # coverage counts below; they are not fabricated as 0p values.
+            "allPlat": total_plat_all,
+            "primePartUnits": prime_part_units,
+            "pricedPrimePartUnits": priced_prime_part_units,
+            # Retained only as a separate "sell surplus" comparison.  This
+            # value intentionally keeps one copy for every uncrafted set.
             "loosePlat": total_loose,
             # All owned Prime parts, matching AlecaFrame's exchange total.
             "allDucats": total_ducats_all,
@@ -824,7 +1311,9 @@ def build(*, offline: bool = False) -> dict:
         },
         "sets": sets,
         "relics": relics,
-        "ownedWeapons": build_owned_weapons(inv),
+        "ownedWeapons": owned_weapons,
+        "ownedWarframes": owned_warframes,
+        "loadouts": build_loadouts(inv, owned_warframes, owned_weapons),
     }
 
 
@@ -880,8 +1369,10 @@ def main(argv: list[str] | None = None) -> int:
 
     t = data["totals"]
     print(f"套装 {t['setsAll']}（已制成 {t['setsOwned']} / 可制造 {t['setsReady']}）")
-    print(f"散件可变现 {t['loosePlat']} p · 全部可换 {t['allDucats']} Ducats"
-          f"（保留一套后 {t['looseDucats']}）")
+    print(f"全部已报价 Prime 散件市价 {t['allPlat']} p"
+          f"（覆盖 {t['pricedPrimePartUnits']}/{t['primePartUnits']} 件；"
+          f"保留一套后的余件参考 {t['loosePlat']} p）")
+    print(f"全部可换 {t['allDucats']} Ducats（保留一套后 {t['looseDucats']}）")
     print(f"遗物 {t['relicKinds']} 代号 {t['relicUnits']} 个 · Aya {len(data['aya']['items'])} 项")
     print(f"背包武器 {len(data['ownedWeapons'])} 把 · 账号快照 {data['source']['accountHash'][:12]}")
     print(f"-> {args.out}  {size//1024} KB")

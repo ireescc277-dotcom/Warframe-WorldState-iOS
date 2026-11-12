@@ -8,7 +8,6 @@ private enum NativeCalcSheet: Identifiable {
     case weapon
     case enemy
     case mod(slot: Int)
-    case shard(slot: Int)
     case effect(group: NativeEffectGroup)
 
     var id: String {
@@ -16,17 +15,19 @@ private enum NativeCalcSheet: Identifiable {
         case .weapon: return "weapon"
         case .enemy: return "enemy"
         case .mod(let slot): return "mod-\(slot)"
-        case .shard(let slot): return "shard-\(slot)"
         case .effect(let group): return "effect-\(group.rawValue)"
         }
     }
 }
 
 private extension ScenarioEffectID {
-    var nativeGroup: NativeEffectGroup {
+    /// Abilities with a Warframe source are intentionally absent here.  They
+    /// are selected via the current Warframe or an external caster below,
+    /// never presented as source-free environment switches.
+    var nativeGroup: NativeEffectGroup? {
         switch self {
         case .roar, .eclipse, .nourish, .xata, .toxicLash:
-            return .warframe
+            return nil
         case .flatCriticalChance, .madurai:
             return .environment
         }
@@ -79,11 +80,17 @@ struct NativeDamageCalculatorView: View {
 
     init(weapon: String? = nil,
          ownedWeapon: InventoryData.OwnedWeapon? = nil,
+         ownedWarframe: InventoryData.OwnedWarframe? = nil,
+         warframeConfigIndex: Int = 0,
+         availableWarframes: [InventoryData.OwnedWarframe] = [],
          title: String = "伤害计算") {
         self.title = title
         _model = StateObject(wrappedValue: NativeDamageCalculatorModel(
             initialWeaponName: weapon,
-            initialOwnedWeapon: ownedWeapon
+            initialOwnedWeapon: ownedWeapon,
+            initialOwnedWarframe: ownedWarframe,
+            initialWarframeConfigIndex: warframeConfigIndex,
+            availableWarframes: availableWarframes
         ))
         autoRevealResults = CommandLine.arguments.contains("-calcResult")
     }
@@ -147,11 +154,6 @@ struct NativeDamageCalculatorView: View {
             case .mod(let slot):
                 NativeModPicker(model: model, slot: slot) { name in
                     model.setMod(name, in: slot)
-                    sheet = nil
-                }
-            case .shard(let slot):
-                NativeShardPicker(model: model, slot: slot) { name in
-                    model.setArchonShard(name, in: slot)
                     sheet = nil
                 }
             case .effect(let group):
@@ -551,51 +553,50 @@ struct NativeDamageCalculatorView: View {
 
     private var archonShardControls: some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("执政官石")
-                        .font(.wfBody)
-                        .foregroundColor(WFTheme.textSecondary)
-                    Text("五个独立槽位；石头效果由所选卡片的原始 action 进入计算。")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
-                Spacer()
-            }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: WFUI.s2) {
-                ForEach(model.archonShardSlots.indices, id: \.self) { slot in
-                    Button { sheet = .shard(slot: slot) } label: {
-                        archonShardSlot(slot)
-                    }
-                    .buttonStyle(.plain)
+            Text("执政官石")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            Text("石头装在战甲上；这里直接读取当前战甲实例，不提供与背包无关的手填石槽。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            if model.currentWarframe == nil {
+                Text("先选择背包中的战甲，才能读取它装备的执政官石。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else if model.importedWarframeShards.isEmpty {
+                Text("这名战甲在当前背包快照中没有已装执政官石。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                ForEach(model.importedWarframeShards) { shard in
+                    archonShardRow(shard)
                 }
             }
         }
         .padding(.top, WFUI.s2)
     }
 
-    private func archonShardSlot(_ slot: Int) -> some View {
-        let selected = model.archonShardSlots[slot]
+    private func archonShardRow(_ shard: InventoryData.OwnedWarframe.Shard) -> some View {
         return HStack(spacing: 8) {
-            if let selected, let mod = ModLibrary.shared.mod(named: selected) {
-                NativeThumb(local: model.catalog.localModIcon(for: mod),
-                            remote: model.catalog.iconURL(for: mod), size: 30)
-            } else {
-                Image(systemName: "diamond")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted)
-                    .frame(width: 30, height: 30)
-                    .background(WFTheme.panelElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            }
+            Image(systemName: "diamond.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(WFTheme.gold)
+                .frame(width: 30, height: 30)
+                .background(WFTheme.panelElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text("石槽 \(slot + 1)")
+                Text("石槽 \(shard.slot + 1)")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
-                Text(selected.map(model.catalog.localShard) ?? "选择执政官石")
+                Text(shard.name)
                     .font(.wfBody)
-                    .foregroundColor(selected == nil ? WFTheme.textSecondary : WFTheme.textPrimary)
+                    .foregroundColor(WFTheme.textPrimary)
                     .lineLimit(1)
+                Text(shard.damageKitName == nil
+                     ? "已读取；它不改变当前武器伤害，所以不写入本次伤害计算。"
+                     : "已随当前战甲写入本次伤害计算。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
             }
             Spacer(minLength: 0)
         }
@@ -684,22 +685,334 @@ struct NativeDamageCalculatorView: View {
     private var warframeCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
             WFSectionHeader("战甲")
-            Text("这里填当前战甲的配卡、赋能、执政官石和技能。技能强度是这套战甲配卡后的最终数值，不是外部环境 Buff。")
+            Text("技能强度不手填。当前战甲与外部施法者各自从其 A/B/C 配置、Mod 和执政官石结算，互不借用数值。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
-            DamageNumberField("战甲配卡后的技能强度", value: $model.abilityStrengthPercent, suffix: "%")
-            .onChange(of: model.abilityStrengthPercent) { _ in model.calculate() }
-            Text("计算时，所有明确写为“随技能强度缩放”的战甲技能、战甲增益和同伴增益共用这个当前战甲的最终强度。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-            archonShardControls
+            currentWarframeSelection
+            if let frame = model.currentWarframe {
+                currentWarframeConfiguration(frame)
+                currentWarframeStrengthSummary
+                archonShardControls
+                currentWarframeBuffControls
+            } else {
+                Text("未选择当前战甲：本次武器按 100% 技能强度且不带战甲石头或自身技能计算。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
             WFHairline()
-            externalEffectsControls(for: .warframe,
-                                    title: "战甲 Mod 与赋能",
-                                    empty: "尚未添加会影响当前武器的战甲 Mod 或赋能。")
-            scenarioEffectsControls(in: .warframe, title: "战甲技能")
+            externalWarframeBuffControls
         }
         .wfCardStyle()
+    }
+
+    private var currentWarframeSelection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("当前战甲")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            if model.availableWarframes.isEmpty {
+                Text("这次打开计算器时没有传入背包战甲；从军械库的整套配置进入后会自动带入。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                Menu {
+                    Button("不使用战甲来源") { model.selectCurrentWarframe(nil) }
+                    Divider()
+                    ForEach(model.availableWarframes) { frame in
+                        Button(frame.z) { model.selectCurrentWarframe(frame.id) }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.square")
+                            .foregroundColor(WFTheme.gold)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(model.currentWarframe?.z ?? "选择背包中的战甲")
+                                .font(.wfBody)
+                                .foregroundColor(WFTheme.textPrimary)
+                            Text(model.currentWarframe.map { "使用它的 A/B/C 配置" } ?? "不带战甲来源")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    .padding(10)
+                    .background(WFUI.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func currentWarframeConfiguration(_ frame: InventoryData.OwnedWarframe) -> some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            Text("战甲配置")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            HStack(spacing: 6) {
+                ForEach(Array(frame.configs.enumerated()), id: \.element.id) { entry in
+                    let index = entry.offset
+                    let config = entry.element
+                    Button {
+                        model.selectCurrentWarframeConfig(index)
+                    } label: {
+                        Text(config.label)
+                            .font(.wfBody)
+                            .foregroundColor(index == model.currentWarframeConfigIndex
+                                             ? Color(hex: "1A1408") : WFTheme.textSecondary)
+                            .frame(minWidth: 34)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(index == model.currentWarframeConfigIndex
+                                                        ? WFTheme.gold : WFUI.raised))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if let config = model.currentWarframeConfig, !config.isExactImport {
+                Text(config.issues.joined(separator: "\n"))
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+            }
+        }
+    }
+
+    private var currentWarframeStrengthSummary: some View {
+        let strength = model.currentWarframeStrength
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("已结算技能强度")
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.textSecondary)
+                Spacer()
+                Text("\(strength.percent)%")
+                    .font(.wfNumSmall)
+                    .foregroundColor(WFTheme.gold)
+            }
+            if strength.contributions.isEmpty {
+                Text("没有常驻技能强度词条；以 100% 计算。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                ForEach(strength.contributions) { contribution in
+                    HStack {
+                        Text(contribution.label)
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                        Spacer()
+                        Text(String(format: "%+.0f%%", contribution.value * 100))
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textSecondary)
+                    }
+                }
+            }
+            if !strength.inactiveConditionalTerms.isEmpty {
+                Text("以下卡片有触发条件，当前未自动算入：\(strength.inactiveConditionalTerms.joined(separator: "；"))")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            }
+        }
+        .padding(10)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var currentWarframeBuffControls: some View {
+        let candidates = model.currentWarframeCandidates
+        return VStack(alignment: .leading, spacing: WFUI.s2) {
+            Text("当前战甲自身技能")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            Text("只列出这名战甲当前配置实际拥有、且已接入 DamageKit 公式的武器增益。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            if candidates.isEmpty {
+                Text("这套配置没有已接入的自身武器增益。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                ForEach(candidates) { candidate in
+                    currentWarframeBuffRow(candidate)
+                }
+            }
+        }
+    }
+
+    private func currentWarframeBuffRow(_ candidate: WarframeWeaponBuffCandidate) -> some View {
+        let enabled = model.activeCurrentWarframeBuffIDs.contains(candidate.id)
+        // The display resolution is useful even before the toggle is enabled;
+        // it tells the player exactly what this configuration would provide.
+        let preview = model.currentWarframe.map {
+            WarframeWeaponBuffResolver.resolve(candidate, caster: $0,
+                                                configIndex: model.currentWarframeConfigIndex)
+        }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: WFUI.s2) {
+                Toggle("", isOn: currentWarframeBuffBinding(candidate.id))
+                    .labelsHidden()
+                    .tint(WFTheme.gold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(candidate.name)
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textPrimary)
+                    Text(candidate.detail)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                Spacer(minLength: 0)
+                if let preview {
+                    Text(warframeBuffValueLabel(preview))
+                        .font(.wfLabel)
+                        .foregroundColor(enabled ? WFTheme.gold : WFTheme.textMuted)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+        }
+        .padding(10)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var externalWarframeBuffControls: some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            HStack {
+                Text("外部施法战甲 Buff")
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.textSecondary)
+                Spacer()
+                Button("添加") { model.addExternalWarframeBuff() }
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+                    .disabled(model.availableWarframes.isEmpty)
+            }
+            Text("每一行是一名施法者。选择施法者、其 A/B/C 配置和实际可给队友的技能；它的技能强度不会使用当前战甲的配置。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            if model.availableWarframes.isEmpty {
+                Text("没有可选择的背包战甲。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else if model.externalWarframeBuffs.isEmpty {
+                Text("尚未添加外部施法者。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                ForEach(model.externalWarframeBuffs) { draft in
+                    externalWarframeBuffEditor(draft)
+                }
+            }
+        }
+    }
+
+    private func externalWarframeBuffEditor(_ draft: NativeExternalWarframeBuffDraft) -> some View {
+        let caster = model.externalCaster(for: draft)
+        let candidates = model.externalCandidates(for: draft)
+        let selected = model.externalCandidate(for: draft)
+        let preview: WarframeWeaponBuffResolution? = {
+            guard let caster, let selected else { return nil }
+            return WarframeWeaponBuffResolver.resolve(selected, caster: caster,
+                                                      configIndex: draft.configIndex)
+        }()
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Menu {
+                    ForEach(model.availableWarframes) { frame in
+                        Button(frame.z) { model.setExternalCaster(frame.id, for: draft.id) }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "person.2")
+                        Text(caster?.z ?? "选择施法者")
+                        Image(systemName: "chevron.down")
+                    }
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.textPrimary)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                Toggle("启用", isOn: Binding(
+                    get: { draft.active },
+                    set: { model.setExternalWarframeBuffActive($0, for: draft.id) }
+                ))
+                .tint(WFTheme.gold)
+                .font(.wfLabel)
+                Button(role: .destructive) { model.removeExternalWarframeBuff(draft.id) } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(WFTheme.red)
+            }
+            if let caster {
+                HStack(spacing: 6) {
+                    Text("配置")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                    ForEach(Array(caster.configs.enumerated()), id: \.element.id) { entry in
+                        let index = entry.offset
+                        Button(entry.element.label) {
+                            model.setExternalCasterConfig(index, for: draft.id)
+                        }
+                        .font(.wfLabel)
+                        .foregroundColor(index == draft.configIndex ? Color(hex: "1A1408") : WFTheme.textSecondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(index == draft.configIndex ? WFTheme.gold : WFTheme.panelElevated))
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+                if let config = caster.config(at: draft.configIndex), !config.isExactImport {
+                    Text(config.issues.joined(separator: "\n"))
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.gold)
+                }
+            }
+            if candidates.isEmpty {
+                Text("这套施法者配置没有已接入、且能施加给队友的武器增益。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+            } else {
+                Menu {
+                    ForEach(candidates) { candidate in
+                        Button(candidate.name) {
+                            model.setExternalWarframeBuffCandidate(candidate.id, for: draft.id)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(selected?.name ?? "选择施放技能")
+                                .font(.wfBody)
+                                .foregroundColor(WFTheme.textPrimary)
+                            Text(selected?.detail ?? "只列出实际可给队友的技能")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                        if let preview {
+                            Text(warframeBuffValueLabel(preview))
+                                .font(.wfLabel)
+                                .foregroundColor(draft.active ? WFTheme.gold : WFTheme.textMuted)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    .padding(9)
+                    .background(WFTheme.panelElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var companionCard: some View {
@@ -771,7 +1084,7 @@ struct NativeDamageCalculatorView: View {
     @ViewBuilder
     private func scenarioEffectsControls(in group: NativeEffectGroup, title: String) -> some View {
         let indexes = model.scenarioEffectDrafts.indices.filter {
-            model.scenarioEffectDrafts[$0].effect.nativeGroup == group
+            model.scenarioEffectDrafts[$0].effect.nativeGroup == Optional(group)
         }
         if !indexes.isEmpty {
             VStack(alignment: .leading, spacing: WFUI.s2) {
@@ -970,7 +1283,7 @@ struct NativeDamageCalculatorView: View {
                     DamageNumberField("距离", value: distanceBinding, suffix: "m")
                     DamageNumberField("时长", value: $model.window, suffix: "秒")
                 }
-                Text("腐蚀层数上限由上方五个执政官石槽中的实际石头卡计算。")
+                Text("腐蚀层数上限由当前战甲实际装配的执政官石计算。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
                 HStack(spacing: WFUI.s2) {
@@ -1394,6 +1707,24 @@ struct NativeDamageCalculatorView: View {
         })
     }
 
+    private func currentWarframeBuffBinding(_ candidateID: String) -> Binding<Bool> {
+        Binding(
+            get: { model.activeCurrentWarframeBuffIDs.contains(candidateID) },
+            set: { model.setCurrentWarframeBuff(candidateID, active: $0) }
+        )
+    }
+
+    private func warframeBuffValueLabel(_ resolution: WarframeWeaponBuffResolution) -> String {
+        switch resolution.candidate.route {
+        case .scenario:
+            let value = resolution.finalPercent ?? 0
+            return String(format: "结算值 +%.1f%%\n施法强度 %d%%", value, resolution.strength.percent)
+        case let .externalMod(_, rankScale):
+            let value = rankScale * resolution.strength.multiplier * 100
+            return String(format: "附伤 +%.1f%%\n施法强度 %d%%", value, resolution.strength.percent)
+        }
+    }
+
     private func percent(_ value: Binding<Double>) -> Binding<Double> {
         Binding(get: { value.wrappedValue * 100 }, set: { value.wrappedValue = $0 / 100 })
     }
@@ -1665,61 +1996,6 @@ private struct NativeModPicker: View {
     }
 }
 
-private struct NativeShardPicker: View {
-    @ObservedObject var model: NativeDamageCalculatorModel
-    let slot: Int
-    let select: (String?) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var query = ""
-
-    private var rows: [ModDefinition] {
-        let term = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return ModLibrary.shared.definitions.filter { mod in
-            guard mod.type?.lowercased() == "shard" else { return false }
-            return term.isEmpty || mod.name.lowercased().contains(term)
-                || model.catalog.localShard(mod.name).lowercased().contains(term)
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Button(role: .destructive) {
-                    select(nil)
-                    dismiss()
-                } label: {
-                    Label("清空此石槽", systemImage: "xmark.circle")
-                }
-                ForEach(rows, id: \.name) { mod in
-                    Button {
-                        select(mod.name)
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 10) {
-                            NativeThumb(local: model.catalog.localModIcon(for: mod),
-                                        remote: model.catalog.iconURL(for: mod), size: 36)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(model.catalog.localShard(mod.name))
-                                    .font(.wfBody)
-                                    .foregroundColor(WFTheme.textPrimary)
-                                if model.catalog.localShard(mod.name) != mod.name {
-                                    Text(mod.name).font(.wfLabel).foregroundColor(WFTheme.textMuted)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(WFTheme.bgPrimary)
-            .searchable(text: $query, prompt: "搜索执政官石（中英文）")
-            .navigationTitle("选择石槽 \(slot + 1)")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
 private struct NativeEffectPicker: View {
     @ObservedObject var model: NativeDamageCalculatorModel
     let group: NativeEffectGroup
@@ -1773,9 +2049,6 @@ private struct NativeEffectPicker: View {
         let type = (mod.type ?? "").lowercased()
         let tags = Set((mod.tags ?? []).map { $0.lowercased() })
         switch group {
-        case .warframe:
-            return (type.contains("frame") || type == "aura_mod")
-                && !Self.companionSourceMods.contains(mod.name)
         case .companion:
             return Self.companionSourceMods.contains(mod.name)
                 || type.contains("companion") || tags.contains("companion")

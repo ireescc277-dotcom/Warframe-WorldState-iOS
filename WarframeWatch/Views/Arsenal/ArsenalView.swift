@@ -78,15 +78,31 @@ public struct ArsenalView: View {
             // iOS 16 没有 navigationDestination(item:)，用 isPresented + 暂存数据
             .navigationDestination(isPresented: $showCalc) {
                 if let owned = pushedOwned {
-                    DamageCalcView(ownedWeapon: owned, title: owned.z)
+                    DamageCalcView(
+                        ownedWeapon: owned,
+                        availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        title: owned.z
+                    )
                 } else if let w = pushedGeneric {
-                    DamageCalcView(weapon: w.n, title: w.z)
+                    DamageCalcView(
+                        weapon: w.n,
+                        availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        title: w.z
+                    )
                 } else {
-                    DamageCalcView(weapon: nil, title: "伤害计算")
+                    DamageCalcView(
+                        weapon: nil,
+                        availableWarframes: inventory.data?.ownedWarframes ?? [],
+                        title: "伤害计算"
+                    )
                 }
             }
             .navigationDestination(isPresented: $openCalc) {
-                DamageCalcView(weapon: nil, title: "伤害计算")
+                DamageCalcView(
+                    weapon: nil,
+                    availableWarframes: inventory.data?.ownedWarframes ?? [],
+                    title: "伤害计算"
+                )
             }
         }
     }
@@ -96,7 +112,7 @@ public struct ArsenalView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("武器")
+                Text("军械库")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
                 Text(weaponSubtitle)

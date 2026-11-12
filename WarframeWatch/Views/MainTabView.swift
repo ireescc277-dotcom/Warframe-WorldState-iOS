@@ -42,7 +42,7 @@ public struct MainTabView: View {
 
             ArsenalView()
                 .tabItem {
-                    Label("武器", systemImage: "scope")
+                    Label("军械库", systemImage: "scope")
                 }
                 .tag(3)
 

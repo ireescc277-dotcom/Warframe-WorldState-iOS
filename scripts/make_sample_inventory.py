@@ -41,6 +41,11 @@ def build() -> dict:
     aya = doc["aya"]
     aya["items"] = aya["items"][:AYA]
     sample_ducats = sum(p["n"] * p["d"] for s in sets for p in s["parts"])
+    prime_part_units = sum(p["n"] for s in sets for p in s["parts"])
+    priced_prime_part_units = sum(
+        p["n"] for s in sets for p in s["parts"] if p["p"] > 0
+    )
+    all_plat = sum(p["n"] * p["p"] for s in sets for p in s["parts"])
 
     return {
         # 样例不携带真实快照的 hash 或武器实例；远端版本切换只看 manifest，
@@ -55,6 +60,9 @@ def build() -> dict:
             "setsClose": sum(1 for s in sets if s["status"] == "missing" and s["loose"] == 0
                              and s["total"] - s["have"] <= 2),
             "setsAll": len(sets),
+            "allPlat": all_plat,
+            "primePartUnits": prime_part_units,
+            "pricedPrimePartUnits": priced_prime_part_units,
             "loosePlat": sum(s["loose"] for s in sets),
             "allDucats": sample_ducats,
             "looseDucats": sample_ducats,
@@ -66,6 +74,8 @@ def build() -> dict:
         "sets": sets,
         "relics": relics,
         "ownedWeapons": [],
+        "ownedWarframes": [],
+        "loadouts": [],
     }
 
 

@@ -10,17 +10,33 @@ import SwiftUI
 public struct DamageCalcView: View {
     private let weapon: String?
     private let ownedWeapon: InventoryData.OwnedWeapon?
+    private let ownedWarframe: InventoryData.OwnedWarframe?
+    private let warframeConfigIndex: Int
+    private let availableWarframes: [InventoryData.OwnedWarframe]
     private let title: String
 
     public init(weapon: String? = nil,
                 ownedWeapon: InventoryData.OwnedWeapon? = nil,
+                ownedWarframe: InventoryData.OwnedWarframe? = nil,
+                warframeConfigIndex: Int = 0,
+                availableWarframes: [InventoryData.OwnedWarframe] = [],
                 title: String = "伤害计算") {
         self.weapon = weapon
         self.ownedWeapon = ownedWeapon
+        self.ownedWarframe = ownedWarframe
+        self.warframeConfigIndex = warframeConfigIndex
+        self.availableWarframes = availableWarframes
         self.title = title
     }
 
     public var body: some View {
-        NativeDamageCalculatorView(weapon: weapon, ownedWeapon: ownedWeapon, title: title)
+        NativeDamageCalculatorView(
+            weapon: weapon,
+            ownedWeapon: ownedWeapon,
+            ownedWarframe: ownedWarframe,
+            warframeConfigIndex: warframeConfigIndex,
+            availableWarframes: availableWarframes,
+            title: title
+        )
     }
 }

@@ -679,27 +679,33 @@ public struct ExternalEffectSource: Codable, Sendable, Equatable {
     public var mod: String?
     public var active: Bool
     public var conditionValue: Double?
-    /// Optional source-specific override for programmatic callers.  `nil`
-    /// means this source uses `Options.abilityStrength`, which is the exact
-    /// website contract: one global ability-strength input applies to every
-    /// selected strength-scaled action.  The native calculator UI always
-    /// writes `nil` here and exposes that one global input instead.
+    /// Optional source-specific Ability Strength.  `nil` means this source
+    /// uses `Options.abilityStrength`; a source-bound client can instead pass
+    /// the strength resolved from that caster's actual A/B/C configuration.
     public var abilityStrength: Double?
+    /// Optional coefficient of the equipped external Mod's own rank.  Damage
+    /// data stores some augments at their max-rank action (1.0), while an
+    /// account configuration can equip a lower rank.  This scales only the
+    /// strength-routed action for that source; it is not a second ability-
+    /// strength input.
+    public var effectScale: Double?
     public var buff: ExternalWeaponBuff
 
     public init(name: String, mod: String? = nil, active: Bool = true,
                 conditionValue: Double? = nil, abilityStrength: Double? = nil,
+                effectScale: Double? = nil,
                 buff: ExternalWeaponBuff = .none) {
         self.name = name
         self.mod = mod
         self.active = active
         self.conditionValue = conditionValue
         self.abilityStrength = abilityStrength
+        self.effectScale = effectScale
         self.buff = buff
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, mod, active, conditionValue, abilityStrength, buff
+        case name, mod, active, conditionValue, abilityStrength, effectScale, buff
     }
 
     public init(from decoder: Decoder) throws {
@@ -709,6 +715,7 @@ public struct ExternalEffectSource: Codable, Sendable, Equatable {
         active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? true
         conditionValue = try c.decodeIfPresent(Double.self, forKey: .conditionValue)
         abilityStrength = try c.decodeIfPresent(Double.self, forKey: .abilityStrength)
+        effectScale = try c.decodeIfPresent(Double.self, forKey: .effectScale)
         buff = try c.decodeIfPresent(ExternalWeaponBuff.self, forKey: .buff) ?? .none
     }
 }
@@ -1046,9 +1053,10 @@ public struct Options: Codable, Sendable, Equatable {
     /// `conditionalModStacks` 表达；这个布尔值只保留网站会据此启停的全局项目，
     /// 例如自定义的每种状态基础伤害。
     public var allModConditionsMet: Bool
-    /// Website-wide Ability Strength.  `1.0` means 100%.  Strength-scaled
-    /// weapon data and frame/companion actions consume it in BuildResolver;
-    /// no presentation layer pre-multiplies damage values with it.
+    /// Resolved Ability Strength. `1.0` means 100%. Strength-scaled weapon
+    /// data and frame/companion actions consume it in BuildResolver; a client
+    /// should derive this from the selected Warframe configuration rather than
+    /// expose a duplicate free-form final-strength field.
     public var abilityStrength: Double
     /// 对应网站 “Damage per status multiplier is multiplicative” 开关。它不改变
     /// 状态层数，只决定每状态基础伤害是否与基础伤害池相乘。

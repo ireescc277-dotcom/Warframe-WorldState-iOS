@@ -20,9 +20,17 @@ public struct InventoryData: Decodable {
     public let sets: [PrimeSet]
     public let relics: [RelicRow]
     public let ownedWeapons: [OwnedWeapon]
+    /// Owned Warframe instances retain their own A/B/C configurations.  This
+    /// is deliberately not collapsed into an app-wide "ability strength".
+    public let ownedWarframes: [OwnedWarframe]
+    /// Normal Arsenal presets reference concrete items above by opaque id.
+    /// A snapshot can mark more than one category as active, so `active` is
+    /// source evidence, not a claim that we inferred one global preset.
+    public let loadouts: [Loadout]
 
     private enum CodingKeys: String, CodingKey {
         case builtAt, source, marketAt, profile, totals, aya, sets, relics, ownedWeapons
+        case ownedWarframes, loadouts
     }
 
     public init(from decoder: Decoder) throws {
@@ -39,6 +47,8 @@ public struct InventoryData: Decodable {
         sets = try c.decodeIfPresent([PrimeSet].self, forKey: .sets) ?? []
         relics = try c.decodeIfPresent([RelicRow].self, forKey: .relics) ?? []
         ownedWeapons = try c.decodeIfPresent([OwnedWeapon].self, forKey: .ownedWeapons) ?? []
+        ownedWarframes = try c.decodeIfPresent([OwnedWarframe].self, forKey: .ownedWarframes) ?? []
+        loadouts = try c.decodeIfPresent([Loadout].self, forKey: .loadouts) ?? []
     }
 
     /// Provenance of the account snapshot consumed by this payload.  The
@@ -60,6 +70,15 @@ public struct InventoryData: Decodable {
         public let setsReady: Int
         public let setsClose: Int
         public let setsAll: Int
+        /// Direct sum of every owned Prime component's listed unit price.
+        /// It never applies a crafting-reserve rule.
+        public let allPlat: Int?
+        /// Coverage behind `allPlat`; an unquoted part is not pretended to be
+        /// a zero-plat item.
+        public let primePartUnits: Int?
+        public let pricedPrimePartUnits: Int?
+        /// Market value after retaining one component for each uncrafted set.
+        /// This is only a surplus-selling comparison, not the total.
         public let loosePlat: Int
         /// Every owned Prime component's exchange value.  This is the number
         /// AlecaFrame shows when no crafting reserve is applied.
@@ -181,6 +200,224 @@ public struct InventoryData: Decodable {
                 public let label: String
 
                 public var id: String { tag }
+            }
+        }
+    }
+
+    /// One owned Warframe instance and the source data that determines the
+    /// strength of its abilities.  `configs` retains actual equipped upgrades
+    /// (including non-strength cards) so a user can audit the selected build
+    /// instead of trusting a hidden final-stat field.
+    public struct OwnedWarframe: Decodable, Identifiable, Hashable {
+        public let id: String
+        public let z: String
+        public let abilities: [Ability]
+        public let configs: [Config]
+        /// Shards live on the Warframe instance, not on a weapon config.
+        public let shards: [Shard]
+
+        private enum CodingKeys: String, CodingKey { case id, z, a, cfg, sh }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            z = try c.decodeIfPresent(String.self, forKey: .z) ?? "未命名战甲"
+            abilities = try c.decodeIfPresent([Ability].self, forKey: .a) ?? []
+            configs = try c.decodeIfPresent([Config].self, forKey: .cfg) ?? []
+            shards = try c.decodeIfPresent([Shard].self, forKey: .sh) ?? []
+        }
+
+        public func config(at index: Int) -> Config? {
+            guard configs.indices.contains(index) else { return nil }
+            return configs[index]
+        }
+
+        public struct Ability: Decodable, Hashable, Identifiable {
+            /// 1...4 for native abilities.  The actual formula owner may use
+            /// this to apply a card such as Precision Intensify.
+            public let ordinal: Int
+            public let name: String
+            public var id: Int { ordinal }
+
+            private enum CodingKeys: String, CodingKey { case o, n }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                ordinal = try c.decodeIfPresent(Int.self, forKey: .o) ?? 0
+                name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未命名技能"
+            }
+        }
+
+        public struct Config: Decodable, Hashable, Identifiable {
+            public let label: String
+            public let upgrades: [Upgrade]
+            public let helminth: HelminthAbility?
+            public let isExactImport: Bool
+            public let issues: [String]
+            public var id: String { label }
+
+            private enum CodingKeys: String, CodingKey { case l, u, h, exact, issues }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                label = try c.decodeIfPresent(String.self, forKey: .l) ?? "A"
+                upgrades = try c.decodeIfPresent([Upgrade].self, forKey: .u) ?? []
+                helminth = try c.decodeIfPresent(HelminthAbility.self, forKey: .h)
+                isExactImport = try c.decodeIfPresent(Bool.self, forKey: .exact) ?? true
+                issues = try c.decodeIfPresent([String].self, forKey: .issues) ?? []
+            }
+        }
+
+        public struct Upgrade: Decodable, Hashable, Identifiable {
+            public let slot: Int
+            public let name: String
+            public let rank: Int?
+            public let maxRank: Int?
+            public let kind: String
+            /// Only terms with an exact unconditional formula are in this
+            /// list.  Conditional / stateful text remains in `strengthReview`
+            /// until the corresponding game state is modelled explicitly.
+            public let strengthTerms: [StrengthTerm]
+            public let strengthReview: [String]
+            /// Exact coefficient printed by the installed rank of a
+            /// strength-scaled weapon-buff augment.  `1` is its max-rank
+            /// action-table value; a lower rank is deliberately retained as
+            /// its own value rather than silently treated as max rank.
+            public let weaponBuffScale: Double?
+            public var id: Int { slot }
+
+            private enum CodingKeys: String, CodingKey { case s, n, r, m, k, st, sr, wb }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? -1
+                name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未识别升级"
+                rank = try c.decodeIfPresent(Int.self, forKey: .r)
+                maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
+                kind = try c.decodeIfPresent(String.self, forKey: .k) ?? "Mod"
+                strengthTerms = try c.decodeIfPresent([StrengthTerm].self, forKey: .st) ?? []
+                strengthReview = try c.decodeIfPresent([String].self, forKey: .sr) ?? []
+                weaponBuffScale = try c.decodeIfPresent(Double.self, forKey: .wb)
+            }
+
+            public var rankLabel: String {
+                guard let rank else { return "等级未确认" }
+                guard let maxRank else { return "等级 \(rank)" }
+                return "等级 \(rank)/\(maxRank)"
+            }
+        }
+
+        public struct StrengthTerm: Decodable, Hashable, Identifiable {
+            public let label: String
+            /// Decimal bonus: 0.30 means +30% Ability Strength.
+            public let value: Double
+            /// `base` or `ability4`; values are never inferred from display
+            /// strings in Swift.
+            public let kind: String
+            public var id: String { "\(kind)-\(label)-\(value)" }
+
+            private enum CodingKeys: String, CodingKey { case l, v, k }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                label = try c.decodeIfPresent(String.self, forKey: .l) ?? "技能强度"
+                value = try c.decodeIfPresent(Double.self, forKey: .v) ?? 0
+                kind = try c.decodeIfPresent(String.self, forKey: .k) ?? "base"
+            }
+        }
+
+        public struct HelminthAbility: Decodable, Hashable {
+            /// DE records the replaced native slot as zero-based; keep that
+            /// source convention and add one only when presenting it.
+            public let replacedIndex: Int?
+            public let name: String
+
+            private enum CodingKeys: String, CodingKey { case o, n }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                replacedIndex = try c.decodeIfPresent(Int.self, forKey: .o)
+                name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未识别的 Helminth 技能"
+            }
+        }
+
+        public struct Shard: Decodable, Hashable, Identifiable {
+            public let slot: Int
+            public let name: String
+            /// DamageKit's existing shard definition, when this shard affects
+            /// weapon damage.  Ability-strength shards intentionally use the
+            /// separate `abilityStrength` field instead.
+            public let damageKitName: String?
+            public let abilityStrength: Double?
+            public let isTauforged: Bool
+            public var id: Int { slot }
+
+            private enum CodingKeys: String, CodingKey { case s, n, dk, `as`, tau }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? -1
+                name = try c.decodeIfPresent(String.self, forKey: .n) ?? "执政官石"
+                damageKitName = try c.decodeIfPresent(String.self, forKey: .dk)
+                abilityStrength = try c.decodeIfPresent(Double.self, forKey: .as)
+                isTauforged = try c.decodeIfPresent(Bool.self, forKey: .tau) ?? false
+            }
+        }
+    }
+
+    /// A normal Arsenal preset.  The UI treats it as one whole configuration:
+    /// frame + primary + secondary + melee + heavy, each with an independent
+    /// A/B/C index.  It is not a shortcut straight into a weapon calculator.
+    public struct Loadout: Decodable, Identifiable, Hashable {
+        public let id: String
+        public let name: String
+        public let isFavorite: Bool
+        public let snapshotMarkedActive: Bool
+        public let slots: [Slot]
+
+        private enum CodingKeys: String, CodingKey { case id, n, fav, active, slots }
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(String.self, forKey: .id)
+            name = try c.decodeIfPresent(String.self, forKey: .n) ?? "配置"
+            isFavorite = try c.decodeIfPresent(Bool.self, forKey: .fav) ?? false
+            snapshotMarkedActive = try c.decodeIfPresent(Bool.self, forKey: .active) ?? false
+            slots = try c.decodeIfPresent([Slot].self, forKey: .slots) ?? []
+        }
+
+        public func slot(_ role: Slot.Role) -> Slot? {
+            slots.first { $0.role == role }
+        }
+
+        public struct Slot: Decodable, Hashable, Identifiable {
+            public enum Role: String, Decodable, CaseIterable, Hashable {
+                case warframe, primary, secondary, melee, heavy
+
+                public var label: String {
+                    switch self {
+                    case .warframe: return "战甲"
+                    case .primary: return "主武器"
+                    case .secondary: return "副武器"
+                    case .melee: return "近战"
+                    case .heavy: return "重型武器"
+                    }
+                }
+            }
+
+            public let role: Role
+            public let itemID: String?
+            public let displayName: String?
+            public let configIndex: Int?
+            public let isHidden: Bool
+            public var id: Role { role }
+
+            private enum CodingKeys: String, CodingKey { case r, i, z, c, hide }
+            public init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                role = try c.decode(Role.self, forKey: .r)
+                itemID = try c.decodeIfPresent(String.self, forKey: .i)
+                displayName = try c.decodeIfPresent(String.self, forKey: .z)
+                configIndex = try c.decodeIfPresent(Int.self, forKey: .c)
+                isHidden = try c.decodeIfPresent(Bool.self, forKey: .hide) ?? false
+            }
+
+            public var configLabel: String? {
+                guard let configIndex, configIndex >= 0 else { return nil }
+                return String(UnicodeScalar(65 + min(configIndex, 25)) ?? "?")
             }
         }
     }

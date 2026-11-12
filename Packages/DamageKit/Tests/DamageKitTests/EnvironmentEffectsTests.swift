@@ -62,6 +62,25 @@ final class EnvironmentEffectsTests: XCTestCase {
         XCTAssertEqual(resolved.damage[.corrosive] ?? 0, 125, accuracy: 1e-9)
     }
 
+    func testExternalAugmentRankScaleDoesNotPromoteLowerRankToMax() {
+        let attack = Attack(name: "Hit", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 100])
+        let environment = EnvironmentEffects(
+            warframeMods: [
+                // Venom Dose rank 0 is +50%, while DamageKit's compact
+                // action table stores its rank-3 coefficient as 1.0.
+                ExternalEffectSource(name: "Saryn Prime A · Venom Dose", mod: "Venom Dose",
+                                     abilityStrength: 1.5, effectScale: 0.5)
+            ]
+        )
+        let resolved = BuildResolver(weapon: secondaryWeapon(attack), build: Build(),
+                                     options: Options(environment: environment), faction: neutral)
+            .resolveAll()[0]
+
+        XCTAssertEqual(resolved.damage[.impact] ?? 0, 100, accuracy: 1e-9)
+        XCTAssertEqual(resolved.damage[.corrosive] ?? 0, 75, accuracy: 1e-9)
+    }
+
     func testShockTrooperKeepsDirectAndDotElectricityRulesSeparate() {
         let attack = Attack(name: "Hit", speed: 1, critChance: 0, critMultiplier: 1,
                             statusChance: 100, damage: [.impact: 100])

@@ -364,9 +364,11 @@ public struct BuildResolver: Sendable {
             }
         let isHeavyMeleeAttack = isMelee && (options.heavyAttack || attack.isHeavy)
 
-        // Ability Strength is one global website input, not a collection of
-        // UI-side multipliers. The source discriminator is decoded with the
-        // weapon and resolved here so each effect retains its documented pool:
+        // This is the equipped/current Warframe's resolved Ability Strength,
+        // not a UI-side multiplier.  A separately cast external ability keeps
+        // its own source-specific strength in `ExternalEffectSource`. The
+        // source discriminator is decoded with the weapon and resolved here
+        // so each effect retains its documented pool:
         // simple/excalibur are final direct-and-status factors; Mesa is base
         // damage; Cyte-09 changes only the weapon vector.
         let abilityStrength = max(0, options.abilityStrength)
@@ -1002,11 +1004,13 @@ struct ModAggregate {
     mutating func apply(externalMod mod: ModDefinition, source effect: ExternalEffectSource,
                         weapon: Weapon, attack: Attack, options: Options, notes: inout [String]) {
         var action = mod.action ?? [:]
-        // The website has one global Ability Strength control. An optional
-        // source override remains available only to API callers that are
-        // intentionally modelling a non-website source; the SwiftUI screen
-        // leaves it nil and therefore follows the global value.
+        // A source can carry its caster-specific Ability Strength and, when
+        // relevant, the exact equipped rank of its augment.  Falling back to
+        // Options keeps saved website-style inputs compatible, but clients
+        // with a concrete Warframe source must not borrow another caster's
+        // strength or silently promote an augment to max rank.
         let abilityStrength = max(0, effect.abilityStrength ?? options.abilityStrength)
+            * max(0, effect.effectScale ?? 1)
         if let perWeapon = action.removeValue(forKey: "FOR_WEAPON")?.objectValue {
             for (tag, raw) in perWeapon where Self.weapon(weapon, matches: tag) {
                 for (key, value) in raw.objectValue ?? [:] { action[key] = value }
