@@ -729,7 +729,7 @@ struct NativeDamageCalculatorView: View {
                             Text(model.currentWarframe?.z ?? "选择背包中的战甲")
                                 .font(.wfBody)
                                 .foregroundColor(WFTheme.textPrimary)
-                            Text(model.currentWarframe.map { "使用它的 A/B/C 配置" } ?? "不带战甲来源")
+                            Text(model.currentWarframe.map { _ in "使用它的 A/B/C 配置" } ?? "不带战甲来源")
                                 .font(.wfLabel)
                                 .foregroundColor(WFTheme.textMuted)
                         }
