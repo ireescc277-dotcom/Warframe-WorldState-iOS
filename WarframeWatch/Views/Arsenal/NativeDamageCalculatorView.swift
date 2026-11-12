@@ -907,13 +907,13 @@ struct NativeDamageCalculatorView: View {
                 Button("添加") { model.addExternalWarframeBuff() }
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
-                    .disabled(model.availableWarframes.isEmpty)
+                    .disabled(model.availableExternalWarframes.isEmpty)
             }
-            Text("每一行是一名施法者。选择施法者、其 A/B/C 配置和实际可给队友的技能；它的技能强度不会使用当前战甲的配置。")
+            Text("每一行是一条外部施放来源。选择其他施法者、其 A/B/C 配置和实际可给队友的技能；它的技能强度不会使用当前战甲的配置，当前战甲也不能重复作为外部来源。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
-            if model.availableWarframes.isEmpty {
-                Text("没有可选择的背包战甲。")
+            if model.availableExternalWarframes.isEmpty {
+                Text("没有可选择的其他背包战甲。当前战甲仅在上方按自身来源结算，不会重复计入这里。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             } else if model.externalWarframeBuffs.isEmpty {
@@ -940,7 +940,7 @@ struct NativeDamageCalculatorView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Menu {
-                    ForEach(model.availableWarframes) { frame in
+                    ForEach(model.availableExternalWarframes) { frame in
                         Button(frame.z) { model.setExternalCaster(frame.id, for: draft.id) }
                     }
                 } label: {
@@ -966,7 +966,11 @@ struct NativeDamageCalculatorView: View {
                 .buttonStyle(.plain)
                 .foregroundColor(WFTheme.red)
             }
-            if let caster {
+            if caster == nil {
+                Text("请选择另一名背包战甲作为外部施法者；当前战甲不能同时作为外部来源。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+            } else if let caster {
                 HStack(spacing: 6) {
                     Text("配置")
                         .font(.wfLabel)
@@ -991,11 +995,11 @@ struct NativeDamageCalculatorView: View {
                         .foregroundColor(WFTheme.gold)
                 }
             }
-            if candidates.isEmpty {
+            if caster != nil, candidates.isEmpty {
                 Text("这套施法者配置没有已接入、且能施加给队友的武器增益。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
-            } else {
+            } else if caster != nil {
                 Menu {
                     ForEach(candidates) { candidate in
                         Button(candidate.name) {

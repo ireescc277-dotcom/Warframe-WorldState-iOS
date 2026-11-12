@@ -629,6 +629,16 @@ final class NativeDamageCalculatorModel: ObservableObject {
         )
     }
 
+    /// A selected current Warframe is the player, not a second squadmate.  Do
+    /// not offer that exact inventory instance in the external-caster picker:
+    /// doing so would let one cast be added once as "self" and a second time
+    /// as an ally buff.  A separately owned duplicate frame still has its own
+    /// ID and remains a valid external source.
+    var availableExternalWarframes: [InventoryData.OwnedWarframe] {
+        guard let currentID = currentWarframe?.id else { return availableWarframes }
+        return availableWarframes.filter { $0.id != currentID }
+    }
+
     var activeCurrentWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
         guard let currentWarframe else { return [] }
         return currentWarframeCandidates
@@ -768,8 +778,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     func externalCaster(for draft: NativeExternalWarframeBuffDraft) -> InventoryData.OwnedWarframe? {
         guard let casterID = draft.casterID else { return nil }
-        if currentWarframe?.id == casterID { return currentWarframe }
-        return availableWarframes.first { $0.id == casterID }
+        return availableExternalWarframes.first { $0.id == casterID }
     }
 
     func externalCandidates(for draft: NativeExternalWarframeBuffDraft) -> [WarframeWeaponBuffCandidate] {
@@ -843,6 +852,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
             currentWarframe = nil
             currentWarframeConfigIndex = 0
             activeCurrentWarframeBuffIDs = []
+            reconcileExternalCasterSelection()
             calculate()
             return
         }
@@ -850,6 +860,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
         currentWarframe = frame
         currentWarframeConfigIndex = 0
         activeCurrentWarframeBuffIDs = []
+        reconcileExternalCasterSelection()
         calculate()
     }
 
@@ -926,7 +937,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
     }
 
     func addExternalWarframeBuff() {
-        guard let first = availableWarframes.first else { return }
+        guard let first = availableExternalWarframes.first else { return }
         var draft = NativeExternalWarframeBuffDraft(casterID: first.id)
         draft.candidateID = externalCandidates(for: draft).first?.id
         externalWarframeBuffs.append(draft)
@@ -940,6 +951,10 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     func setExternalCaster(_ casterID: String?, for draftID: UUID) {
         guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
+        if let casterID,
+           !availableExternalWarframes.contains(where: { $0.id == casterID }) {
+            return
+        }
         externalWarframeBuffs[index].casterID = casterID
         externalWarframeBuffs[index].configIndex = 0
         externalWarframeBuffs[index].candidateID = externalCandidates(for: externalWarframeBuffs[index]).first?.id
@@ -982,6 +997,19 @@ final class NativeDamageCalculatorModel: ObservableObject {
     private func reconcileCurrentBuffSelection() {
         let available = Set(currentWarframeCandidates.map(\.id))
         activeCurrentWarframeBuffIDs.formIntersection(available)
+    }
+
+    /// If the player changes the current Warframe to an instance that was
+    /// previously selected as an ally caster, keep the row visible but clear
+    /// its source.  This prevents an invisible double count and makes the
+    /// required correction explicit in the external-buff UI.
+    private func reconcileExternalCasterSelection() {
+        guard let currentID = currentWarframe?.id else { return }
+        for index in externalWarframeBuffs.indices where externalWarframeBuffs[index].casterID == currentID {
+            externalWarframeBuffs[index].casterID = nil
+            externalWarframeBuffs[index].configIndex = 0
+            externalWarframeBuffs[index].candidateID = nil
+        }
     }
 
     private func reconcileCurrentCompanionBuffSelection() {

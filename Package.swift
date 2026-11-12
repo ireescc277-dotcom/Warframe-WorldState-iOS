@@ -28,6 +28,11 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]
+        ),
+        .testTarget(
+            name: "WarframeWatchTests",
+            dependencies: ["WarframeWatch"],
+            path: "WarframeWatchPackageTests"
         )
     ]
 )
