@@ -199,7 +199,9 @@ public struct InventoryAdapter: Sendable {
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnNoMelee":
             ("Primary Deadhead", 5),
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee":
-            ("Secondary Deadhead", 5)
+            ("Secondary Deadhead", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CorrosiveMeleePerAbilityCast":
+            ("Melee Exposure", 5)
     ]
 
     private func findWeapon(_ id: String, in snapshot: [String: Any]) -> [String: Any]? {
