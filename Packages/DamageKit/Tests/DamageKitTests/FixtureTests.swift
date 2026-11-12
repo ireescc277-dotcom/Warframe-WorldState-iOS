@@ -17,7 +17,7 @@ final class FixtureTests: XCTestCase {
             .deletingLastPathComponent()   // repo root
     }
 
-    static var dataRoot: URL { packageRoot.appendingPathComponent("web/app/site") }
+    static var dataRoot: URL { packageRoot.appendingPathComponent("server/site") }
     static var fixtures: URL { packageRoot.appendingPathComponent("Packages/DamageKit/Fixtures") }
 
     func testFixturesRunThroughOneDefenseTimeline() throws {

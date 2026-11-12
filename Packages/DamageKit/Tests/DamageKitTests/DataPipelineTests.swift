@@ -15,7 +15,7 @@ final class DataPipelineTests: XCTestCase {
     }
 
     private static var dataRoot: URL {
-        packageRoot.appendingPathComponent("web/app/site")
+        packageRoot.appendingPathComponent("server/site")
     }
 
     func testEnemyRoundTripsThroughItsOwnCodableRepresentation() throws {
@@ -57,6 +57,28 @@ final class DataPipelineTests: XCTestCase {
         XCTAssertTrue(demolisher.showPartyCount)
         XCTAssertEqual(demolisher.health, 2_000)
         XCTAssertEqual(demolisher.shield, 800)
+    }
+
+    func testCanonicalServerSiteWorksWithoutGeneratedBrowserIndex() throws {
+        // A clean checkout intentionally has no ignored `web/app/site` bundle.
+        // The CLI and CI must therefore be able to use the checked-in website
+        // source directly, including its weapons.json dictionary manifest.
+        XCTAssertTrue(DataStore.hasRequiredData(at: Self.dataRoot))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: Self.dataRoot.appendingPathComponent("weapons-list.json").path
+        ))
+        XCTAssertEqual(DataStore.defaultRoot(relativeTo: Self.packageRoot), Self.dataRoot)
+
+        let store = DataStore(root: Self.dataRoot)
+        let names = try store.weaponNames()
+        XCTAssertTrue(names.contains("Kuva Tonkor"))
+        XCTAssertTrue(names.contains("Laetum"))
+
+        let packageDirectory = Self.packageRoot.appendingPathComponent("Packages/DamageKit")
+        XCTAssertEqual(
+            try XCTUnwrap(DataStore.discoverRoot(startingAt: packageDirectory)).standardizedFileURL,
+            Self.dataRoot.standardizedFileURL
+        )
     }
 
     func testForceProcsDecodeFromBothObservedShapes() throws {

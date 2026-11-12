@@ -31,7 +31,7 @@ WarframeWatch 的伤害页是原生 SwiftUI 页面：选择器把用户选项转
 
 要逐项核对这一移植，可对照：
 
-- 网站原实现：`../../web/app/site/min.js` 中的 `showEnemy` 和 `correctEnemyLvl`。
+- 网站原实现：`../../server/site/min.js` 中的 `showEnemy` 和 `correctEnemyLvl`。
 - Swift 实现：`Sources/DamageKit/EnemyProfile.swift`。
 - 固定状态对照：`node ../../scripts/compare_target_states.js`。
 
@@ -47,14 +47,14 @@ swift test -j 1
 
 # 计算一个 JSON 输入
 swift run -c debug damagekit-cli Fixtures\02-torid-mods.json `
-  --data-root C:\WarframeWorldState\web\app\site --compact
+  --data-root C:\WarframeWorldState\server\site --compact
 
 # 查看配卡解析后的攻击参数，不运行时间线
 swift run -c debug damagekit-cli Fixtures\02-torid-mods.json `
-  --data-root C:\WarframeWorldState\web\app\site --dump-resolved
+  --data-root C:\WarframeWorldState\server\site --dump-resolved
 ```
 
-`damagekit-cli` 还支持 `--list-weapons`、`--list-enemies`、`--list-mods`、`--timing` 和 `--repeat N`。不传 `--data-root` 时，它会从当前目录向上寻找 `web/app/site`。
+`damagekit-cli` 还支持 `--list-weapons`、`--list-enemies`、`--list-mods`、`--timing` 和 `--repeat N`。不传 `--data-root` 时，它会从当前目录向上寻找受版本控制的 `server/site`；仅为旧开发目录兼容，才回退到生成的 `web/app/site`。
 
 ## 与 warframe-damage 对照
 
@@ -77,4 +77,4 @@ node ../../scripts/compare_damagekit.js --strict --summary
 - App 原生页面：`../../WarframeWatch/Views/Arsenal/NativeDamageCalculatorView.swift`
 - App 输入适配：`../../WarframeWatch/Views/Arsenal/NativeDamageCalculatorModel.swift`
 - App 本地武器、翻译与图标资料：`../../ios/DamageData/`
-- 网站对照源码和资料：`../../web/app/site/`
+- 网站对照源码和资料：`../../server/site/`

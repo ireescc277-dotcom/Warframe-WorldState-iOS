@@ -20,7 +20,7 @@ const ROOT = path.resolve(__dirname, '..');
 const KERNEL_PATH = path.join(ROOT, 'server', 'kernel.js');
 const MIN_PATH = path.join(ROOT, 'server', 'site', 'min.js');
 const PACKAGE = path.join(ROOT, 'Packages', 'DamageKit');
-const DATA_ROOT = path.join(ROOT, 'web', 'app', 'site');
+const DATA_ROOT = path.join(ROOT, 'server', 'site');
 const CASE_FILE = path.join(PACKAGE, 'Parity', 'website-cases.json');
 const CASE_IDS = [
   'paris-prime-charged-shot-lancer-l50',

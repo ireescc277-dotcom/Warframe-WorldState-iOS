@@ -11,7 +11,7 @@ final class ResolverFormulaTests: XCTestCase {
             .deletingLastPathComponent()   // DamageKit
             .deletingLastPathComponent()   // Packages
             .deletingLastPathComponent()   // repository root
-            .appendingPathComponent("web/app/site")
+            .appendingPathComponent("server/site")
     }
 
     func testDirectComponentsUseModdedBaseOverThirtyTwoQuantization() {

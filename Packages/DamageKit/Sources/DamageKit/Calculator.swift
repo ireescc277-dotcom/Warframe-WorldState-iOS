@@ -1,6 +1,6 @@
 import Foundation
 
-/// 站点离线数据目录（`web/app/site`）的读取器。
+/// 站点离线数据目录（`server/site`）的读取器。
 ///
 /// 只读，不改动仓库里的数据文件。
 public struct DataStore: Sendable {
@@ -10,8 +10,18 @@ public struct DataStore: Sendable {
         self.root = root
     }
 
-    /// 仓库默认布局：`<repo>/web/app/site`。
+    /// 仓库中受版本控制的原始站点资料：`<repo>/server/site`。
+    ///
+    /// 这里不把开发机生成的 `web/app/site` 当作默认值。后者是浏览器离线包，
+    /// 不会进入干净的 CI checkout；所有原生计算和对照都应直接读取同一份
+    /// `server/site` 数据。
     public static func defaultRoot(relativeTo url: URL) -> URL {
+        url.appendingPathComponent("server/site")
+    }
+
+    /// 旧浏览器离线包的兼容位置。仅在调用方明确处于一个仍保留该生成物的
+    /// 开发目录时作为 `discoverRoot` 的回退，绝不优先于 `server/site`。
+    public static func legacyBrowserBundleRoot(relativeTo url: URL) -> URL {
         url.appendingPathComponent("web/app/site")
     }
 
@@ -20,8 +30,13 @@ public struct DataStore: Sendable {
     public static func discoverRoot(startingAt directory: URL) -> URL? {
         var cursor = directory.standardizedFileURL
         while true {
-            let candidate = defaultRoot(relativeTo: cursor)
-            if hasRequiredData(at: candidate) { return candidate }
+            let candidates = [
+                defaultRoot(relativeTo: cursor),
+                legacyBrowserBundleRoot(relativeTo: cursor),
+            ]
+            if let candidate = candidates.first(where: hasRequiredData(at:)) {
+                return candidate
+            }
 
             let parent = cursor.deletingLastPathComponent()
             guard parent.path != cursor.path else { return nil }
@@ -31,7 +46,10 @@ public struct DataStore: Sendable {
 
     public static func hasRequiredData(at root: URL) -> Bool {
         let fm = FileManager.default
-        return fm.fileExists(atPath: root.appendingPathComponent("weapons-list.json").path)
+        let hasWeaponManifest = fm.fileExists(atPath: root.appendingPathComponent("weapons.json").path)
+            || fm.fileExists(atPath: root.appendingPathComponent("weapons-list.json").path)
+        return hasWeaponManifest
+            && fm.fileExists(atPath: root.appendingPathComponent("weapons").path)
             && fm.fileExists(atPath: root.appendingPathComponent("data/json/enemies-min.json").path)
     }
 
@@ -50,6 +68,18 @@ public struct DataStore: Sendable {
         let directName = name.replacingOccurrences(of: " ", with: "_") + ".json"
         let direct = directory.appendingPathComponent(directName)
         if FileManager.default.fileExists(atPath: direct.path) { return direct }
+
+        // `server/site/weapons.json` is the source site's exact name-to-file
+        // map.  Use it before the broad normalized fallback so punctuation,
+        // parentheses and special weapon names select the same record as the
+        // website itself.
+        let manifest = root.appendingPathComponent("weapons.json")
+        if let data = try? Data(contentsOf: manifest),
+           let entries = try? JSONDecoder().decode([String: String].self, from: data),
+           let filename = entries[name] {
+            let mapped = directory.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: mapped.path) { return mapped }
+        }
 
         let key = Self.weaponLookupKey(name)
         guard !key.isEmpty,
@@ -85,10 +115,20 @@ public struct DataStore: Sendable {
     }
 
     public func weaponNames() throws -> [String] {
-        let url = root.appendingPathComponent("weapons-list.json")
         struct Entry: Decodable { let n: String }
-        let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode([Entry].self, from: data).map(\.n)
+        let generatedIndex = root.appendingPathComponent("weapons-list.json")
+        if FileManager.default.fileExists(atPath: generatedIndex.path) {
+            let data = try Data(contentsOf: generatedIndex)
+            return try JSONDecoder().decode([Entry].self, from: data).map(\.n)
+        }
+
+        // The checked-in website source has a compact dictionary instead of
+        // the generated browser bundle's array.  It is sufficient for the
+        // CLI's name listing and keeps native tooling independent of ignored
+        // build artefacts.
+        let manifest = root.appendingPathComponent("weapons.json")
+        let data = try Data(contentsOf: manifest)
+        return try JSONDecoder().decode([String: String].self, from: data).keys.sorted()
     }
 }
 

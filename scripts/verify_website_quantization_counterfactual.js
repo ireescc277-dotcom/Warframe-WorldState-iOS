@@ -19,7 +19,7 @@ const K = require('../server/kernel');
 
 const ROOT = path.resolve(__dirname, '..');
 const PACKAGE = path.join(ROOT, 'Packages', 'DamageKit');
-const DATA_ROOT = path.join(ROOT, 'web', 'app', 'site');
+const DATA_ROOT = path.join(ROOT, 'server', 'site');
 const CASE_FILE = path.join(PACKAGE, 'Parity', 'website-cases.json');
 const verify = process.argv.includes('--verify');
 const SAMPLE_COUNT = 61;

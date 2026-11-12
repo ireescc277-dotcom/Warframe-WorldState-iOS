@@ -78,9 +78,9 @@ func requireStore(explicitRoot: String?) -> DataStore {
     guard let store = discoverStore(explicitRoot: explicitRoot),
           DataStore.hasRequiredData(at: store.root) else {
         if let explicitRoot {
-            fail("数据目录无效: \(explicitRoot)（需要 weapons-list.json 和 data/json/enemies-min.json）")
+            fail("数据目录无效: \(explicitRoot)（需要 weapons.json 或 weapons-list.json、weapons/ 和 data/json/enemies-min.json）")
         }
-        fail("找不到离线数据目录；请传入 --data-root <web/app/site>")
+        fail("找不到离线数据目录；请传入 --data-root <server/site>")
     }
     return store
 }
