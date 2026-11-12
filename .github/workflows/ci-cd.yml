@@ -126,7 +126,11 @@ jobs:
 
       - name: Generate Xcode Project
         run: |
-          cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          # 公开样例不含任何账号装备；视觉门禁改用由该样例生成的虚构军械库，
+          # 才能真的走到“配置页 → 计算器”的路径，而不泄露用户账号数据。
+          python3 scripts/make_visual_inventory_fixture.py \
+            --input WarframeWatch/Resources/InventoryData.sample.json \
+            --out WarframeWatch/Resources/InventoryData.json
           # 仲裁排程是公开数据，构建时现抓一份（30 天），抓不到就用空样例，
           # 界面上那张卡会自己隐藏，不影响其他页面。
           python3 scripts/build_arb_schedule.py --days 30 \
