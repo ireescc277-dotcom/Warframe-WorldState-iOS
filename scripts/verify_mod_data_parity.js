@@ -4,9 +4,9 @@
 /*
  * Verifies the raw Mod catalogue and the default-melee-combo table used by
  * native DamageKit against the literals shipped in the warframe-damage site
- * source. It also verifies that the web bundle and the source used to build
- * the native iOS data folder are byte-for-byte the same for every calculation
- * input they share.
+ * source. When a locally generated browser mirror is present, it also reports
+ * whether that mirror matches the same source data. The native iOS build does
+ * not require that ignored browser output.
  *
  * This intentionally does not boot the website, invoke its calculator, or
  * overwrite any resource.  It only extracts the data literal and compares
@@ -24,7 +24,9 @@ const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const canonicalSite = path.join(root, 'server', 'site');
-const webSite = path.join(root, 'web', 'app', 'site');
+const webSite = process.env.DAMAGEKIT_WEB_MIRROR
+  ? path.resolve(root, process.env.DAMAGEKIT_WEB_MIRROR)
+  : path.join(root, 'web', 'app', 'site');
 const sourcePath = path.join(canonicalSite, 'min.js');
 const nativePath = path.join(root, 'Packages', 'DamageKit', 'Sources', 'DamageKit', 'Resources', 'mods.json');
 const stanceOrderPath = path.join(root, 'Packages', 'DamageKit', 'Sources', 'DamageKit',
@@ -175,24 +177,24 @@ const defaultMeleeStanceDifference = firstDifference(
   '$.defaultMeleeStances'
 );
 
-// The iOS bundle is generated from server/site while the browser bundle is
-// web/app/site.  Treat the source tree as one coherent input only when the
-// formula script, raw tables, and every weapon record named by weapons.json
-// match byte-for-byte.  This catches a stale copied web bundle before a
-// DamageKit parity result can be mistaken for a data/formula disagreement.
-const mirrorFiles = [
-  'min.js',
-  'weapons.json',
-  'zh.js',
-  'data/json/enemies-min.json',
-].map(compareMirroredFile);
 const canonicalManifest = JSON.parse(fs.readFileSync(path.join(canonicalSite, 'weapons.json'), 'utf8'));
-const weaponMirrors = Object.entries(canonicalManifest).map(([weapon, filename]) => ({
-  weapon,
-  ...compareMirroredFile(path.join('weapons', filename)),
-}));
-const siteMirrorEqual = mirrorFiles.every(row => row.equal)
-  && weaponMirrors.every(row => row.equal);
+// `web/app/site` is an ignored, generated browser artifact.  Its absence on a
+// clean GitHub checkout is expected now that the shipped calculator is native
+// Swift.  Keep the comparison when a developer generated that artifact, but
+// never make the native data/Mod check depend on an obsolete web payload.
+const webMirrorAvailable = fs.existsSync(webSite);
+const mirrorFiles = webMirrorAvailable
+  ? ['min.js', 'weapons.json', 'zh.js', 'data/json/enemies-min.json'].map(compareMirroredFile)
+  : [];
+const weaponMirrors = webMirrorAvailable
+  ? Object.entries(canonicalManifest).map(([weapon, filename]) => ({
+      weapon,
+      ...compareMirroredFile(path.join('weapons', filename)),
+    }))
+  : [];
+const siteMirrorEqual = webMirrorAvailable
+  ? mirrorFiles.every(row => row.equal) && weaponMirrors.every(row => row.equal)
+  : null;
 
 const summary = {
   source: path.relative(root, sourcePath).replace(/\\/g, '/'),
@@ -218,15 +220,16 @@ const summary = {
   siteMirror: {
     canonical: relative(canonicalSite),
     web: relative(webSite),
+    available: webMirrorAvailable,
     equal: siteMirrorEqual,
     files: mirrorFiles,
-    weaponCount: weaponMirrors.length,
+    weaponCount: webMirrorAvailable ? weaponMirrors.length : Object.keys(canonicalManifest).length,
     mismatchedWeapons: weaponMirrors.filter(row => !row.equal),
   },
 };
 
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 if (!summary.equal || !summary.stanceComboOrderEqual || !summary.defaultMeleeStancesEqual
-    || !summary.siteMirror.equal) {
+    || (summary.siteMirror.available && !summary.siteMirror.equal)) {
   process.exitCode = 1;
 }
