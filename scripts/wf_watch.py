@@ -7,7 +7,7 @@
         → wf_inventory.py read            解密 + 快照
         → build_inventory_view.py         生成 view.json / view.html
         → build_app_inventory.py          合并价格 → InventoryData.json
-        → wf_publish.py                   上传到 /var/www/wf/<token>/
+        → wf_publish.py                   验证 payload 后原子发布 manifest
 
 AlecaFrame 每几十秒就会重写一次这个文件，写到一半被读到就会解密失败。
 所以这里不直接在变化瞬间动手：先要求 (mtime, size) 连续两次采样一致，
@@ -29,6 +29,8 @@ AlecaFrame 每几十秒就会重写一次这个文件，写到一半被读到就
 from __future__ import annotations
 
 import argparse
+import gzip
+import hashlib
 import json
 import os
 import subprocess
@@ -40,6 +42,12 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, "scripts")
 DATA = os.path.join(ROOT, "data")
+INVENTORY = os.path.join(DATA, "inventory")
+SNAPSHOT = os.path.join(INVENTORY, "latest.json.gz")
+SNAPSHOT_META = os.path.join(INVENTORY, "latest.meta.json")
+APP_PAYLOAD = os.path.join(ROOT, "WarframeWatch", "Resources", "InventoryData.json")
+PUBLISH_RECEIPT = os.path.join(INVENTORY, "publish_receipt.json")
+SYNC_RECEIPT = os.path.join(INVENTORY, "sync_receipt.json")
 STATE = os.path.join(DATA, "watch_state.json")
 LOG = os.path.join(DATA, "watch.log")
 
@@ -134,22 +142,144 @@ def write_state(state: dict) -> None:
     os.replace(tmp, STATE)
 
 
+def read_json(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            parsed = json.load(fh)
+        return parsed if isinstance(parsed, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def atomic_json_write(path: str, payload: dict) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        json.dump(payload, fh, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def sha256_file(path: str, *, gzip_payload: bool = False) -> str:
+    """Hash what the next stage actually consumes, not mtime or gzip headers."""
+    digest = hashlib.sha256()
+    opener = gzip.open if gzip_payload else open
+    with opener(path, "rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def iso_mtime(path: str) -> str | None:
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+    except OSError:
+        return None
+
+
+def begin_receipt(dat: str) -> dict:
+    try:
+        byte_count = os.path.getsize(dat)
+    except OSError:
+        byte_count = None
+    receipt = {
+        "schemaVersion": 1,
+        "startedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        # The watcher records a fingerprint only to detect writes.  Version
+        # truth below is always a SHA-256 over parsed snapshot/payload bytes.
+        "input": {"mtime": iso_mtime(dat), "bytes": byte_count},
+        "stages": {},
+    }
+    atomic_json_write(SYNC_RECEIPT, receipt)
+    return receipt
+
+
+def record_stage(receipt: dict, name: str, *, ok: bool, **fields) -> None:
+    receipt["stages"][name] = {
+        "ok": ok,
+        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        **fields,
+    }
+    atomic_json_write(SYNC_RECEIPT, receipt)
+
+
 def sync(dat: str, publish: bool) -> bool:
-    """走完整条链路。任一步失败就停在原地，不把半成品推上线。"""
+    """Run one verifiable, version-linked account snapshot publication.
+
+    `sync_receipt.json` deliberately contains hashes and stage times only.  It
+    gives a future investigation a precise answer to “where did this version
+    stop?” without copying raw inventory, credentials, or item instance IDs to
+    logs.
+    """
+    receipt = begin_receipt(dat)
     if not run("wf_inventory.py", ["--dat", dat, "read"]):
+        record_stage(receipt, "sourceRead", ok=False, error="wf_inventory.py failed")
         return False
+    if not os.path.exists(SNAPSHOT):
+        record_stage(receipt, "sourceRead", ok=False, error="latest.json.gz missing")
+        return False
+    try:
+        source_hash = sha256_file(SNAPSHOT, gzip_payload=True)
+    except (OSError, gzip.BadGzipFile) as exc:
+        record_stage(receipt, "sourceRead", ok=False, error=f"snapshot hash failed: {exc}")
+        return False
+    source_meta = read_json(SNAPSHOT_META)
+    record_stage(receipt, "sourceRead", ok=True, sourceHash=source_hash,
+                 sourceObservedAt=iso_mtime(SNAPSHOT),
+                 capturedAt=source_meta.get("captured_at"))
+
     if not run("build_inventory_view.py"):
+        record_stage(receipt, "inventoryView", ok=False,
+                     sourceHash=source_hash, error="build_inventory_view.py failed")
         return False
+    record_stage(receipt, "inventoryView", ok=True, sourceHash=source_hash)
+
     if not run("build_app_inventory.py"):
+        record_stage(receipt, "appPayload", ok=False,
+                     sourceHash=source_hash, error="build_app_inventory.py failed")
         return False
+    if not os.path.exists(APP_PAYLOAD):
+        record_stage(receipt, "appPayload", ok=False,
+                     sourceHash=source_hash, error="InventoryData.json missing")
+        return False
+    try:
+        payload = read_json(APP_PAYLOAD)
+        payload_hash = sha256_file(APP_PAYLOAD)
+        payload_source_doc = payload.get("source")
+        payload_source = payload_source_doc.get("accountHash") \
+            if isinstance(payload_source_doc, dict) else None
+    except OSError as exc:
+        record_stage(receipt, "appPayload", ok=False,
+                     sourceHash=source_hash, error=f"payload hash failed: {exc}")
+        return False
+    if payload_source != source_hash:
+        # This is the invariant that the old builtAt scheme failed to prove.
+        # Do not publish a perfectly valid JSON document if it describes a
+        # different account snapshot than this watcher cycle just read.
+        record_stage(receipt, "appPayload", ok=False, sourceHash=source_hash,
+                     contentHash=payload_hash,
+                     error="payload source hash does not match current snapshot")
+        log("× InventoryData 的 sourceHash 和本轮背包快照不一致，拒绝发布")
+        return False
+    record_stage(receipt, "appPayload", ok=True, sourceHash=source_hash,
+                 contentHash=payload_hash, bytes=os.path.getsize(APP_PAYLOAD))
+
     if not publish:
         log("跳过发布（--no-publish）")
+        record_stage(receipt, "published", ok=True, skipped=True,
+                     sourceHash=source_hash, contentHash=payload_hash)
         return True
     # 排程和背包分两条线：抓不到 browse.wf 就沿用上一份，不阻断发布。
     # 6 小时以内不重复拉，排程一天只变一次。
     run("build_arb_schedule.py", ["--days", "30", "--max-age", "6"])
     if not (os.environ.get("WF_VPS_HOST") and os.environ.get("WF_VPS_PASS")):
         log("× 没有 WF_VPS_HOST / WF_VPS_PASS，无法发布")
+        record_stage(receipt, "published", ok=False, sourceHash=source_hash,
+                     contentHash=payload_hash, error="VPS credentials unavailable")
         return False
     args = []
     token = os.environ.get("WF_PUBLISH_TOKEN")
@@ -159,7 +289,22 @@ def sync(dat: str, publish: bool) -> bool:
     if base:
         args += ["--base-url", base]
     if not run("wf_publish.py", args):
+        record_stage(receipt, "published", ok=False, sourceHash=source_hash,
+                     contentHash=payload_hash, error="wf_publish.py failed")
         return False
+    publish_receipt = read_json(PUBLISH_RECEIPT)
+    if (publish_receipt.get("contentHash") != payload_hash
+            or publish_receipt.get("sourceHash") != source_hash):
+        record_stage(receipt, "published", ok=False, sourceHash=source_hash,
+                     contentHash=payload_hash,
+                     error="publish receipt does not match this payload")
+        log("× VPS 回执的 source/content hash 与本轮不一致，视为发布失败")
+        return False
+    record_stage(receipt, "published", ok=True, sourceHash=source_hash,
+                 contentHash=payload_hash,
+                 status=publish_receipt.get("status"),
+                 snapshotId=publish_receipt.get("snapshotId"),
+                 publishedAt=publish_receipt.get("publishedAt"))
     return True
 
 

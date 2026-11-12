@@ -68,9 +68,14 @@ struct NativeDamageCalculatorView: View {
     private let autoRevealResults: Bool
     private let resultsAnchor = "native-damage-results"
 
-    init(weapon: String? = nil, title: String = "伤害计算") {
+    init(weapon: String? = nil,
+         ownedWeapon: InventoryData.OwnedWeapon? = nil,
+         title: String = "伤害计算") {
         self.title = title
-        _model = StateObject(wrappedValue: NativeDamageCalculatorModel(initialWeaponName: weapon))
+        _model = StateObject(wrappedValue: NativeDamageCalculatorModel(
+            initialWeaponName: weapon,
+            initialOwnedWeapon: ownedWeapon
+        ))
         autoRevealResults = CommandLine.arguments.contains("-calcResult")
     }
 
@@ -154,13 +159,17 @@ struct NativeDamageCalculatorView: View {
                 Text("伤害计算")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                Text("原生 Swift · 与网站配置逐例对拍")
+                Text("原生 Swift · 当前配置在本机计算")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.textMuted)
             }
             Spacer()
             if model.calculating {
                 ProgressView().tint(WFTheme.gold)
+            } else if let elapsed = model.calculationDurationMilliseconds {
+                Text("\(elapsed) ms")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
             }
         }
     }
@@ -189,6 +198,10 @@ struct NativeDamageCalculatorView: View {
                 )
             }
             .buttonStyle(.plain)
+            if let owned = model.ownedWeapon {
+                WFHairline()
+                ownedConfigRow(owned)
+            }
             WFHairline()
             Button { sheet = .enemy } label: {
                 selectionRow(
@@ -202,6 +215,47 @@ struct NativeDamageCalculatorView: View {
             .buttonStyle(.plain)
         }
         .wfCardStyle()
+    }
+
+    private func ownedConfigRow(_ owned: InventoryData.OwnedWeapon) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: WFUI.s2) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("背包配卡")
+                        .font(.wfBody)
+                        .foregroundColor(WFTheme.textSecondary)
+                    Text("已带入这把武器实例的槽位与固有元素；可继续手动调整")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: WFUI.s2)
+                if !owned.configs.isEmpty {
+                    Picker("背包配卡", selection: ownedConfigBinding) {
+                        ForEach(Array(owned.configs.enumerated()), id: \.offset) { index, config in
+                            Text("配置 \(config.label)").tag(index)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(WFTheme.gold)
+                }
+            }
+            if !model.ownedConfigIsExact {
+                Label("此配置有未被自动导入的槽位，当前结果不会把它们误算成满级。",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+                ForEach(model.ownedConfigIssues, id: \.self) { issue in
+                    Text("• \(issue)")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+            }
+        }
+    }
+
+    private var ownedConfigBinding: Binding<Int> {
+        Binding(get: { model.ownedConfigIndex }, set: { model.selectOwnedConfig($0) })
     }
 
     @ViewBuilder

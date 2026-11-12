@@ -2,17 +2,18 @@ import SwiftUI
 import UIKit
 import ImageIO
 
-/// 武器库：选一把枪，装进伤害计算器。
+/// 武器库：先列出账号快照里的武器实例，再把选中的 A/B/C 配卡交给计算器。
 ///
-/// 它本身不算任何东西——计算全在 `DamageCalcView` 的 Swift/DamageKit 内核里。这里只负责
-/// 把 666 把武器按类别摆出来、能搜、带图标，点进去把武器名交给计算器预填。
-/// 顶部另有一个「空计算器」，对应「不从这里选、进去自己配」那条路。
+/// 公共武器数据库只提供图标、中文名和空计算器的手动选择器；它不是这个页面的
+/// 列表来源。这样同名武器的不同实例、继承元素和配置不会被合并丢掉。
 public struct ArsenalView: View {
     @ObservedObject private var catalog = WeaponCatalog.shared
+    @ObservedObject private var inventory = InventoryFeed.shared
 
     @State private var category: WeaponCategory = ArsenalView.seededCategory
     @State private var query = ""
-    @State private var pushed: WeaponEntry?
+    @State private var pushedOwned: InventoryData.OwnedWeapon?
+    @State private var pushedGeneric: WeaponEntry?
     @State private var showCalc = false
     @State private var openCalc = ArsenalView.seededCalc
 
@@ -55,21 +56,33 @@ public struct ArsenalView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 100)
                 }
+                .refreshable { await inventory.refresh() }
             }
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 catalog.load()
+                // Warm the JSON/DataStore once while the user is looking at
+                // their owned list.  We do not compute every config eagerly:
+                // target/environment options would make such cached answers
+                // stale.  The selected config is still prefilled and its real
+                // calculation remains off the main thread.
+                _ = NativeDamageCatalog.shared
+                await inventory.refresh()
                 if let want = ArsenalView.seededWeapon,
-                   pushed == nil,
+                   pushedGeneric == nil,
                    let hit = catalog.weapons.first(where: { $0.n == want }) {
-                    pushed = hit
+                    pushedGeneric = hit
                     showCalc = true
                 }
             }
             // iOS 16 没有 navigationDestination(item:)，用 isPresented + 暂存数据
             .navigationDestination(isPresented: $showCalc) {
-                if let w = pushed {
+                if let owned = pushedOwned {
+                    DamageCalcView(ownedWeapon: owned, title: owned.z)
+                } else if let w = pushedGeneric {
                     DamageCalcView(weapon: w.n, title: w.z)
+                } else {
+                    DamageCalcView(weapon: nil, title: "伤害计算")
                 }
             }
             .navigationDestination(isPresented: $openCalc) {
@@ -86,7 +99,7 @@ public struct ArsenalView: View {
                 Text("武器")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
-                Text(catalog.failed ? "武器数据不可用" : "\(catalog.weapons.count) 把 · 点一把配卡算伤害")
+                Text(weaponSubtitle)
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             }
@@ -164,37 +177,67 @@ public struct ArsenalView: View {
 
     // MARK: - 列表
 
-    private var filtered: [WeaponEntry] {
+    private var ownedWeapons: [InventoryData.OwnedWeapon] {
+        inventory.data?.ownedWeapons ?? []
+    }
+
+    private var weaponSubtitle: String {
+        if inventory.data == nil {
+            return inventory.fetching ? "正在读取背包快照…" : "尚未取得背包快照"
+        }
+        if catalog.failed {
+            return "背包 \(ownedWeapons.count) 把 · 计算器数据不可用"
+        }
+        return "背包 \(ownedWeapons.count) 把 · 点入后预填 A/B/C 配卡"
+    }
+
+    private func categoryMatches(_ weapon: InventoryData.OwnedWeapon) -> Bool {
+        switch category {
+        case .all: return true
+        case .primary: return weapon.category == "Primary"
+        case .secondary: return weapon.category == "Secondary"
+        case .melee: return weapon.category == "Melee"
+        case .archgun: return weapon.category == "Archgun" || weapon.category == "Archmelee"
+        }
+    }
+
+    private var filtered: [InventoryData.OwnedWeapon] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        return catalog.weapons.filter { w in
-            guard category.matches(w) else { return false }
+        return ownedWeapons.filter { w in
+            guard categoryMatches(w) else { return false }
             guard !q.isEmpty else { return true }
-            return w.z.lowercased().contains(q) || w.n.lowercased().contains(q)
+            return w.z.lowercased().contains(q)
+                || (w.calcName?.lowercased().contains(q) ?? false)
         }
     }
 
     private var list: some View {
         let rows = filtered
         return LazyVStack(spacing: 0) {
-            if catalog.failed {
-                Text("武器与计算数据未能加载。请重新安装完整版本后再试。")
+            if inventory.data == nil {
+                Text(inventory.failed
+                     ? "没有可用的背包快照。下拉重试；空计算器仍可手动选武器。"
+                     : "正在读取背包快照…")
                     .font(.wfBody)
-                    .foregroundColor(WFTheme.red)
+                    .foregroundColor(inventory.failed ? WFTheme.red : WFTheme.textMuted)
                     .padding(.vertical, WFUI.s4)
             } else if rows.isEmpty {
-                Text("没有匹配的武器")
+                Text(ownedWeapons.isEmpty ? "这份背包快照没有武器实例。" : "没有匹配的背包武器")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.textMuted)
                     .padding(.vertical, WFUI.s5)
             } else {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { idx, w in
                     Button {
-                        pushed = w
+                        guard canCalculate(w) else { return }
+                        pushedOwned = w
+                        pushedGeneric = nil
                         showCalc = true
                     } label: {
                         row(w)
                     }
                     .buttonStyle(.plain)
+                    .disabled(!canCalculate(w))
                     if idx < rows.count - 1 {
                         WFHairline().padding(.leading, 56)
                     }
@@ -205,9 +248,20 @@ public struct ArsenalView: View {
         .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
     }
 
-    private func row(_ w: WeaponEntry) -> some View {
+    private func catalogEntry(for weapon: InventoryData.OwnedWeapon) -> WeaponEntry? {
+        guard let name = weapon.calcName else { return nil }
+        return catalog.weapons.first(where: { $0.n == name })
+    }
+
+    private func canCalculate(_ weapon: InventoryData.OwnedWeapon) -> Bool {
+        weapon.calcName != nil && catalogEntry(for: weapon) != nil && !catalog.failed
+    }
+
+    private func row(_ w: InventoryData.OwnedWeapon) -> some View {
+        let entry = catalogEntry(for: w)
+        let supported = canCalculate(w)
         HStack(spacing: WFUI.s3) {
-            WeaponThumb(name: w.img, remote: w.iconURL, size: 40)
+            WeaponThumb(name: entry?.img, remote: entry?.iconURL, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(w.z)
@@ -215,16 +269,16 @@ public struct ArsenalView: View {
                     .foregroundColor(WFTheme.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(w.typeLabel)
+                    Text(w.categoryLabel)
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textSecondary)
-                    Text("MR \(w.mr)")
+                    Text("\(w.configs.count) 套配卡")
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
-                    if w.inc {
-                        Text("灵化")
+                    if w.configs.contains(where: { !$0.isExactImport }) {
+                        Text("有未导入槽位")
                             .font(.wfLabel)
-                            .foregroundColor(WFTheme.cyan)
+                            .foregroundColor(WFTheme.gold)
                     }
                 }
             }
@@ -232,17 +286,20 @@ public struct ArsenalView: View {
             Spacer(minLength: WFUI.s2)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(w.atk.count) 段")
+                Text(supported ? "预填计算" : "暂不支持")
                     .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted.opacity(0.7))
+                    .foregroundColor(supported ? WFTheme.cyan : WFTheme.textMuted)
+                if supported {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted.opacity(0.7))
+                }
             }
         }
         .padding(.horizontal, WFUI.s3)
         .padding(.vertical, 9)
         .contentShape(Rectangle())
+        .opacity(supported ? 1 : 0.64)
     }
 }
 

@@ -15,7 +15,9 @@
 """
 from __future__ import annotations
 
+import argparse
 import gzip
+import hashlib
 import json
 import os
 import sys
@@ -25,6 +27,9 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIEW = os.path.join(ROOT, "data", "inventory", "view.json")
 SNAPSHOT = os.path.join(ROOT, "data", "inventory", "latest.json.gz")
+SNAPSHOT_META = os.path.join(ROOT, "data", "inventory", "latest.meta.json")
+GAMEDATA = os.path.join(ROOT, "data", "gamedata", "gamedata.json")
+RIVEN_TAGS = os.path.join(ROOT, "data", "gamedata", "ref", "riven", "riven_tags.json")
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
 ICONS = os.path.join(ROOT, "data", "market", "icons.json")
@@ -39,9 +44,113 @@ REFINE = [("Intact", "I"), ("Exceptional", "E"), ("Flawless", "F"), ("Radiant", 
 REFINE_ZH = {"Intact": "完整", "Exceptional": "优良", "Flawless": "无瑕", "Radiant": "光辉"}
 ERA_ZH = {"Lith": "古纪", "Meso": "前纪", "Neo": "中纪", "Axi": "后纪", "Requiem": "安魂"}
 
+# These category names match the calculator catalogue.  They deliberately do
+# not try to pretend that a sentinel gun or an Arch-melee weapon is a normal
+# primary: the weapon page must still show every owned instance, while the
+# native calculator can explicitly say which types it currently understands.
+OWNED_WEAPON_CATEGORIES = {
+    "LongGuns": "Primary",
+    "Pistols": "Secondary",
+    "Melee": "Melee",
+    "SentinelWeapons": "Companion",
+    "SpaceGuns": "Archgun",
+    "SpaceMelee": "Archmelee",
+}
+
+# DamageKit has the same compatibility aliases in InventoryAdapter.swift.
+# Keeping this small table here makes a generated mobile snapshot preserve
+# installed weapon Arcanes without leaking inventory instance IDs.
+UPGRADE_ALIASES = {
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnKill":
+        ("Primary Merciless", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnKill":
+        ("Secondary Merciless", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageOnKill":
+        ("Melee Merciless", 5),
+}
+
+RIVEN_MAXIMUM = 1_073_741_823.0
+RIVEN_BUFF_ATTENUATION = [0, 1, 0.66000003, 0.5, 0.40000001, 0.34999999]
+RIVEN_CURSE_ATTENUATION = [0, 1, 0.33000001, 0.5, 1.25, 1.5]
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def file_iso(path: str) -> str | None:
+    """Filesystem observation time, used only in local diagnostics.
+
+    It is intentionally not put into the App payload.  A cache file can be
+    rewritten with identical account data, and treating that write time as a
+    new account version is exactly how a newer-looking timestamp can become
+    detached from its actual content.
+    """
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+    except OSError:
+        return None
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def atomic_json_write(path: str, payload: dict) -> None:
+    """Write a complete JSON document or leave the previous one intact."""
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        json.dump(payload, fh, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def as_number(value) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def object_id(value) -> str | None:
+    if isinstance(value, dict):
+        raw = value.get("$oid")
+        return raw if isinstance(raw, str) and raw else None
+    return value if isinstance(value, str) and value else None
+
+
+def fingerprint(value) -> dict | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def short_type_name(value: str) -> str:
+    """A safe diagnostic label; never put a private instance ID in the app."""
+    return value.rstrip("/").rsplit("/", 1)[-1] or "未知条目"
+
+
+def source_sync_iso(inv: dict) -> str | None:
+    raw = inv.get("LastInventorySync")
+    if isinstance(raw, dict):
+        oid = raw.get("$oid")
+        if isinstance(oid, str) and len(oid) >= 8:
+            try:
+                return datetime.fromtimestamp(int(oid[:8], 16), timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            except ValueError:
+                return None
+    return raw if isinstance(raw, str) else None
 
 
 def alias_ref(ref: str) -> str | None:
@@ -64,8 +173,348 @@ def load_json(path: str) -> dict:
         return json.load(fh)
 
 
-def fetch_aya() -> dict:
+def load_inventory_snapshot() -> tuple[dict, bytes, dict]:
+    """Return the decrypted snapshot plus stable, non-secret source metadata.
+
+    `latest.json.gz` is written by `wf_inventory.py` after it has read
+    AlecaFrame's cache.  The SHA-256 is over its plaintext JSON, so gzip header
+    time and filesystem mtime cannot create a fake new account version.
+    """
+    with gzip.open(SNAPSHOT, "rb") as fh:
+        raw = fh.read()
+    inv = json.loads(raw)
+    meta = load_json(SNAPSHOT_META) if os.path.exists(SNAPSHOT_META) else {}
+    return inv, raw, {
+        "accountHash": sha256(raw),
+        "accountSync": source_sync_iso(inv),
+        # Kept for local stage receipts.  The value never participates in the
+        # App payload version comparison.
+        "observedAt": file_iso(SNAPSHOT),
+        "capturedAt": meta.get("captured_at"),
+    }
+
+
+def riven_value(raw: dict, *, curse: bool, disposition: float,
+                tags: dict[str, dict], buff_count: int, curse_count: int,
+                rank: int) -> float | None:
+    tag = raw.get("Tag")
+    row = tags.get(tag) if isinstance(tag, str) else None
+    base = as_number(row.get("value")) if isinstance(row, dict) else None
+    stored = as_number(raw.get("Value"))
+    if base is None or stored is None:
+        return None
+    result = base * 1.5 * disposition * 10 * (-1 if curse else 1)
+    if curse:
+        result *= RIVEN_CURSE_ATTENUATION[min(buff_count, 5)]
+        result *= RIVEN_BUFF_ATTENUATION[min(curse_count, 5)]
+    else:
+        result *= pow(1.25, curse_count)
+        result *= RIVEN_BUFF_ATTENUATION[min(buff_count, 5)]
+    fraction = min(max(stored / RIVEN_MAXIMUM, 0), 1)
+    result *= 0.9 + 0.2 * fraction
+    result *= rank + 1
+    # InventoryAdapter rounds to four decimal places before constructing the
+    # DamageKit Riven.  Do the same at the serialization boundary.
+    return round(result, 4)
+
+
+def riven_name(buffs: list[dict], tags: dict[str, dict]) -> str:
+    ordered = sorted(buffs, key=lambda row: as_number(row.get("Value")) or 0, reverse=True)
+    pieces: list[str] = []
+    for index, buff in enumerate(ordered):
+        tag = buff.get("Tag")
+        row = tags.get(tag) if isinstance(tag, str) else None
+        if not isinstance(row, dict):
+            continue
+        if index == len(ordered) - 1:
+            suffix = row.get("suffix")
+            if isinstance(suffix, str):
+                pieces.append(suffix)
+        elif index == 0:
+            prefix = row.get("prefix")
+            if isinstance(prefix, str) and prefix:
+                pieces.append(prefix[:1].upper() + prefix[1:])
+        else:
+            prefix = row.get("prefix")
+            if isinstance(prefix, str) and prefix:
+                pieces.append("-" + prefix)
+    return "".join(pieces) or "Riven"
+
+
+def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[dict | None, str | None]:
+    """Normalize a Riven exactly as DamageKit's InventoryAdapter does.
+
+    The app receives only the resolved numerical effects.  It never receives
+    the upgrade instance ID, account ID, or the encrypted Aleca cache.
+    """
+    fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+    item_type = upgrade.get("ItemType")
+    if not fp or not isinstance(item_type, str):
+        return None, "紫卡缺少可解析的词条数据"
+    riven_type = item_type.rsplit("/", 1)[-1]
+    rows = riven_tags.get(riven_type)
+    if not isinstance(rows, list) or not rows:
+        return None, f"紫卡类型未映射：{short_type_name(item_type)}"
+    tags = {
+        row["tag"]: row for row in rows
+        if isinstance(row, dict) and isinstance(row.get("tag"), str)
+    }
+    buffs = [x for x in (fp.get("buffs") or []) if isinstance(x, dict)]
+    curses = [x for x in (fp.get("curses") or []) if isinstance(x, dict)]
+    rank = int(as_number(fp.get("lvl")) or 0)
+    disposition = as_number(weapon_data.get("om")) or 1.2
+
+    scalars: dict[str, float] = {}
+    elements: dict[str, float] = {}
+    physical: dict[str, float] = {}
+    factions: dict[str, float] = {}
+
+    scalar_tags = {
+        "WeaponProcTimeMod": "statusDuration",
+        "WeaponCritDamageMod": "critDamage",
+        "WeaponCritChanceMod": "critChance",
+        "WeaponDamageAmountMod": "damage",
+        "WeaponMeleeDamageMod": "damage",
+        "WeaponFireIterationsMod": "multishot",
+        "WeaponStunChanceMod": "statusChance",
+        "WeaponFireRateMod": "fireRate",
+        "WeaponReloadSpeedMod": "reloadSpeed",
+    }
+    element_tags = {
+        "WeaponFireDamageMod": "heat", "WeaponHeatDamageMod": "heat",
+        "WeaponFreezeDamageMod": "cold", "WeaponColdDamageMod": "cold",
+        "WeaponElectricityDamageMod": "electricity",
+        "WeaponToxinDamageMod": "toxin", "WeaponPoisonDamageMod": "toxin",
+    }
+    physical_tags = {
+        "WeaponImpactDamageMod": "impact", "WeaponSlashDamageMod": "slash",
+        "WeaponArmorPiercingDamageMod": "puncture", "WeaponPunctureDamageMod": "puncture",
+    }
+    faction_tags = {
+        "WeaponFactionDamageGrineer": "Grineer",
+        "WeaponMeleeFactionDamageGrineer": "Grineer",
+        "WeaponFactionDamageCorpus": "Corpus",
+        "WeaponMeleeFactionDamageCorpus": "Corpus",
+        "WeaponFactionDamageInfested": "Infested",
+        "WeaponMeleeFactionDamageInfested": "Infested",
+        "WeaponFactionDamageCorrupted": "Orokin",
+    }
+
+    def add(raw: dict, curse: bool) -> None:
+        tag = raw.get("Tag")
+        if not isinstance(tag, str):
+            return
+        value = riven_value(raw, curse=curse, disposition=disposition, tags=tags,
+                            buff_count=len(buffs), curse_count=len(curses), rank=rank)
+        if value is None:
+            return
+        if tag in scalar_tags:
+            key = scalar_tags[tag]
+            scalars[key] = scalars.get(key, 0) + value
+        elif tag in element_tags:
+            key = element_tags[tag]
+            elements[key] = elements.get(key, 0) + value
+        elif tag in physical_tags:
+            key = physical_tags[tag]
+            physical[key] = physical.get(key, 0) + value
+        elif tag in faction_tags:
+            key = faction_tags[tag]
+            factions[key] = factions.get(key, 0) + value
+
+    for buff in buffs:
+        add(buff, False)
+    for curse in curses:
+        add(curse, True)
+
+    result: dict = {"name": riven_name(buffs, tags)}
+    result.update(scalars)
+    if factions:
+        result["factionBonuses"] = factions
+    if elements:
+        result["elements"] = elements
+    if physical:
+        result["physical"] = physical
+    return result, None
+
+
+def progenitor_elements(weapon: dict) -> dict[str, float]:
+    fp = fingerprint(weapon.get("UpgradeFingerprint"))
+    if not fp:
+        return {}
+    names = {
+        "InnateFireDamage": "heat", "InnateHeatDamage": "heat",
+        "InnateFreezeDamage": "cold", "InnateColdDamage": "cold",
+        "InnateElectricityDamage": "electricity",
+        "InnateToxinDamage": "toxin", "InnatePoisonDamage": "toxin",
+        "InnateMagDamage": "magnetic",
+    }
+    result: dict[str, float] = {}
+    for buff in fp.get("buffs") or []:
+        if not isinstance(buff, dict):
+            continue
+        tag = buff.get("Tag")
+        raw_value = as_number(buff.get("Value"))
+        element = names.get(tag) if isinstance(tag, str) else None
+        if element is None or raw_value is None:
+            continue
+        result[element] = result.get(element, 0) + 0.25 + 0.35 * min(
+            max(raw_value / RIVEN_MAXIMUM, 0), 1
+        )
+    return result
+
+
+def calculator_slot(raw_slot: int, category: str) -> int:
+    """DE stores gun Arcanes at raw index 9; DamageKit reserves index 9 for stance."""
+    return 10 if category != "Melee" and raw_slot == 9 else raw_slot
+
+
+def config_label(index: int) -> str:
+    return chr(ord("A") + index) if 0 <= index < 26 else f"配置 {index + 1}"
+
+
+def incarnon_choices(weapon: dict) -> tuple[list[int], str | None]:
+    """Decode DE's compact per-tier SkillTree selection string.
+
+    The game's inventory stores one digit per unlocked evolution tier.  The
+    calculator has its own tier IDs, so the app maps this positional list onto
+    the selected weapon's sorted incarnon tiers only after it loads that weapon
+    definition.
+    """
+    raw = weapon.get("SkillTree")
+    if raw in (None, ""):
+        return [], None
+    if not isinstance(raw, str) or not raw.isdigit():
+        return [], "灵化进化选择格式无法识别，未自动带入"
+    return [int(char) for char in raw], None
+
+
+def build_owned_weapons(inv: dict) -> list[dict]:
+    """Convert the account-only weapon instances into an app-safe view.
+
+    This keeps the instance/config boundary that the old generic weapon list
+    lost: two copies of one weapon remain separate rows and each A/B/C config
+    retains its original slot order.  Raw ItemIds stay local; only a one-way
+    row id reaches the mobile app.
+    """
+    game_data = load_json(GAMEDATA)
+    game_weapons = game_data.get("weapons") if isinstance(game_data, dict) else {}
+    game_mods = game_data.get("mods") if isinstance(game_data, dict) else {}
+    game_weapons = game_weapons if isinstance(game_weapons, dict) else {}
+    game_mods = game_mods if isinstance(game_mods, dict) else {}
+    riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
+
+    upgrades: dict[str, dict] = {}
+    for raw in inv.get("Upgrades") or []:
+        if not isinstance(raw, dict):
+            continue
+        item_id = object_id(raw.get("ItemId"))
+        if item_id:
+            upgrades[item_id] = raw
+
+    result: list[dict] = []
+    for inventory_category, calculator_category in OWNED_WEAPON_CATEGORIES.items():
+        for ordinal, weapon in enumerate(inv.get(inventory_category) or []):
+            if not isinstance(weapon, dict):
+                continue
+            item_type = weapon.get("ItemType")
+            if not isinstance(item_type, str) or not item_type:
+                continue
+            weapon_data = game_weapons.get(item_type)
+            weapon_data = weapon_data if isinstance(weapon_data, dict) else {}
+            calc_name = weapon_data.get("n") if isinstance(weapon_data.get("n"), str) else None
+            display_name = weapon_data.get("z") if isinstance(weapon_data.get("z"), str) else None
+            if not display_name:
+                raw_name = weapon.get("ItemName")
+                display_name = raw_name if isinstance(raw_name, str) and raw_name else short_type_name(item_type)
+            raw_instance_id = object_id(weapon.get("ItemId")) or f"{inventory_category}:{ordinal}:{item_type}"
+            opaque_id = sha256(raw_instance_id.encode("utf-8"))[:20]
+            incarnon, incarnon_issue = incarnon_choices(weapon)
+            configs: list[dict] = []
+            raw_configs = weapon.get("Configs") if isinstance(weapon.get("Configs"), list) else []
+            if not raw_configs:
+                raw_configs = [{}]
+
+            for config_index, raw_config in enumerate(raw_configs):
+                config = raw_config if isinstance(raw_config, dict) else {}
+                slots: list[str | None] = [None] * 11
+                issues: list[str] = []
+                if incarnon_issue:
+                    issues.append(incarnon_issue)
+                riven: dict | None = None
+                riven_slot: int | None = None
+                raw_slots = config.get("Upgrades") if isinstance(config.get("Upgrades"), list) else []
+                for raw_slot, upgrade_id in enumerate(raw_slots):
+                    if not isinstance(upgrade_id, str) or not upgrade_id:
+                        continue
+                    slot = calculator_slot(raw_slot, calculator_category)
+                    if not (0 <= slot < len(slots)):
+                        issues.append(f"第 {raw_slot + 1} 槽超出当前计算器的槽位范围")
+                        continue
+
+                    upgrade = {"ItemType": upgrade_id} if upgrade_id.startswith("/") else upgrades.get(upgrade_id)
+                    if not isinstance(upgrade, dict):
+                        issues.append("有一个已装 Mod 在背包快照中找不到，未把它当作满级 Mod 计算")
+                        continue
+                    upgrade_type = upgrade.get("ItemType")
+                    if not isinstance(upgrade_type, str) or not upgrade_type:
+                        issues.append("有一个已装升级没有类型信息")
+                        continue
+                    fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+                    rank = int(as_number((fp or {}).get("lvl")) or 0)
+
+                    if "Randomized" in upgrade_type:
+                        parsed, error = decode_riven(upgrade, weapon_data, riven_tags)
+                        if error:
+                            issues.append(error)
+                        elif riven is not None:
+                            issues.append("同一配置含有多个紫卡，当前计算器只能保留一个")
+                        else:
+                            riven, riven_slot = parsed, slot
+                        continue
+
+                    alias = UPGRADE_ALIASES.get(upgrade_type)
+                    if alias:
+                        name, maximum = alias
+                    else:
+                        mod_data = game_mods.get(upgrade_type)
+                        if not isinstance(mod_data, dict) or not isinstance(mod_data.get("n"), str):
+                            issues.append(f"未映射的武器升级：{short_type_name(upgrade_type)}")
+                            continue
+                        name = mod_data["n"]
+                        maximum = int(as_number(mod_data.get("mx")) or 0)
+                    if rank != maximum:
+                        issues.append(f"{name} 不是满级（{rank}/{maximum}）；没有把它误当成满级导入")
+                        continue
+                    slots[slot] = name
+
+                configs.append({
+                    "l": config_label(config_index),
+                    "s": slots,
+                    "r": riven,
+                    "rs": riven_slot,
+                    "exact": not issues,
+                    "issues": issues,
+                })
+
+            result.append({
+                "id": opaque_id,
+                "n": calc_name,
+                "z": display_name,
+                "c": calculator_category,
+                "k": inventory_category,
+                "p": progenitor_elements(weapon),
+                "inc": incarnon,
+                "cfg": configs,
+            })
+
+    result.sort(key=lambda row: ((row.get("z") or "").casefold(), row["id"]))
+    return result
+
+
+def fetch_aya(*, offline: bool = False) -> dict:
     """当期 Varzia 的 Aya 遗物。拿不到就用上次缓存，不阻断构建。"""
+    if offline:
+        return load_json(CACHE) if os.path.exists(CACHE) else {"relics": [], "fetchedAt": None}
     try:
         req = urllib.request.Request(WS_URL, headers={
             "Accept": "application/json", "User-Agent": "WarframeWatch/1.0",
@@ -90,9 +539,7 @@ def fetch_aya() -> dict:
             "location": vt.get("location"),
             "relics": rows,
         }
-        os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-        with open(CACHE, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, ensure_ascii=False, indent=1)
+        atomic_json_write(CACHE, payload)
         return payload
     except Exception as exc:                                    # noqa: BLE001
         print(f"  Aya 拉取失败（用缓存）：{exc}")
@@ -109,8 +556,9 @@ def relic_id_zh(raw: str) -> str:
     return raw
 
 
-def build() -> dict:
+def build(*, offline: bool = False) -> dict:
     view = load_json(VIEW)
+    inv, _raw_snapshot, source = load_inventory_snapshot()
     items = {x["ref"]: x for x in load_json(MARKET_ITEMS)["items"] if x.get("ref")}
     prices = load_json(MARKET_PRICES)["items"]
     icons = load_json(ICONS) if os.path.exists(ICONS) else {"slugs": {}, "eras": {}}
@@ -215,7 +663,7 @@ def build() -> dict:
     relics.sort(key=lambda x: (-x["n"] * x["p"], x["id"]))
 
     # ---- 当期 Aya
-    aya_doc = fetch_aya()
+    aya_doc = fetch_aya(offline=offline)
     by_relic_ref = {r["ref"]: r["id"] for r in view["relics"] if r.get("ref")}
     owned_ids = {r["id"] for r in view["relics"]}
     price_by_id = {r["id"]: r["p"] for r in relics}
@@ -241,38 +689,22 @@ def build() -> dict:
         })
 
     # ---- 概况
-    profile = {}
-    snap = os.path.join(ROOT, "data", "inventory", "latest.json.gz")
-    if os.path.exists(snap):
-        try:
-            inv = json.loads(gzip.open(snap).read())
-            # LastInventorySync 是 MongoDB ObjectId，前 4 字节就是同步时刻的
-            # Unix 时间戳；它不是字符串，直接当字符串用会拿到 None。
-            sync_raw = inv.get("LastInventorySync")
-            sync_iso = None
-            if isinstance(sync_raw, dict):
-                oid = sync_raw.get("$oid")
-                if isinstance(oid, str) and len(oid) >= 8:
-                    try:
-                        sync_iso = datetime.fromtimestamp(
-                            int(oid[:8], 16), timezone.utc
-                        ).strftime("%Y-%m-%dT%H:%M:%SZ")
-                    except ValueError:
-                        sync_iso = None
-            elif isinstance(sync_raw, str):
-                sync_iso = sync_raw
-            profile = {
-                "mr": int(inv.get("PlayerLevel") or 0),
-                "plat": int(inv.get("PremiumCreditsFree") or 0) + int(inv.get("PremiumCredits") or 0),
-                "credits": int(inv.get("RegularCredits") or 0),
-                "sync": sync_iso,
-            }
-        except Exception:                                       # noqa: BLE001
-            pass
+    profile = {
+        "mr": int(inv.get("PlayerLevel") or 0),
+        "plat": int(inv.get("PremiumCreditsFree") or 0) + int(inv.get("PremiumCredits") or 0),
+        "credits": int(inv.get("RegularCredits") or 0),
+        "sync": source.get("accountSync"),
+    }
 
     counts = view["counts"]
     return {
-        "builtAt": now_iso(),
+        # Kept for old bundled samples.  It is no longer used to decide which
+        # snapshot wins: that decision is the immutable manifest hash.
+        "builtAt": source.get("accountSync") or "1970-01-01T00:00:00Z",
+        "source": {
+            "accountHash": source["accountHash"],
+            "accountSync": source.get("accountSync"),
+        },
         "marketAt": load_json(MARKET_PRICES).get("ts"),
         "profile": profile,
         "totals": {
@@ -295,6 +727,7 @@ def build() -> dict:
         },
         "sets": sets,
         "relics": relics,
+        "ownedWeapons": build_owned_weapons(inv),
     }
 
 
@@ -321,14 +754,19 @@ def guess_relic_id(ref: str, names: dict[str, str]) -> str | None:
     return None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", default=OUT, help="输出路径；默认写入 App 资源")
+    parser.add_argument("--offline", action="store_true",
+                        help="不访问 warframestat；Aya 只用已有本地缓存")
+    args = parser.parse_args(argv)
+
     if not os.path.exists(MARKET_PRICES):
         print("没有价格快照，先跑 `wf_market.py sync`", file=sys.stderr)
         return 1
 
-    # builtAt 打的是「现在几点」，不是「数据是哪一刻的」。所以链路里只要有一步没产出
-    # 新文件，结果就是时间戳一路更新、内容一直是几天前那份，从界面上根本看不出来。
-    # 这里直接拿 view.json 和背包快照比时间，旧了就停下，别把陈货当新货推上去。
+    # view 是同一份账号快照的派生物。它比 latest.json.gz 旧时，停止而不是用旧
+    # 资产列表重新打一个“新”版本；真正的版本身份则由发布清单的 payload hash 决定。
     if os.path.exists(SNAPSHOT) and os.path.exists(VIEW):
         if os.path.getmtime(VIEW) + 60 < os.path.getmtime(SNAPSHOT):
             print(
@@ -339,17 +777,16 @@ def main() -> int:
             )
             return 1
 
-    data = build()
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))
-    size = os.path.getsize(OUT)
+    data = build(offline=args.offline)
+    atomic_json_write(args.out, data)
+    size = os.path.getsize(args.out)
 
     t = data["totals"]
     print(f"套装 {t['setsAll']}（已制成 {t['setsOwned']} / 可制造 {t['setsReady']}）")
     print(f"散件可变现 {t['loosePlat']} p · {t['looseDucats']} Ducats")
     print(f"遗物 {t['relicKinds']} 代号 {t['relicUnits']} 个 · Aya {len(data['aya']['items'])} 项")
-    print(f"-> {OUT}  {size//1024} KB")
+    print(f"背包武器 {len(data['ownedWeapons'])} 把 · 账号快照 {data['source']['accountHash'][:12]}")
+    print(f"-> {args.out}  {size//1024} KB")
     return 0
 
 

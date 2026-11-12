@@ -327,7 +327,9 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
 
-          # 账号快照在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          # 账号版本 manifest 在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          # wf_publish.py 保持路径为 inventory.json，但该文件现在只指向经
+          # sha256 校验的不可变 payload，App 不会把时间和别的版本混在一起。
           INVENTORY_URL="${{ secrets.INVENTORY_URL }}"
           if [ -n "$INVENTORY_URL" ]; then
             /usr/libexec/PlistBuddy -c "Add :InventoryURL string $INVENTORY_URL" "$APP/Info.plist"

@@ -88,7 +88,9 @@ public struct AssetsView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
                 HStack(spacing: 5) {
-                    Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
+                    Text("背包源 \(AssetFormat.stamp(data.profile.sync)) · "
+                         + "已发布 \(AssetFormat.stamp(feed.manifest?.publishedAt)) · "
+                         + "价格 \(AssetFormat.stamp(data.marketAt))")
                     if feed.fetching {
                         ProgressView()
                             .controlSize(.mini)

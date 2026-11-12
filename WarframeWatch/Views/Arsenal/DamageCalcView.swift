@@ -9,14 +9,18 @@ import SwiftUI
 /// comparison oracle in development tests; it is not executed in the app.
 public struct DamageCalcView: View {
     private let weapon: String?
+    private let ownedWeapon: InventoryData.OwnedWeapon?
     private let title: String
 
-    public init(weapon: String? = nil, title: String = "伤害计算") {
+    public init(weapon: String? = nil,
+                ownedWeapon: InventoryData.OwnedWeapon? = nil,
+                title: String = "伤害计算") {
         self.weapon = weapon
+        self.ownedWeapon = ownedWeapon
         self.title = title
     }
 
     public var body: some View {
-        NativeDamageCalculatorView(weapon: weapon, title: title)
+        NativeDamageCalculatorView(weapon: weapon, ownedWeapon: ownedWeapon, title: title)
     }
 }

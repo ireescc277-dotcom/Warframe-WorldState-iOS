@@ -1,4 +1,5 @@
 import Combine
+import Dispatch
 import Foundation
 import DamageKit
 
@@ -222,11 +223,48 @@ struct NativeRivenDraft: Hashable {
     }
 }
 
+extension NativeRivenDraft {
+    /// Inventory export already resolves the Riven with the same contract as
+    /// DamageKit.InventoryAdapter.  This conversion only changes decimal data
+    /// units into the percentage fields shown by SwiftUI.
+    init(imported value: InventoryData.OwnedWeapon.ImportedRiven) {
+        self.init()
+        enabled = true
+        name = value.name
+        damagePercent = (value.damage ?? 0) * 100
+        multishotPercent = (value.multishot ?? 0) * 100
+        critChancePercent = (value.critChance ?? 0) * 100
+        critDamagePercent = (value.critDamage ?? 0) * 100
+        statusChancePercent = (value.statusChance ?? 0) * 100
+        statusDurationPercent = (value.statusDuration ?? 0) * 100
+        fireRatePercent = (value.fireRate ?? 0) * 100
+        reloadSpeedPercent = (value.reloadSpeed ?? 0) * 100
+        factionPercent = (value.faction ?? 0) * 100
+        heatPercent = (value.elements?["heat"] ?? 0) * 100
+        coldPercent = (value.elements?["cold"] ?? 0) * 100
+        electricityPercent = (value.elements?["electricity"] ?? 0) * 100
+        toxinPercent = (value.elements?["toxin"] ?? 0) * 100
+        impactPercent = (value.physical?["impact"] ?? 0) * 100
+        puncturePercent = (value.physical?["puncture"] ?? 0) * 100
+        slashPercent = (value.physical?["slash"] ?? 0) * 100
+        grineerFactionPercent = (value.factionBonuses?["Grineer"] ?? 0) * 100
+        corpusFactionPercent = (value.factionBonuses?["Corpus"] ?? 0) * 100
+        infestedFactionPercent = (value.factionBonuses?["Infested"] ?? 0) * 100
+        orokinFactionPercent = (value.factionBonuses?["Orokin"] ?? 0) * 100
+    }
+}
+
 @MainActor
 final class NativeDamageCalculatorModel: ObservableObject {
     let catalog: NativeDamageCatalog
 
     @Published var weaponName: String?
+    /// The selected account instance, if this calculator was opened from the
+    /// owned-weapons page.  It is not a public weapon definition.
+    @Published private(set) var ownedWeapon: InventoryData.OwnedWeapon?
+    @Published private(set) var ownedConfigIndex = 0
+    @Published private(set) var ownedConfigIssues: [String] = []
+    @Published private(set) var ownedConfigIsExact = true
     @Published var enemyName: String?
     @Published var level: Int = 100
     @Published var weaponSlots: [String?] = Array(repeating: nil, count: 11)
@@ -302,16 +340,24 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published private(set) var result: DamageKit.Result?
     @Published private(set) var calculationError: String?
     @Published private(set) var calculating = false
+    @Published private(set) var calculationDurationMilliseconds: Int?
 
     private var calculationGeneration = UUID()
+    private var ownedProgenitorElements: [String: Double] = [:]
 
-    init(initialWeaponName: String? = nil, catalog suppliedCatalog: NativeDamageCatalog? = nil) {
+    init(initialWeaponName: String? = nil,
+         initialOwnedWeapon: InventoryData.OwnedWeapon? = nil,
+         catalog suppliedCatalog: NativeDamageCatalog? = nil) {
         let catalog = suppliedCatalog ?? .shared
         self.catalog = catalog
-        weaponName = initialWeaponName
+        ownedWeapon = initialOwnedWeapon
+        weaponName = initialOwnedWeapon?.calcName ?? initialWeaponName
         enemyName = catalog.enemies.first(where: { $0.name == "Corrupted Heavy Gunner" })?.name
             ?? catalog.enemies.first?.name
         reloadSelectedData(resetBuildWhenWeaponChanges: false)
+        if initialOwnedWeapon != nil {
+            applyOwnedConfig(at: 0, recalculate: false)
+        }
     }
 
     /// Site slot IDs are stable: main 0...7, Exilus 8, stance 9 (melee only),
@@ -358,6 +404,12 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     var selectedWeaponModSlotCount: Int {
         selectedSlottedMods.count + (riven.enabled && riven.slot != nil ? 1 : 0)
+    }
+
+    var selectedOwnedConfig: InventoryData.OwnedWeapon.Config? {
+        guard let ownedWeapon,
+              ownedWeapon.configs.indices.contains(ownedConfigIndex) else { return nil }
+        return ownedWeapon.configs[ownedConfigIndex]
     }
 
     var availableStanceCombos: [MeleeStanceCombo] {
@@ -456,6 +508,11 @@ final class NativeDamageCalculatorModel: ObservableObject {
 
     func selectWeapon(_ name: String) {
         guard weaponName != name else { return }
+        ownedWeapon = nil
+        ownedConfigIndex = 0
+        ownedConfigIssues = []
+        ownedConfigIsExact = true
+        ownedProgenitorElements = [:]
         weaponName = name
         weaponSlots = Array(repeating: nil, count: 11)
         stanceCombo = nil
@@ -465,6 +522,45 @@ final class NativeDamageCalculatorModel: ObservableObject {
         selectedAttackCombinationIDs = []
         reloadSelectedData(resetBuildWhenWeaponChanges: false)
         calculate()
+    }
+
+    func selectOwnedConfig(_ index: Int) {
+        applyOwnedConfig(at: index, recalculate: true)
+    }
+
+    private func applyOwnedConfig(at index: Int, recalculate: Bool) {
+        guard let ownedWeapon, ownedWeapon.configs.indices.contains(index) else { return }
+        let config = ownedWeapon.configs[index]
+        ownedConfigIndex = index
+        weaponName = ownedWeapon.calcName
+        weaponSlots = config.normalizedSlots
+        ownedProgenitorElements = ownedWeapon.progenitorElements
+        ownedConfigIssues = config.issues
+        ownedConfigIsExact = config.isExactImport
+        if let imported = config.riven {
+            var draft = NativeRivenDraft(imported: imported)
+            draft.slot = config.rivenSlot
+            riven = draft
+        } else {
+            riven = NativeRivenDraft()
+        }
+        stanceCombo = nil
+        incarnonSelections = [:]
+        conditionalStacks = [:]
+        selectedAttackCombinationIDs = []
+        reloadSelectedData(resetBuildWhenWeaponChanges: false)
+        if let tiers = selectedWeapon?.incarnon {
+            for (position, selectedOption) in ownedWeapon.incarnonChoices.enumerated()
+                where tiers.indices.contains(position)
+                    && tiers[position].options.indices.contains(selectedOption) {
+                incarnonSelections[tiers[position].tier] = selectedOption
+            }
+        }
+        if weaponSlots.indices.contains(9), weaponSlots[9] != nil {
+            stanceCombo = availableStanceCombos.first?.name
+        }
+        pruneConditionState()
+        if recalculate { calculate() }
     }
 
     func selectEnemy(_ name: String) {
@@ -629,6 +725,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
             level: max(1, level),
             build: Build(mods: selectedMods, slottedMods: selectedSlottedMods,
                          riven: riven.resolved, rivenSlot: riven.slot,
+                          progenitorElements: ownedProgenitorElements,
                          incarnonPerks: incarnonSelections.keys.sorted().compactMap { tier in
                              incarnonSelections[tier].map { "\(tier):\($0)" }
                          }, stanceCombo: stanceCombo),
@@ -673,11 +770,14 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculating = true
         calculationError = nil
         let calculator = Calculator(store: store)
+        let started = DispatchTime.now().uptimeNanoseconds
         Task.detached(priority: .userInitiated) { [weak self] in
             let output = calculator.evaluate(input)
+            let elapsed = Int((DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
             await MainActor.run {
                 guard let self, self.calculationGeneration == generation else { return }
                 self.result = output
+                self.calculationDurationMilliseconds = elapsed
                 self.calculating = false
             }
         }
