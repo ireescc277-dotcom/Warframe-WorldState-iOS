@@ -862,7 +862,7 @@ def incarnon_choices(weapon: dict) -> tuple[list[int], str | None]:
     return [int(char) for char in raw], None
 
 
-def build_owned_weapons(inv: dict) -> list[dict]:
+def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> list[dict]:
     """Convert the account-only weapon instances into an app-safe view.
 
     This keeps the instance/config boundary that the old generic weapon list
@@ -870,7 +870,14 @@ def build_owned_weapons(inv: dict) -> list[dict]:
     retains its original slot order.  Raw ItemIds stay local; only a one-way
     row id reaches the mobile app.
     """
-    game_data = load_json(GAMEDATA)
+    # The optional data injection keeps the importer independently testable in
+    # a clean checkout, where the generated game-data cache is intentionally
+    # absent. Production callers leave it unset and read the current cache.
+    game_data = (
+        game_data_override
+        if isinstance(game_data_override, dict)
+        else load_json(GAMEDATA)
+    )
     game_weapons = game_data.get("weapons") if isinstance(game_data, dict) else {}
     game_mods = game_data.get("mods") if isinstance(game_data, dict) else {}
     game_weapons = game_weapons if isinstance(game_weapons, dict) else {}

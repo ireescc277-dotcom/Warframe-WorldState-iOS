@@ -12,10 +12,8 @@ import json
 import unittest
 
 from build_app_inventory import (
-    GAMEDATA,
     build_owned_weapons,
     damagekit_ranked_action_values,
-    load_json,
     resolve_config_upgrade,
     source_stat_coefficients,
     source_proven_non_damage_reason,
@@ -175,12 +173,23 @@ class SourceProvenNonDamageTests(unittest.TestCase):
         }))
 
     def test_rank_ambiguous_hush_remains_visible_without_tainting_damage_result(self):
-        game_data = load_json(GAMEDATA)
-        weapon_type = next(
-            key for key, value in game_data["weapons"].items()
-            if isinstance(value, dict) and value.get("n") == "Braton"
-        )
+        weapon_type = "/Lotus/Weapons/Tenno/Rifle/Braton"
         hush_type = "/Lotus/Upgrades/Mods/Rifle/WeaponNoiseReductionMod"
+        game_data = {
+            "weapons": {
+                weapon_type: {"n": "Braton", "z": "Braton"},
+            },
+            "mods": {
+                hush_type: {
+                    "n": "Hush",
+                    "mx": 3,
+                    "lv": [
+                        ["Reduces the chance an enemy will hear gunfire by 25%."],
+                        ["Reduces the chance an enemy will hear gunfire by 100%."],
+                    ],
+                },
+            },
+        }
         result = build_owned_weapons({
             "LongGuns": [{
                 "ItemId": "test-braton",
@@ -189,7 +198,7 @@ class SourceProvenNonDamageTests(unittest.TestCase):
             }],
             "Upgrades": [],
             "RawUpgrades": [],
-        })
+        }, game_data_override=game_data)
 
         config = result[0]["cfg"][0]
         self.assertTrue(config["exact"])
