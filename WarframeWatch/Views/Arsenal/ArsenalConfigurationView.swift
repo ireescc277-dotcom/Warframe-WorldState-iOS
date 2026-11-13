@@ -537,7 +537,7 @@ struct ArsenalWeaponConfigurationView: View {
         }
     }
 
-    private static func rivenStatLines(_ riven: InventoryData.OwnedWeapon.Config.ImportedRiven) -> [String] {
+    private static func rivenStatLines(_ riven: InventoryData.OwnedWeapon.ImportedRiven) -> [String] {
         var lines: [String] = []
         let fmt: (String, Double?) -> Void = { label, value in
             guard let value, abs(value) > 0.0001 else { return }

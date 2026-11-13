@@ -79,53 +79,55 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
 
     func testCurrentSelfBuffAndExternalSquadBuffAreBothRetained() throws {
         let current = try frame(id: "current", name: "Saryn", abilityName: "Toxic Lash")
-        let ally = try frame(
-            id: "ally",
-            name: "Rhino",
-            abilityName: "Roar",
-            strengthBonus: 0.30
-        )
         let model = NativeDamageCalculatorModel(
             initialOwnedWarframe: current,
-            availableWarframes: [current, ally]
+            availableWarframes: [current]
         )
         model.setCurrentWarframeBuff("scenario-toxic-lash", active: true)
 
-        var draft = NativeExternalWarframeBuffDraft(casterID: ally.id)
-        draft.candidateID = "scenario-roar"
+        let draft = NativeExternalWarframeBuffDraft(
+            template: .roarNative,
+            abilityStrengthPercent: 130,
+            active: true
+        )
         model.externalWarframeBuffs = [draft]
 
-        // Toxic Lash is self-only, while this Roar comes from the other
-        // caster's 130% Strength configuration. They are distinct active
-        // effects and must coexist in the calculation input.
+        // Toxic Lash is self-only, while this Roar comes from an independent
+        // teammate caster's 130% Strength setting. They must coexist.
         XCTAssertEqual(model.resolvedScenarioEffects.value(for: .toxicLash), 0.30,
                        accuracy: 0.000_001)
         XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65,
                        accuracy: 0.000_001)
     }
 
-    func testCurrentFrameCannotRemainAnExternalCaster() throws {
-        let current = try frame(id: "current", name: "Current", abilityName: "Toxic Lash")
-        let ally = try frame(id: "ally", name: "Rhino", abilityName: "Roar")
+    func testOperatorFocusAddsToCurrentWarframeStrengthButNotExternalCaster() throws {
+        let current = try frame(
+            id: "current",
+            name: "Saryn",
+            abilityName: "Toxic Lash",
+            strengthBonus: 0.20
+        )
         let model = NativeDamageCalculatorModel(
             initialOwnedWarframe: current,
-            availableWarframes: [current, ally]
+            availableWarframes: [current]
         )
+        model.setCurrentWarframeBuff("scenario-toxic-lash", active: true)
+        model.operatorFocus.slingStrength = true
 
-        XCTAssertEqual(model.availableExternalWarframes.map(\.id), ["ally"])
-
-        var draft = NativeExternalWarframeBuffDraft(casterID: ally.id)
-        draft.candidateID = "scenario-roar"
+        let draft = NativeExternalWarframeBuffDraft(
+            template: .roarNative,
+            abilityStrengthPercent: 130,
+            active: true
+        )
         model.externalWarframeBuffs = [draft]
-        XCTAssertEqual(model.externalCaster(for: draft)?.id, ally.id)
 
-        model.selectCurrentWarframe(ally.id)
-
-        XCTAssertEqual(model.currentWarframe?.id, ally.id)
-        XCTAssertEqual(model.availableExternalWarframes.map(\.id), ["current"])
-        XCTAssertNil(model.externalWarframeBuffs[0].casterID)
-        XCTAssertNil(model.externalWarframeBuffs[0].candidateID)
-        XCTAssertNil(model.externalCaster(for: model.externalWarframeBuffs[0]))
+        // Current frame (100% + 20%) + Sling Strength (+40%) = 160% -> Toxic Lash 0.30 * 1.60 = 0.48
+        XCTAssertEqual(model.currentWarframeStrength.multiplier, 1.60, accuracy: 0.000_001)
+        XCTAssertEqual(model.resolvedScenarioEffects.value(for: .toxicLash), 0.48,
+                       accuracy: 0.000_001)
+        // Teammate caster specifies their final Strength (130%), so Focus does not stack again.
+        XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65,
+                       accuracy: 0.000_001)
     }
 
     func testSameSquadBuffUsesStrongestSourceRatherThanDoubleCounting() throws {
@@ -135,23 +137,20 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
             abilityName: "Roar",
             strengthBonus: 0.20
         )
-        let ally = try frame(
-            id: "ally",
-            name: "Ally Rhino",
-            abilityName: "Roar",
-            strengthBonus: 0.30
-        )
         let model = NativeDamageCalculatorModel(
             initialOwnedWarframe: current,
-            availableWarframes: [current, ally]
+            availableWarframes: [current]
         )
         model.setCurrentWarframeBuff("scenario-roar", active: true)
 
-        var draft = NativeExternalWarframeBuffDraft(casterID: ally.id)
-        draft.candidateID = "scenario-roar"
+        let draft = NativeExternalWarframeBuffDraft(
+            template: .roarNative,
+            abilityStrengthPercent: 130,
+            active: true
+        )
         model.externalWarframeBuffs = [draft]
 
-        // Player Roar resolves to 50% * 1.20 = 60%; ally Roar resolves to
+        // Player Roar resolves to 50% * 1.20 = 60%; teammate Roar resolves to
         // 50% * 1.30 = 65%.  These are the same non-stacking squad effect, so
         // DamageKit receives the stronger 65% value, not their 125% sum.
         XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65, accuracy: 0.000_001)
