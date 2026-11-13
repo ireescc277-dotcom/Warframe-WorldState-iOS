@@ -206,4 +206,33 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         XCTAssertTrue(draft.selectedStats.contains(.gas))
         XCTAssertEqual(draft.resolved?.elements?["gas"] ?? 0, 0.875, accuracy: 0.000_001)
     }
+
+    func testImportedRivenTimingStatsAndDisplayOnlyTermsStaySeparate() throws {
+        let json = """
+        {
+          "name": "Scopebin",
+          "magazineSize": 0.42,
+          "meleeComboEfficiency": 0.50,
+          "displayOnly": [{
+            "tag": "WeaponZoomFovMod",
+            "label": "变焦",
+            "value": 0.18
+          }]
+        }
+        """.data(using: .utf8)!
+        let imported = try JSONDecoder().decode(
+            InventoryData.OwnedWeapon.ImportedRiven.self,
+            from: json
+        )
+
+        let draft = NativeRivenDraft(imported: imported)
+        XCTAssertTrue(draft.selectedStats.contains(.magazineSize))
+        XCTAssertTrue(draft.selectedStats.contains(.meleeComboEfficiency))
+        XCTAssertEqual(draft.value(for: .magazineSize), 42, accuracy: 0.000_001)
+        XCTAssertEqual(draft.value(for: .meleeComboEfficiency), 50, accuracy: 0.000_001)
+        XCTAssertEqual(draft.resolved?.magazineSize ?? 0, 0.42, accuracy: 0.000_001)
+        XCTAssertEqual(draft.resolved?.meleeComboEfficiency ?? 0, 0.50, accuracy: 0.000_001)
+        XCTAssertEqual(draft.displayOnlyEffects.map(\.tag), ["WeaponZoomFovMod"])
+        XCTAssertEqual(draft.displayOnlyEffects.map(\.value), [0.18])
+    }
 }

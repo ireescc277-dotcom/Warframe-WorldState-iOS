@@ -341,6 +341,8 @@ public struct InventoryData: Decodable {
             public let statusDuration: Double?
             public let fireRate: Double?
             public let reloadSpeed: Double?
+            public let magazineSize: Double?
+            public let meleeComboEfficiency: Double?
             public let faction: Double?
             public let factionBonuses: [String: Double]?
             public let elements: [String: Double]?
@@ -349,10 +351,22 @@ public struct InventoryData: Decodable {
             /// corresponding damage rule.  They are deliberately visible,
             /// rather than guessed as another stat or silently discarded.
             public let unresolved: [UnresolvedEffect]?
+            /// Real source-card terms retained for audit that do not enter the
+            /// current already-landed-hit simulation (for example zoom).
+            public let displayOnly: [DisplayOnlyEffect]?
 
             public struct UnresolvedEffect: Decodable, Hashable, Identifiable {
                 public let tag: String
                 public let label: String
+
+                public var id: String { tag }
+            }
+
+            public struct DisplayOnlyEffect: Decodable, Hashable, Identifiable {
+                public let tag: String
+                public let label: String
+                /// Decimal display unit: `0.45` means `+45%`.
+                public let value: Double
 
                 public var id: String { tag }
             }

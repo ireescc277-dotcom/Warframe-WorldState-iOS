@@ -253,6 +253,24 @@ class OfficialRivenTagTests(unittest.TestCase):
                     "suffixTag": "tus",
                     "upgradeValues": [{"value": 0.01}],
                 },
+                {
+                    "tag": "WeaponClipMaxMod",
+                    "prefixTag": "magna",
+                    "suffixTag": "bin",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponMeleeComboEfficiencyMod",
+                    "prefixTag": "combo",
+                    "suffixTag": "save",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponZoomFovMod",
+                    "prefixTag": "zoom",
+                    "suffixTag": "scope",
+                    "upgradeValues": [{"value": 0.01}],
+                },
             ],
         }])
 
@@ -263,6 +281,7 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertEqual(set(by_tag), {
             "WeaponBlastDamageMod", "WeaponCorrosiveDamageMod", "WeaponGasDamageMod",
             "WeaponMagneticDamageMod", "WeaponRadiationDamageMod", "WeaponViralDamageMod",
+            "WeaponClipMaxMod", "WeaponMeleeComboEfficiencyMod", "WeaponZoomFovMod",
         })
         self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["value"], 0.01)
         self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["prefix"], "cori")
@@ -285,6 +304,61 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(riven.get("unresolved"), None)
         self.assertAlmostEqual(riven["elements"]["corrosive"], 1.782)
+
+    def test_riven_magazine_and_heavy_efficiency_enter_damagekit_inputs(self):
+        upgrade = {
+            "ItemType": "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare",
+            "UpgradeFingerprint": json.dumps({
+                "lvl": 8,
+                "buffs": [
+                    {"Tag": "WeaponClipMaxMod", "Value": RIVEN_MAXIMUM},
+                    {"Tag": "WeaponMeleeComboEfficiencyMod", "Value": RIVEN_MAXIMUM},
+                ],
+                "curses": [],
+            }),
+        }
+
+        riven, error = decode_riven(upgrade, {"om": 1.2}, self.official_riven_tags())
+
+        self.assertIsNone(error)
+        self.assertEqual(riven.get("unresolved"), None)
+        self.assertNotIn("displayOnly", riven)
+        self.assertGreater(riven["magazineSize"], 0)
+        self.assertGreater(riven["meleeComboEfficiency"], 0)
+
+    def test_zoom_riven_stays_auditable_without_tainting_damage_import(self):
+        weapon_type = "/Lotus/Weapons/Test/Tonkor"
+        riven_type = "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare"
+        result = build_owned_weapons({
+            "LongGuns": [{
+                "ItemId": "test-tonkor",
+                "ItemType": weapon_type,
+                "Configs": [{"Upgrades": ["test-riven"]}],
+            }],
+            "Upgrades": [{
+                "ItemId": "test-riven",
+                "ItemType": riven_type,
+                "UpgradeFingerprint": json.dumps({
+                    "lvl": 8,
+                    "buffs": [{"Tag": "WeaponZoomFovMod", "Value": RIVEN_MAXIMUM}],
+                    "curses": [],
+                }),
+            }],
+            "RawUpgrades": [],
+        }, game_data_override={
+            "weapons": {weapon_type: {"n": "Tonkor", "z": "征服榴炮", "om": 1.2}},
+            "mods": {},
+            "rivenTags": self.official_riven_tags(),
+        })
+
+        config = result[0]["cfg"][0]
+        self.assertTrue(config["exact"])
+        self.assertEqual(config["issues"], [])
+        self.assertEqual(config["r"].get("unresolved"), None)
+        self.assertEqual(len(config["r"]["displayOnly"]), 1)
+        self.assertEqual(config["r"]["displayOnly"][0]["tag"], "WeaponZoomFovMod")
+        self.assertEqual(config["r"]["displayOnly"][0]["label"], "变焦")
+        self.assertGreater(config["r"]["displayOnly"][0]["value"], 0)
 
     def test_owned_weapon_import_prefers_current_official_riven_tag_table(self):
         """A generated game-data cache, not the retired sidecar, drives import."""

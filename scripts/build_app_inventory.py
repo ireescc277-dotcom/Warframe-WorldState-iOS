@@ -362,6 +362,19 @@ RIVEN_UNRESOLVED_LABELS = {
     "SlideAttackCritChanceMod": "滑行攻击暴击率",
 }
 
+
+# These entries are real, resolved Riven rolls.  No current calculation rule
+# consumes them; retain them for the player to audit instead of presenting
+# them as an unknown damage formula. Keep this list narrow: Ammo Efficiency,
+# for example, stays unresolved because it can alter sustained DPS.
+RIVEN_DISPLAY_ONLY_LABELS = {
+    "WeaponZoomFovMod": "变焦",
+    "WeaponProjectileSpeedMod": "投射物速度",
+    "WeaponRecoilReductionMod": "后坐力",
+    "WeaponMeleeRangeIncMod": "近战范围",
+}
+
+
 def riven_unresolved_label(tag: str) -> str:
     """Readable name for a raw Riven tag that has no DamageKit rule yet."""
     return RIVEN_UNRESOLVED_LABELS.get(tag, tag)
@@ -395,6 +408,7 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
     physical: dict[str, float] = {}
     factions: dict[str, float] = {}
     unresolved: list[dict[str, str]] = []
+    display_only: dict[str, dict[str, float | str]] = {}
 
     scalar_tags = {
         "WeaponProcTimeMod": "statusDuration",
@@ -406,6 +420,8 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         "WeaponStunChanceMod": "statusChance",
         "WeaponFireRateMod": "fireRate",
         "WeaponReloadSpeedMod": "reloadSpeed",
+        "WeaponClipMaxMod": "magazineSize",
+        "WeaponMeleeComboEfficiencyMod": "meleeComboEfficiency",
     }
     element_tags = {
         "WeaponFireDamageMod": "heat", "WeaponHeatDamageMod": "heat",
@@ -440,7 +456,9 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         tag = raw.get("Tag")
         if not isinstance(tag, str):
             return
-        supported = tag in scalar_tags or tag in element_tags or tag in physical_tags or tag in faction_tags
+        is_display_only = tag in RIVEN_DISPLAY_ONLY_LABELS
+        supported = (is_display_only or tag in scalar_tags or tag in element_tags
+                     or tag in physical_tags or tag in faction_tags)
         if not supported:
             unresolved.append({"tag": tag, "label": riven_unresolved_label(tag)})
             return
@@ -448,6 +466,15 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
                             buff_count=len(buffs), curse_count=len(curses), rank=rank)
         if value is None:
             unresolved.append({"tag": tag, "label": riven_unresolved_label(tag)})
+            return
+        if is_display_only:
+            existing = display_only.get(tag)
+            previous = float(existing["value"]) if existing else 0.0
+            display_only[tag] = {
+                "tag": tag,
+                "label": RIVEN_DISPLAY_ONLY_LABELS[tag],
+                "value": previous + value,
+            }
             return
         if tag in scalar_tags:
             key = scalar_tags[tag]
@@ -475,6 +502,8 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         result["elements"] = elements
     if physical:
         result["physical"] = physical
+    if display_only:
+        result["displayOnly"] = [display_only[tag] for tag in sorted(display_only)]
     if unresolved:
         # Preserve every raw tag that was not placed into a DamageKit formula.
         # A duplicate tag is still one card term for this purpose; it is not

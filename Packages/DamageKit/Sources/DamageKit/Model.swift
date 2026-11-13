@@ -522,6 +522,10 @@ public struct Riven: Codable, Sendable, Equatable {
     public var fireRate: Double?
     /// 装填速度相对加成；正值使换弹时间除以 `1 + value`。
     public var reloadSpeed: Double?
+    /// 弹匣容量相对加成；正值与普通 `magazineSize` Mod 进入同一乘区。
+    public var magazineSize: Double?
+    /// 重击消耗的连击保留比例；由规则限制在 0...90%。
+    public var meleeComboEfficiency: Double?
     /// 对目标派系的伤害加成（Bane 类）。
     public var faction: Double?
     /// 按派系区分的紫卡 Bane 词条；键接受 `Grineer`、`Corpus`、`Infested`、`Orokin`。
@@ -533,6 +537,7 @@ public struct Riven: Codable, Sendable, Equatable {
     public init(name: String = "Riven", damage: Double? = nil, multishot: Double? = nil,
                 critChance: Double? = nil, critDamage: Double? = nil, statusChance: Double? = nil,
                 statusDuration: Double? = nil, fireRate: Double? = nil, reloadSpeed: Double? = nil,
+                magazineSize: Double? = nil, meleeComboEfficiency: Double? = nil,
                 faction: Double? = nil,
                 factionBonuses: [String: Double]? = nil,
                 elements: [String: Double]? = nil, physical: [String: Double]? = nil) {
@@ -545,6 +550,8 @@ public struct Riven: Codable, Sendable, Equatable {
         self.statusDuration = statusDuration
         self.fireRate = fireRate
         self.reloadSpeed = reloadSpeed
+        self.magazineSize = magazineSize
+        self.meleeComboEfficiency = meleeComboEfficiency
         self.faction = faction
         self.factionBonuses = factionBonuses
         self.elements = elements
@@ -553,7 +560,8 @@ public struct Riven: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case name, damage, multishot, critChance, critDamage, statusChance
-        case statusDuration, fireRate, reloadSpeed, faction, factionBonuses, elements, physical
+        case statusDuration, fireRate, reloadSpeed, magazineSize, meleeComboEfficiency
+        case faction, factionBonuses, elements, physical
     }
 
     public init(from decoder: Decoder) throws {
@@ -567,6 +575,8 @@ public struct Riven: Codable, Sendable, Equatable {
         statusDuration = try c.decodeIfPresent(Double.self, forKey: .statusDuration)
         fireRate = try c.decodeIfPresent(Double.self, forKey: .fireRate)
         reloadSpeed = try c.decodeIfPresent(Double.self, forKey: .reloadSpeed)
+        magazineSize = try c.decodeIfPresent(Double.self, forKey: .magazineSize)
+        meleeComboEfficiency = try c.decodeIfPresent(Double.self, forKey: .meleeComboEfficiency)
         faction = try c.decodeIfPresent(Double.self, forKey: .faction)
         factionBonuses = try c.decodeIfPresent([String: Double].self, forKey: .factionBonuses)
         elements = try c.decodeIfPresent([String: Double].self, forKey: .elements)

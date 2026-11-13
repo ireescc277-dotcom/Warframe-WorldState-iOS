@@ -127,6 +127,7 @@ struct NativeManualBuffDraft: Identifiable, Hashable {
 enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
     case core
     case status
+    case timing
     case element
     case physical
     case faction
@@ -137,6 +138,7 @@ enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
         switch self {
         case .core: return "基础词条"
         case .status: return "暴击与状态"
+        case .timing: return "弹匣与连击"
         case .element: return "元素伤害"
         case .physical: return "物理伤害"
         case .faction: return "阵营伤害"
@@ -147,6 +149,7 @@ enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
 enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
     case damage, multishot, critChance, critDamage, fireRate, reloadSpeed
     case statusChance, statusDuration
+    case magazineSize, meleeComboEfficiency
     case heat, cold, electricity, toxin
     case blast, corrosive, gas, magnetic, radiation, viral
     case impact, puncture, slash
@@ -164,6 +167,8 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
         case .reloadSpeed: return "装填速度"
         case .statusChance: return "触发几率"
         case .statusDuration: return "状态持续时间"
+        case .magazineSize: return "弹匣容量"
+        case .meleeComboEfficiency: return "重击连击效率"
         case .heat: return "火焰伤害"
         case .cold: return "冰冻伤害"
         case .electricity: return "电击伤害"
@@ -190,6 +195,8 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
             return .core
         case .critChance, .critDamage, .statusChance, .statusDuration:
             return .status
+        case .magazineSize, .meleeComboEfficiency:
+            return .timing
         case .heat, .cold, .electricity, .toxin,
                 .blast, .corrosive, .gas, .magnetic, .radiation, .viral:
             return .element
@@ -216,6 +223,9 @@ struct NativeRivenDraft: Hashable {
     /// have a formula for.  They remain visible to the player and are never
     /// substituted with a similarly named damage value.
     var unresolvedEffects: [InventoryData.OwnedWeapon.ImportedRiven.UnresolvedEffect] = []
+    /// Source terms such as zoom that are resolved and retained for audit,
+    /// but are outside this calculator's already-landed-hit scope.
+    var displayOnlyEffects: [InventoryData.OwnedWeapon.ImportedRiven.DisplayOnlyEffect] = []
     var damagePercent = 0.0
     var multishotPercent = 0.0
     var critChancePercent = 0.0
@@ -224,6 +234,8 @@ struct NativeRivenDraft: Hashable {
     var statusDurationPercent = 0.0
     var fireRatePercent = 0.0
     var reloadSpeedPercent = 0.0
+    var magazineSizePercent = 0.0
+    var meleeComboEfficiencyPercent = 0.0
     var factionPercent = 0.0
     var heatPercent = 0.0
     var coldPercent = 0.0
@@ -253,6 +265,8 @@ struct NativeRivenDraft: Hashable {
         case .statusDuration: return statusDurationPercent
         case .fireRate: return fireRatePercent
         case .reloadSpeed: return reloadSpeedPercent
+        case .magazineSize: return magazineSizePercent
+        case .meleeComboEfficiency: return meleeComboEfficiencyPercent
         case .heat: return heatPercent
         case .cold: return coldPercent
         case .electricity: return electricityPercent
@@ -284,6 +298,8 @@ struct NativeRivenDraft: Hashable {
         case .statusDuration: statusDurationPercent = value
         case .fireRate: fireRatePercent = value
         case .reloadSpeed: reloadSpeedPercent = value
+        case .magazineSize: magazineSizePercent = value
+        case .meleeComboEfficiency: meleeComboEfficiencyPercent = value
         case .heat: heatPercent = value
         case .cold: coldPercent = value
         case .electricity: electricityPercent = value
@@ -366,6 +382,8 @@ struct NativeRivenDraft: Hashable {
                      statusDuration: decimal(statusDurationPercent),
                      fireRate: decimal(fireRatePercent),
                      reloadSpeed: decimal(reloadSpeedPercent),
+                     magazineSize: decimal(magazineSizePercent),
+                     meleeComboEfficiency: decimal(meleeComboEfficiencyPercent),
                      faction: decimal(factionPercent),
                      factionBonuses: factionBonuses,
                      elements: elements,
@@ -389,6 +407,8 @@ extension NativeRivenDraft {
         statusDurationPercent = (value.statusDuration ?? 0) * 100
         fireRatePercent = (value.fireRate ?? 0) * 100
         reloadSpeedPercent = (value.reloadSpeed ?? 0) * 100
+        magazineSizePercent = (value.magazineSize ?? 0) * 100
+        meleeComboEfficiencyPercent = (value.meleeComboEfficiency ?? 0) * 100
         factionPercent = (value.faction ?? 0) * 100
         heatPercent = (value.elements?["heat"] ?? 0) * 100
         coldPercent = (value.elements?["cold"] ?? 0) * 100
@@ -408,6 +428,7 @@ extension NativeRivenDraft {
         infestedFactionPercent = (value.factionBonuses?["Infested"] ?? 0) * 100
         orokinFactionPercent = (value.factionBonuses?["Orokin"] ?? 0) * 100
         unresolvedEffects = value.unresolved ?? []
+        displayOnlyEffects = value.displayOnly ?? []
 
         for stat in NativeRivenStat.allCases where abs(self.value(for: stat)) > .ulpOfOne {
             selectedStats.insert(stat)

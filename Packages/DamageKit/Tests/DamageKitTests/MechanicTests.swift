@@ -366,6 +366,48 @@ final class MechanicTests: XCTestCase {
         XCTAssertEqual(result.attacks[0].shots, 2, accuracy: 1e-9)
     }
 
+    func testRivenMagazineSizeChangesReloadCycle() throws {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 2)
+        let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
+
+        let baseline = run(weapon, enemy, window: 5)
+        let enlarged = run(weapon, enemy, window: 5,
+                           build: Build(riven: Riven(magazineSize: 1)))
+
+        // Default magazine 1: t=0 and t=3.  The +100% Riven makes magazine 2,
+        // so t=0, t=1, then reload and t=4 are all inside this window.
+        XCTAssertEqual(baseline.attacks[0].shots, 2, accuracy: 1e-9)
+        XCTAssertEqual(enlarged.attacks[0].shots, 3, accuracy: 1e-9)
+    }
+
+    func testRivenHeavyComboEfficiencyReachesTheHeavySchedule() throws {
+        let attack = Attack(name: "Normal Attack", speed: 1, critChance: 0,
+                            critMultiplier: 1, statusChance: 0, damage: [.slash: 10])
+        var weapon = Weapon(name: "Skana", attacks: [attack], category: "Melee")
+        weapon.categories = ["weapon", "melee", "melee-sword"]
+        weapon.compTags = ["SWORDS_STANCE", "SKANA"]
+        let options = Options(window: 20, heavyAttack: true, heavyAttackStartingCombo: 12)
+        let resolved = try XCTUnwrap(BuildResolver(
+            weapon: weapon,
+            build: Build(riven: Riven(meleeComboEfficiency: 0.5)),
+            options: options,
+            faction: .grineer
+        ).resolveAll().first)
+
+        XCTAssertEqual(resolved.heavyComboEfficiency, 0.5, accuracy: 1e-12)
+        let enemy = Enemy(name: "E", faction: "Grineer", health: 1e12, armor: 0)
+        let schedule = WeaponSimulator(
+            segments: [resolved], enemy: EnemyProfile(enemy: enemy, level: 1, options: options),
+            options: options
+        ).shotSchedule(for: resolved)
+        // One pair of heavy contacts consumes combo at a time. At 50%
+        // efficiency the 12x opening pair becomes a 6x pair, rather than
+        // falling straight to 1x as it would with no efficiency.
+        XCTAssertEqual(Array(schedule.prefix(4).map(\.comboMultiplier)), [12, 12, 6, 6])
+    }
+
     func testRivenCompletedCorrosiveStaysOneCompletedDamageComponent() {
         let attack = Attack(name: "Riven Corrosive", speed: 1, critChance: 0, critMultiplier: 1,
                             statusChance: 0, damage: [.impact: 100])

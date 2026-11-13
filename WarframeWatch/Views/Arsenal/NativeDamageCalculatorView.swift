@@ -491,6 +491,25 @@ struct NativeDamageCalculatorView: View {
                 ForEach(model.riven.selectedStats.sorted { $0.rawValue < $1.rawValue }, id: \.self) { stat in
                     rivenStatEditor(stat)
                 }
+                if !model.riven.displayOnlyEffects.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("以下词条已从背包读入，保留供核对；当前计算按“命中已经成立、从首次命中起计时”，不会把它们伪装成伤害乘数：",
+                              systemImage: "info.circle.fill")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textSecondary)
+                        ForEach(model.riven.displayOnlyEffects) { effect in
+                            Text("• \(effect.label) \(String(format: "%+.2f%%", effect.value * 100))")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                        Text("它们涉及瞄准、弹道或攻击距离；本页不建立这些命中条件的物理模型。")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    .padding(9)
+                    .background(WFUI.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
                 if !model.riven.unresolvedEffects.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("以下紫卡原始词条已读取，但当前没有对应的伤害规则，因此没有写入计算：",
@@ -523,7 +542,7 @@ struct NativeDamageCalculatorView: View {
                         .font(.wfBody)
                         .foregroundColor(WFTheme.gold)
                 }
-                Text("每一行就是一条实际紫卡词条；可填负数作为负面。元素、物理与阵营词条都和其他词条处在同一层级。不会额外捏造“任意元素”或“泛用派系”输入；背包导入的特殊原始词条会单独显示。")
+                Text("每一行就是一条实际紫卡词条；可填负数作为负面。元素、物理与阵营词条都和其他词条处在同一层级。不会额外捏造“任意元素”或“泛用派系”输入；已识别但不属于当前命中模型的词条会保留供核对，真正没有公式的词条才会标为待实现。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             }

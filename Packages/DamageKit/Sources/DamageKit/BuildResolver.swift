@@ -1047,6 +1047,8 @@ struct ModAggregate {
         if let v = riven.statusDuration { statusDuration += v }
         if let v = riven.fireRate { fireRate += v }
         if let v = riven.reloadSpeed { reloadSpeed += v }
+        if let v = riven.magazineSize { magazine += v }
+        if let v = riven.meleeComboEfficiency { meleeComboEfficiency += v }
         if let v = riven.faction { anyFactionBonus += v }
         for (rawFaction, value) in riven.factionBonuses ?? [:] {
             let key = FactionProfile.resolve(rawFaction: rawFaction).canonical
