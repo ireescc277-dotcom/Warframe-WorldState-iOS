@@ -254,7 +254,7 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
           "c": "Primary",
           "k": "LongGuns",
           "p": {"toxin": 0.42},
-          "inc": [1, 0, 2],
+          "inc": [0, 1, 0, 2],
           "cfg": [{
             "l": "A",
             "s": [
@@ -307,6 +307,7 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         XCTAssertEqual(model.selectedWeapon?.name, "Torid")
         XCTAssertEqual(model.selectedEnemy?.name, "Corrupted Heavy Gunner")
         XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65, accuracy: 0.000_001)
+        XCTAssertEqual(model.incarnonSelections[18], 0)
         XCTAssertEqual(model.incarnonSelections[19], 1)
         XCTAssertEqual(model.incarnonSelections[20], 0)
         XCTAssertEqual(model.incarnonSelections[21], 2)
@@ -327,7 +328,7 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
                 riven: model.riven.resolved,
                 rivenSlot: model.riven.slot,
                 progenitorElements: ownedWeapon.progenitorElements,
-                incarnonPerks: ["19:1", "20:0", "21:2"],
+                incarnonPerks: ["18:0", "19:1", "20:0", "21:2"],
                 stanceCombo: model.stanceCombo
             ),
             options: Options(
@@ -340,7 +341,7 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
             )
         )
         let output = Calculator(store: store).evaluate(input)
-        let incarnonForm = try XCTUnwrap(output.attacks.first { $0.name == "Incarnon Form" })
+        let incarnonForm = try XCTUnwrap(output.attacks.first { $0.attack == "Incarnon Form" })
         XCTAssertGreaterThan(incarnonForm.targetDps, 0)
         XCTAssertGreaterThan(incarnonForm.targetDirectDamage, 0)
 
