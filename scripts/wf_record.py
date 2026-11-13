@@ -36,21 +36,40 @@ def fetch_json(url, timeout=20):
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         payload = response.read()
-    return json.loads(payload.decode("utf-8")), len(payload)
+    return json.loads(payload.decode("utf-8")), payload
 
 
-def one_cycle(conn, node_meta, interval):
+def write_worldstate_mirror(path, payload):
+    if not path:
+        return
+    try:
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "wb") as fh:
+            fh.write(payload)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except Exception as exc:
+        print("worldstate mirror write warning: %s" % exc, file=sys.stderr, flush=True)
+
+
+def one_cycle(conn, node_meta, interval, worldstate_out=""):
     ts = int(time.time())
     started = time.monotonic()
 
     try:
-        state, size = fetch_json(WORLDSTATE_URL)
+        state, raw_payload = fetch_json(WORLDSTATE_URL)
+        size = len(raw_payload)
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         ms = int((time.monotonic() - started) * 1000)
         wf_store.record_poll(conn, ts, False, ms=ms, note=str(exc)[:200])
         conn.commit()
         print("poll %d FAILED: %s" % (ts, exc), flush=True)
         return False
+
+    write_worldstate_mirror(worldstate_out, raw_payload)
 
     # Arbitration is a separate service and often down or placeholder; a failure
     # there must not fail the poll, which is about the official feed.
@@ -84,6 +103,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", default=os.environ.get("WF_DB", "/opt/wf-monitor/wf_history.db"))
     parser.add_argument("--dict", default=os.environ.get("WF_DICT", "/opt/wf-monitor/node_meta.json"))
+    parser.add_argument("--worldstate-out", default=os.environ.get("WF_WORLDSTATE_OUT", ""))
     parser.add_argument("--interval", type=int, default=120)
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
@@ -96,10 +116,10 @@ def main():
     print("store=%s dict=%d nodes interval=%ds" % (args.db, len(node_meta), args.interval), flush=True)
 
     if args.once:
-        return 0 if one_cycle(conn, node_meta, args.interval) else 1
+        return 0 if one_cycle(conn, node_meta, args.interval, args.worldstate_out) else 1
 
     while not STOP:
-        one_cycle(conn, node_meta, args.interval)
+        one_cycle(conn, node_meta, args.interval, args.worldstate_out)
         # Align to the next interval boundary so rows land on round minutes.
         sleep_for = args.interval - (time.time() % args.interval)
         deadline = time.time() + sleep_for

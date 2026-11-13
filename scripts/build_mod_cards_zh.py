@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "gamedata" / "raw"
 MODS_JSON = ROOT / "Packages" / "DamageKit" / "Sources" / "DamageKit" / "Resources" / "mods.json"
+MOD_ART_INDEX_PATH = ROOT / "assets" / "mod-art-index.json"
 OUT_PATH = ROOT / "assets" / "mod-cards-zh.json"
 
 POLARITY_MAP = {
@@ -69,11 +70,35 @@ def upgrade_priority(entry: dict) -> tuple[int, int, int]:
     return (is_pvp, is_beginner, is_secret)
 
 
+def determine_frame_tier(en_name: str, rarity: str, is_arcane: bool) -> str:
+    if is_arcane:
+        return "Arcane"
+    if en_name.startswith("Galvanized "):
+        return "Galvanized"
+    if en_name.startswith("Amalgam "):
+        return "Amalgam"
+    if "Riven Mod" in en_name:
+        return "Omega"
+    upper_rarity = rarity.upper()
+    if upper_rarity == "LEGENDARY":
+        return "Legendary"
+    if upper_rarity == "RARE":
+        return "Gold"
+    if upper_rarity == "UNCOMMON":
+        return "Silver"
+    return "Bronze"
+
+
 def build_catalog() -> dict[str, dict]:
     up_en = json.loads((RAW_DIR / "ExportUpgrades_en.json").read_text(encoding="utf-8"))["ExportUpgrades"]
     up_zh = json.loads((RAW_DIR / "ExportUpgrades_zh.json").read_text(encoding="utf-8"))["ExportUpgrades"]
     ra_en = json.loads((RAW_DIR / "ExportRelicArcane_en.json").read_text(encoding="utf-8"))["ExportRelicArcane"]
     ra_zh = json.loads((RAW_DIR / "ExportRelicArcane_zh.json").read_text(encoding="utf-8"))["ExportRelicArcane"]
+
+    art_index: dict[str, dict] = {}
+    if MOD_ART_INDEX_PATH.exists():
+        art_index = json.loads(MOD_ART_INDEX_PATH.read_text(encoding="utf-8"))
+    lower_art_index = {k.lower(): v for k, v in art_index.items()}
 
     zh_by_unique = {item["uniqueName"]: item for item in up_zh if item.get("uniqueName")}
     ra_zh_by_unique = {item["uniqueName"]: item for item in ra_zh if item.get("uniqueName")}
@@ -95,14 +120,19 @@ def build_catalog() -> dict[str, dict]:
         compat = (zh_item.get("compatName") or item.get("compatName") or "").strip()
         if not compat:
             compat = TYPE_COMPAT_ZH.get((item.get("type") or "").upper(), "")
+        rarity = (item.get("rarity") or "COMMON").upper()
+        art_meta = art_index.get(name) or lower_art_index.get(name.lower()) or {}
         card = {
             "name": zh_name,
             "polarity": POLARITY_MAP.get(item.get("polarity") or "", ""),
-            "rarity": (item.get("rarity") or "COMMON").upper(),
+            "rarity": rarity,
             "baseDrain": int(item.get("baseDrain") or 0),
             "maxRank": int(fusion_limit),
             "compat": compat,
             "isArcane": False,
+            "art": art_meta.get("art") or "",
+            "frameTier": determine_frame_tier(name, rarity, False),
+            "modSet": art_meta.get("modSet") or "",
             "ranks": ranks,
         }
         prio = upgrade_priority(item)
@@ -118,14 +148,19 @@ def build_catalog() -> dict[str, dict]:
         zh_name = (zh_item.get("name") or "").strip() or name
         level_stats = zh_item.get("levelStats") or item.get("levelStats") or []
         ranks = dedupe_stats(level_stats)
+        rarity = (item.get("rarity") or "RARE").upper()
+        art_meta = art_index.get(name) or lower_art_index.get(name.lower()) or {}
         card = {
             "name": zh_name,
             "polarity": "",
-            "rarity": (item.get("rarity") or "RARE").upper(),
+            "rarity": rarity,
             "baseDrain": 0,
             "maxRank": max(0, len(ranks) - 1),
             "compat": "赋能",
             "isArcane": True,
+            "art": art_meta.get("art") or "",
+            "frameTier": determine_frame_tier(name, rarity, True),
+            "modSet": "",
             "ranks": ranks,
         }
         prio = (0, 0, 1 if item.get("codexSecret") else 0)

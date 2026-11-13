@@ -10,6 +10,9 @@ struct ModCardMetadata: Codable, Hashable {
     let maxRank: Int
     let compat: String
     let isArcane: Bool
+    let art: String?
+    let frameTier: String?
+    let modSet: String?
     let ranks: [String]
 }
 
@@ -275,11 +278,36 @@ final class NativeDamageCatalog: ObservableObject {
         localModIcon(named: mod.image)
     }
 
-    /// 先查本地 `mod-icons/`，再查 `extra-icons/`，最后保留远端备用地址。
+    func localModArt(named image: String?) -> URL? {
+        guard let image, !image.isEmpty,
+              let root = dataRoot else { return nil }
+        let url = root.appendingPathComponent("mod-art").appendingPathComponent(image)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    func localModFrame(named fileName: String) -> URL? {
+        guard !fileName.isEmpty,
+              let root = dataRoot else { return nil }
+        let url = root.appendingPathComponent("mod-frames").appendingPathComponent(fileName)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    func localPolarityIcon(named polarity: String) -> URL? {
+        let lower = polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !lower.isEmpty,
+              let root = dataRoot else { return nil }
+        let url = root.appendingPathComponent("polarities").appendingPathComponent("\(lower).png")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// 先查高清原画 `mod-art/`，再查 `mod-icons/` 与 `extra-icons/`，最后保留远端备用地址。
     func modIconURLs(forName rawName: String) -> (local: URL?, remote: URL?) {
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return (nil, nil) }
         if dataRoot == nil { load() }
+        if let card = modCard(for: trimmed), let artURL = localModArt(named: card.art) {
+            return (artURL, nil)
+        }
         if let mod = ModLibrary.shared.mod(named: trimmed) {
             let localURL = localModIcon(for: mod)
                 ?? WeaponCatalog.shared.extraIconURL(forName: mod.name)

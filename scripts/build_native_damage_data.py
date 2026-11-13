@@ -30,6 +30,9 @@ SITE = ROOT / "server" / "site"
 DEST = ROOT / "ios" / "DamageData"
 ICON_SOURCE = ROOT / "assets" / "weapon-icons"
 MOD_ICON_SOURCE = ROOT / "assets" / "mod-icons"
+MOD_ART_SOURCE = ROOT / "assets" / "mod-art"
+MOD_FRAMES_SOURCE = ROOT / "assets" / "mod-frames"
+POLARITIES_SOURCE = ROOT / "assets" / "polarities"
 EXTRA_ICON_SOURCE = ROOT / "assets" / "extra-icons"
 EXTRA_ZH_SOURCE = ROOT / "assets" / "extra-zh.json"
 MOD_CARDS_ZH_SOURCE = ROOT / "assets" / "mod-cards-zh.json"
@@ -190,6 +193,21 @@ def main() -> int:
         shutil.copytree(MOD_ICON_SOURCE, DEST / "mod-icons")
         mod_icon_count = sum(1 for _ in (DEST / "mod-icons").glob("*.webp"))
 
+    mod_art_count = 0
+    if MOD_ART_SOURCE.exists():
+        shutil.copytree(MOD_ART_SOURCE, DEST / "mod-art")
+        mod_art_count = sum(1 for _ in (DEST / "mod-art").glob("*.webp"))
+
+    mod_frame_count = 0
+    if MOD_FRAMES_SOURCE.exists():
+        shutil.copytree(MOD_FRAMES_SOURCE, DEST / "mod-frames")
+        mod_frame_count = sum(1 for _ in (DEST / "mod-frames").glob("*.png"))
+
+    polarity_count = 0
+    if POLARITIES_SOURCE.exists():
+        shutil.copytree(POLARITIES_SOURCE, DEST / "polarities")
+        polarity_count = sum(1 for _ in (DEST / "polarities").glob("*.png"))
+
     extra_icon_count = 0
     if EXTRA_ICON_SOURCE.exists():
         shutil.copytree(EXTRA_ICON_SOURCE, DEST / "extra-icons")
@@ -202,6 +220,7 @@ def main() -> int:
     print(
         f"[ok] {DEST.relative_to(ROOT)}  weapons={len(index)} "
         f"locale={len(locale)} weapon_icons={icon_count} mod_icons={mod_icon_count} "
+        f"mod_art={mod_art_count} mod_frames={mod_frame_count} polarities={polarity_count} "
         f"extra_icons={extra_icon_count} size={all_size / 1048576:.2f}MB"
     )
     return 0

@@ -34,54 +34,71 @@ public final class WorldStateService {
         }
     }
     
+    private static var vpsFallbackUrl: URL? {
+        guard let remote = InventoryStore.remote else { return nil }
+        return remote.deletingLastPathComponent().appendingPathComponent("worldstate.json")
+    }
+
     public func fetchWorldState(customUrl: URL? = nil) async throws -> (WorldState, Bool) {
-        let startTime = Date()
-        let targetUrl = customUrl ?? activeApiUrl
-        var request = URLRequest(url: targetUrl)
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.timeoutInterval = 12.0
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let duration = Date().timeIntervalSince(startTime)
-            self.lastFetchDuration = duration
-            self.lastResponseBytes = data.count
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw URLError(.badServerResponse)
-            }
-            self.lastHttpStatus = httpResponse.statusCode
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-            
-            let decoder = JSONDecoder()
-            let state = try decoder.decode(WorldState.self, from: data)
-            
-            UserDefaults.standard.set(data, forKey: cacheKey)
-            self.lastErrorDetails = nil
-            return (state, true)
-        } catch {
-            let duration = Date().timeIntervalSince(startTime)
-            self.lastFetchDuration = duration
-            self.lastErrorDetails = "网络/解析异常: \(error.localizedDescription)"
-            print("❌ fetchWorldState error: \(error)")
-            
-            // Try loading cached data
-            if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
-               let state = try? JSONDecoder().decode(WorldState.self, from: cachedData) {
-                return (state, false)
-            }
-            
-            // Fallback to bundled snapshot
-            if let bundledState = loadBundledSnapshot() {
-                return (bundledState, false)
-            }
-            
-            throw error
+        let primaryUrl = customUrl ?? activeApiUrl
+        var candidates: [URL] = [primaryUrl]
+        if customUrl == nil, let mirror = Self.vpsFallbackUrl, mirror != primaryUrl {
+            candidates.append(mirror)
         }
+
+        var lastError: Error = URLError(.badServerResponse)
+        for targetUrl in candidates {
+            let startTime = Date()
+            var request = URLRequest(url: targetUrl)
+            request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            request.timeoutInterval = 15.0
+            request.setValue(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                forHTTPHeaderField: "User-Agent"
+            )
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let duration = Date().timeIntervalSince(startTime)
+                self.lastFetchDuration = duration
+                self.lastResponseBytes = data.count
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw URLError(.badServerResponse)
+                }
+                self.lastHttpStatus = httpResponse.statusCode
+
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw URLError(.badServerResponse)
+                }
+
+                let decoder = JSONDecoder()
+                let state = try decoder.decode(WorldState.self, from: data)
+
+                UserDefaults.standard.set(data, forKey: cacheKey)
+                self.lastErrorDetails = nil
+                return (state, true)
+            } catch {
+                self.lastFetchDuration = Date().timeIntervalSince(startTime)
+                lastError = error
+            }
+        }
+
+        self.lastErrorDetails = "网络/解析异常: \(lastError.localizedDescription)"
+        print("❌ fetchWorldState error: \(lastError)")
+
+        // Try loading cached data
+        if let cachedData = UserDefaults.standard.data(forKey: cacheKey),
+           let state = try? JSONDecoder().decode(WorldState.self, from: cachedData) {
+            return (state, false)
+        }
+
+        // Fallback to bundled snapshot
+        if let bundledState = loadBundledSnapshot() {
+            return (bundledState, false)
+        }
+
+        throw lastError
     }
     
     /// Arbitration is absent from DE's worldState feed, so it is read from the
