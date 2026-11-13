@@ -76,6 +76,33 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         XCTAssertEqual(effectValue, 0.65, accuracy: 0.000_001)
     }
 
+    func testCurrentSelfBuffAndExternalSquadBuffAreBothRetained() throws {
+        let current = try frame(id: "current", name: "Saryn", abilityName: "Toxic Lash")
+        let ally = try frame(
+            id: "ally",
+            name: "Rhino",
+            abilityName: "Roar",
+            strengthBonus: 0.30
+        )
+        let model = NativeDamageCalculatorModel(
+            initialOwnedWarframe: current,
+            availableWarframes: [current, ally]
+        )
+        model.setCurrentWarframeBuff("scenario-toxic-lash", active: true)
+
+        var draft = NativeExternalWarframeBuffDraft(casterID: ally.id)
+        draft.candidateID = "scenario-roar"
+        model.externalWarframeBuffs = [draft]
+
+        // Toxic Lash is self-only, while this Roar comes from the other
+        // caster's 130% Strength configuration. They are distinct active
+        // effects and must coexist in the calculation input.
+        XCTAssertEqual(model.resolvedScenarioEffects.value(for: .toxicLash), 0.30,
+                       accuracy: 0.000_001)
+        XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65,
+                       accuracy: 0.000_001)
+    }
+
     func testCurrentFrameCannotRemainAnExternalCaster() throws {
         let current = try frame(id: "current", name: "Current", abilityName: "Toxic Lash")
         let ally = try frame(id: "ally", name: "Rhino", abilityName: "Roar")
