@@ -32,24 +32,186 @@ struct NativeScenarioEffectDraft: Identifiable, Hashable {
     }
 }
 
-/// One externally cast Warframe weapon buff.  It identifies the caster and
-/// that caster's A/B/C configuration; it deliberately has no strength field.
-/// The selected ability is resolved against the source configuration every
-/// time the calculator runs.
+/// Externally cast teammate weapon buff skill template. Completely independent
+/// of the player's own Arsenal or Operator Focus strength.
+enum ExternalTeamBuffTemplate: String, CaseIterable, Identifiable, Hashable {
+    case roarNative
+    case roarHelminth
+    case eclipseTotal
+    case eclipseHelminth
+    case nourishNative
+    case nourishHelminth
+    case shockTrooper
+    case venomDose
+    case smiteInfusion
+    case fireballFrenzy
+    case freezeForce
+    case thermalTransfer
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .roarNative: return "咆哮（Rhino 原生 50%）"
+        case .roarHelminth: return "咆哮（Helminth 移植 30%）"
+        case .eclipseTotal: return "全蚀日蚀（Mirage 原生）"
+        case .eclipseHelminth: return "全蚀日蚀（Helminth 移植）"
+        case .nourishNative: return "滋养（Grendel 原生 75%）"
+        case .nourishHelminth: return "滋养（Helminth 移植 45%）"
+        case .shockTrooper: return "电击战士（Volt 1 强化）"
+        case .venomDose: return "毒液注入（Saryn 1 强化）"
+        case .smiteInfusion: return "惩击洗礼（Oberon 1 强化）"
+        case .fireballFrenzy: return "火球狂热（Ember 1 强化）"
+        case .freezeForce: return "冰冻之力（Frost 1 强化）"
+        case .thermalTransfer: return "热能传导（Gauss 3 强化）"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .roarNative: return "咆哮（原生）"
+        case .roarHelminth: return "咆哮（移植）"
+        case .eclipseTotal: return "全蚀（原生）"
+        case .eclipseHelminth: return "全蚀（移植）"
+        case .nourishNative: return "滋养（原生）"
+        case .nourishHelminth: return "滋养（移植）"
+        case .shockTrooper: return "电击战士"
+        case .venomDose: return "毒液注入"
+        case .smiteInfusion: return "惩击洗礼"
+        case .fireballFrenzy: return "火球狂热"
+        case .freezeForce: return "冰冻之力"
+        case .thermalTransfer: return "热能传导"
+        }
+    }
+
+    func previewLabel(strengthPercent: Double) -> String {
+        let strength = max(0, strengthPercent) / 100
+        switch self {
+        case .roarNative: return String(format: "+%.0f%% 派系", 50 * strength)
+        case .roarHelminth: return String(format: "+%.0f%% 派系", 30 * strength)
+        case .eclipseTotal: return String(format: "+%.0f%% 日蚀倍率", 200 * strength)
+        case .eclipseHelminth: return String(format: "+%.0f%% 日蚀倍率", 30 * strength)
+        case .nourishNative: return String(format: "+%.0f%% 病毒", 75 * strength)
+        case .nourishHelminth: return String(format: "+%.0f%% 病毒", 45 * strength)
+        case .shockTrooper: return String(format: "+%.0f%% 电击", 100 * strength)
+        case .venomDose: return String(format: "+%.0f%% 腐蚀", 100 * strength)
+        case .smiteInfusion: return String(format: "+%.0f%% 辐射", 100 * strength)
+        case .fireballFrenzy: return String(format: "+%.0f%% 火焰", 100 * strength)
+        case .freezeForce: return String(format: "+%.0f%% 冰冻", 100 * strength)
+        case .thermalTransfer: return String(format: "+%.0f%% 爆炸", 75 * strength)
+        }
+    }
+
+    func scenarioEffect(strengthPercent: Double) -> (effect: ScenarioEffectID, value: Double)? {
+        let strength = max(0, strengthPercent) / 100
+        switch self {
+        case .roarNative: return (.roar, 0.50 * strength)
+        case .roarHelminth: return (.roar, 0.30 * strength)
+        case .eclipseTotal: return (.eclipse, 2.00 * strength)
+        case .eclipseHelminth: return (.eclipse, 0.30 * strength)
+        case .nourishNative: return (.nourish, 0.75 * strength)
+        case .nourishHelminth: return (.nourish, 0.45 * strength)
+        default: return nil
+        }
+    }
+
+    func externalSource(strengthPercent: Double) -> ExternalEffectSource? {
+        let modName: String
+        switch self {
+        case .shockTrooper: modName = "Shock Trooper"
+        case .venomDose: modName = "Venom Dose"
+        case .smiteInfusion: modName = "Smite Infusion"
+        case .fireballFrenzy: modName = "Fireball Frenzy"
+        case .freezeForce: modName = "Freeze Force"
+        case .thermalTransfer: modName = "Thermal Transfer"
+        default: return nil
+        }
+        return ExternalEffectSource(
+            name: "队友 · \(shortName)",
+            mod: modName,
+            active: true,
+            abilityStrength: max(0, strengthPercent) / 100,
+            effectScale: 1.0
+        )
+    }
+}
+
+/// One externally cast teammate weapon buff with its own independent Caster
+/// Ability Strength. Adding/editing this never borrows the player's own
+/// Warframe Mods or Operator Focus Strength.
 struct NativeExternalWarframeBuffDraft: Identifiable, Hashable {
     let id: UUID
-    var casterID: String?
-    var configIndex: Int
-    var candidateID: String?
+    var template: ExternalTeamBuffTemplate
+    var abilityStrengthPercent: Double
     var active: Bool
 
-    init(casterID: String? = nil, configIndex: Int = 0,
-         candidateID: String? = nil, active: Bool = true) {
+    init(template: ExternalTeamBuffTemplate = .roarNative,
+         abilityStrengthPercent: Double = 200,
+         active: Bool = true) {
         id = UUID()
-        self.casterID = casterID
-        self.configIndex = configIndex
-        self.candidateID = candidateID
+        self.template = template
+        self.abilityStrengthPercent = abilityStrengthPercent
         self.active = active
+    }
+}
+
+/// Operator Focus skills operating on the player's own equipment layer.
+/// Strength nodes add directly into the current Warframe strength and never
+/// affect external teammate buffs.
+struct OperatorFocusDraft: Hashable {
+    var slingStrength = false         // Madurai 弹弓强化 +40% 技能强度
+    var hardenedWellspring = false    // Zenurik 硬化泉源 +20% 技能强度
+    var voidStrike = false            // Madurai 虚空突击
+    var voidStrikePercent = 1000.0    // 最多 +1000%
+    var lethalLevitation = false      // Naramon 致命浮空 +200% (4层)
+    var lethalLevitationStacks = 4
+    var killersRush = false           // Naramon 杀手急袭 +50% 近战暴击率
+
+    var strengthBonus: Double {
+        (slingStrength ? 0.40 : 0) + (hardenedWellspring ? 0.20 : 0)
+    }
+
+    var strengthContributions: [WarframeStrengthResolution.Contribution] {
+        var list: [WarframeStrengthResolution.Contribution] = []
+        if slingStrength {
+            list.append(.init(id: "focus-sling-strength", label: "指挥官 · 弹弓强化", value: 0.40))
+        }
+        if hardenedWellspring {
+            list.append(.init(id: "focus-hardened-wellspring", label: "指挥官 · 硬化泉源", value: 0.20))
+        }
+        return list
+    }
+
+    func weaponBuffSources() -> [ExternalEffectSource] {
+        var list: [ExternalEffectSource] = []
+        if voidStrike {
+            let bonus = min(max(voidStrikePercent, 0), 1000) / 100
+            if bonus > 0 {
+                list.append(ExternalEffectSource(
+                    name: "指挥官 · 虚空突击",
+                    active: true,
+                    buff: ExternalWeaponBuff(damageBonus: bonus)
+                ))
+            }
+        }
+        if lethalLevitation {
+            let stacks = min(max(lethalLevitationStacks, 0), 4)
+            if stacks > 0 {
+                list.append(ExternalEffectSource(
+                    name: "指挥官 · 致命浮空",
+                    active: true,
+                    buff: ExternalWeaponBuff(damageBonus: Double(stacks) * 0.50)
+                ))
+            }
+        }
+        if killersRush {
+            list.append(ExternalEffectSource(
+                name: "指挥官 · 杀手急袭",
+                active: true,
+                buff: ExternalWeaponBuff(critChanceBonus: 0.50)
+            ))
+        }
+        return list
     }
 }
 
@@ -541,8 +703,12 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published private(set) var currentWarframe: InventoryData.OwnedWarframe?
     @Published var currentWarframeConfigIndex = 0
     @Published private(set) var activeCurrentWarframeBuffIDs: Set<String> = []
-    /// Each row is another actual caster.  This supports e.g. the current
-    /// player’s Toxic Lash plus an ally's Roar, without merging their strength.
+    /// Player's own Operator Focus nodes on the same equipment layer as
+    /// `currentWarframe`. Strength here adds to `currentWarframeStrength`
+    /// only, never to `externalWarframeBuffs`.
+    @Published var operatorFocus = OperatorFocusDraft()
+    /// Independent external teammate buff rows, each owning one skill and its
+    /// own independent Caster Ability Strength %.
     @Published var externalWarframeBuffs: [NativeExternalWarframeBuffDraft] = []
     /// The one companion whose installed Mods are being considered for this
     /// weapon.  It is deliberately separate from a normal Arsenal loadout:
@@ -665,12 +831,25 @@ final class NativeDamageCalculatorModel: ObservableObject {
     }
 
     var currentWarframeStrength: WarframeStrengthResolution {
-        guard let currentWarframe else {
-            return .init(multiplier: 1, contributions: [], inactiveConditionalTerms: [], importIssues: [])
+        let base: WarframeStrengthResolution
+        if let currentWarframe {
+            base = WarframeStrengthResolver.resolve(
+                currentWarframe,
+                configIndex: currentWarframeConfigIndex
+            )
+        } else {
+            base = WarframeStrengthResolution(
+                multiplier: 1,
+                contributions: [],
+                inactiveConditionalTerms: [],
+                importIssues: []
+            )
         }
-        return WarframeStrengthResolver.resolve(
-            currentWarframe,
-            configIndex: currentWarframeConfigIndex
+        return WarframeStrengthResolution(
+            multiplier: base.multiplier + operatorFocus.strengthBonus,
+            contributions: base.contributions + operatorFocus.strengthContributions,
+            inactiveConditionalTerms: base.inactiveConditionalTerms,
+            importIssues: base.importIssues
         )
     }
 
@@ -683,22 +862,19 @@ final class NativeDamageCalculatorModel: ObservableObject {
         )
     }
 
-    /// A selected current Warframe is the player, not a second squadmate.  Do
-    /// not offer that exact inventory instance in the external-caster picker:
-    /// doing so would let one cast be added once as "self" and a second time
-    /// as an ally buff.  A separately owned duplicate frame still has its own
-    /// ID and remains a valid external source.
-    var availableExternalWarframes: [InventoryData.OwnedWarframe] {
-        guard let currentID = currentWarframe?.id else { return availableWarframes }
-        return availableWarframes.filter { $0.id != currentID }
-    }
-
     var activeCurrentWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
         guard let currentWarframe else { return [] }
         return currentWarframeCandidates
             .filter { activeCurrentWarframeBuffIDs.contains($0.id) }
-            .map { WarframeWeaponBuffResolver.resolve($0, caster: currentWarframe,
-                                                      configIndex: currentWarframeConfigIndex) }
+            .map {
+                WarframeWeaponBuffResolver.resolve(
+                    $0,
+                    caster: currentWarframe,
+                    configIndex: currentWarframeConfigIndex,
+                    extraStrength: operatorFocus.strengthBonus,
+                    extraContributions: operatorFocus.strengthContributions
+                )
+            }
     }
 
     var importedWarframeShards: [InventoryData.OwnedWarframe.Shard] {
@@ -829,48 +1005,16 @@ final class NativeDamageCalculatorModel: ObservableObject {
         }
     }
 
-    func externalCaster(for draft: NativeExternalWarframeBuffDraft) -> InventoryData.OwnedWarframe? {
-        guard let casterID = draft.casterID else { return nil }
-        return availableExternalWarframes.first { $0.id == casterID }
-    }
-
-    func externalCandidates(for draft: NativeExternalWarframeBuffDraft) -> [WarframeWeaponBuffCandidate] {
-        guard let caster = externalCaster(for: draft) else { return [] }
-        return WarframeWeaponBuffResolver.candidates(
-            for: caster,
-            configIndex: draft.configIndex,
-            audience: .selfAndAllies
-        )
-    }
-
-    func externalCandidate(for draft: NativeExternalWarframeBuffDraft) -> WarframeWeaponBuffCandidate? {
-        guard let candidateID = draft.candidateID else { return nil }
-        return externalCandidates(for: draft).first { $0.id == candidateID }
-    }
-
-    var activeExternalWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
-        externalWarframeBuffs.compactMap { draft in
-            guard draft.active,
-                  let caster = externalCaster(for: draft),
-                  let candidate = externalCandidate(for: draft)
-            else { return nil }
-            return WarframeWeaponBuffResolver.resolve(candidate, caster: caster,
-                                                      configIndex: draft.configIndex)
-        }
-    }
-
-    private var activeWarframeBuffResolutions: [WarframeWeaponBuffResolution] {
-        activeCurrentWarframeBuffResolutions + activeExternalWarframeBuffResolutions
-    }
-
     var allEffectSources: EnvironmentEffects {
-        // Warframe effects are source-bound and therefore arrive only through
-        // `activeWarframeBuffResolutions`: a generic frame-Mod record without
-        // its caster/config would have no defensible Ability Strength.
-        let frames = activeWarframeBuffResolutions.compactMap(\.externalSource)
+        let currentFrames = activeCurrentWarframeBuffResolutions.compactMap(\.externalSource)
+        let externalTeamMods = externalWarframeBuffs.compactMap { draft -> ExternalEffectSource? in
+            guard draft.active else { return nil }
+            return draft.template.externalSource(strengthPercent: draft.abilityStrengthPercent)
+        }
         let companions = activeCurrentCompanionSources
-        let environment = manualBuffs.map { $0.source() }
-        return EnvironmentEffects(warframeMods: frames, companionMods: companions,
+        let environment = manualBuffs.map { $0.source() } + operatorFocus.weaponBuffSources()
+        return EnvironmentEffects(warframeMods: currentFrames + externalTeamMods,
+                                  companionMods: companions,
                                   buffs: environment,
                                   initialStatusStacks: initialStatusStacks)
     }
@@ -990,11 +1134,8 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculate()
     }
 
-    func addExternalWarframeBuff() {
-        guard let first = availableExternalWarframes.first else { return }
-        var draft = NativeExternalWarframeBuffDraft(casterID: first.id)
-        draft.candidateID = externalCandidates(for: draft).first?.id
-        externalWarframeBuffs.append(draft)
+    func addExternalWarframeBuff(template: ExternalTeamBuffTemplate = .roarNative) {
+        externalWarframeBuffs.append(NativeExternalWarframeBuffDraft(template: template))
         calculate()
     }
 
@@ -1003,32 +1144,15 @@ final class NativeDamageCalculatorModel: ObservableObject {
         calculate()
     }
 
-    func setExternalCaster(_ casterID: String?, for draftID: UUID) {
+    func setExternalBuffTemplate(_ template: ExternalTeamBuffTemplate, for draftID: UUID) {
         guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
-        if let casterID,
-           !availableExternalWarframes.contains(where: { $0.id == casterID }) {
-            return
-        }
-        externalWarframeBuffs[index].casterID = casterID
-        externalWarframeBuffs[index].configIndex = 0
-        externalWarframeBuffs[index].candidateID = externalCandidates(for: externalWarframeBuffs[index]).first?.id
+        externalWarframeBuffs[index].template = template
         calculate()
     }
 
-    func setExternalCasterConfig(_ configIndex: Int, for draftID: UUID) {
-        guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }),
-              let caster = externalCaster(for: externalWarframeBuffs[index]) else { return }
-        externalWarframeBuffs[index].configIndex = clampedConfigIndex(configIndex, for: caster)
-        let candidates = externalCandidates(for: externalWarframeBuffs[index])
-        if !candidates.contains(where: { $0.id == externalWarframeBuffs[index].candidateID }) {
-            externalWarframeBuffs[index].candidateID = candidates.first?.id
-        }
-        calculate()
-    }
-
-    func setExternalWarframeBuffCandidate(_ candidateID: String?, for draftID: UUID) {
+    func setExternalBuffStrength(_ percent: Double, for draftID: UUID) {
         guard let index = externalWarframeBuffs.firstIndex(where: { $0.id == draftID }) else { return }
-        externalWarframeBuffs[index].candidateID = candidateID
+        externalWarframeBuffs[index].abilityStrengthPercent = max(0, percent)
         calculate()
     }
 
@@ -1053,17 +1177,9 @@ final class NativeDamageCalculatorModel: ObservableObject {
         activeCurrentWarframeBuffIDs.formIntersection(available)
     }
 
-    /// If the player changes the current Warframe to an instance that was
-    /// previously selected as an ally caster, keep the row visible but clear
-    /// its source.  This prevents an invisible double count and makes the
-    /// required correction explicit in the external-buff UI.
     private func reconcileExternalCasterSelection() {
-        guard let currentID = currentWarframe?.id else { return }
-        for index in externalWarframeBuffs.indices where externalWarframeBuffs[index].casterID == currentID {
-            externalWarframeBuffs[index].casterID = nil
-            externalWarframeBuffs[index].configIndex = 0
-            externalWarframeBuffs[index].candidateID = nil
-        }
+        // External teammate buffs carry their own independent caster strength
+        // and never conflict with currentWarframe.
     }
 
     private func reconcileCurrentCompanionBuffSelection() {
@@ -1294,8 +1410,14 @@ final class NativeDamageCalculatorModel: ObservableObject {
         // several source records provide the same non-stacking squad buff, the
         // strongest active instance is the relevant one; no caller can make
         // two Roars/Nourishes stack merely by adding duplicate UI rows.
-        for source in activeWarframeBuffResolutions {
+        for source in activeCurrentWarframeBuffResolutions {
             guard let effect = source.scenarioEffect else { continue }
+            values[effect.effect] = max(values[effect.effect] ?? 0, effect.value)
+        }
+        for draft in externalWarframeBuffs where draft.active {
+            guard let effect = draft.template.scenarioEffect(strengthPercent: draft.abilityStrengthPercent) else {
+                continue
+            }
             values[effect.effect] = max(values[effect.effect] ?? 0, effect.value)
         }
         return ScenarioEffects(values: values)

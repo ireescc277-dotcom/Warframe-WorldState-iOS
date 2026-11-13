@@ -531,7 +531,8 @@ public struct BuildResolver: Sendable {
             ? agg.critChanceWeakPoint + options.customStat(.weakPointCritChance)
             : 0
         let critChance = max(0, (((attack.critChance / 100) + agg.critChanceBaseAdditive)
-            * (1 + agg.critChanceRelative + options.warframe.critChanceBonus
+            * (1 + agg.critChanceRelative + (isHeavyMeleeAttack ? agg.heavyCritChanceRelative : 0)
+               + options.warframe.critChanceBonus
                + options.customStat(.critChance) + weakPointCritChance)
             + agg.critChanceAbsolute + options.customStat(.flatCritChance)
             + options.scenarioEffects.value(for: .flatCriticalChance))
@@ -970,6 +971,8 @@ struct ModAggregate {
     /// step. It is consumed per simulated melee contact, not when the UI
     /// changes a numeric field.
     var critChancePerCombo: Double = 0
+    /// Heavy-attack-only relative critical chance (e.g., Melee Animosity).
+    var heavyCritChanceRelative: Double = 0
     var critDamageRelative: Double = 0
     var critDamageAbsolute: Double = 0
     /// Dreamer's Wrath and similar: only a heavy attack receives this term.
@@ -1455,6 +1458,8 @@ struct ModAggregate {
                 critChanceRelative += v ?? 0
             case "crit_chance_per_combo":
                 critChancePerCombo += v ?? 0
+            case "heavy_crit_chance":
+                heavyCritChanceRelative += v ?? 0
             // 灵化 `"add_crit_chance"`（EVO4 Commodore's Fortune / Survivor's Edge）
             // 直接加在**基础**暴击率上，随后再乘相对暴击率 % Mod；而 `"flat_crit_chance"`
             // （例如 Arcane Avenger、Elemental Excess）则在相对乘算之后加算。

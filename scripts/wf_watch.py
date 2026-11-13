@@ -81,6 +81,27 @@ def load_env() -> None:
 LOCK = os.path.join(DATA, "watch.lock")
 
 
+WATCHED_SCRIPTS = (
+    "wf_inventory.py",
+    "build_inventory_view.py",
+    "build_app_inventory.py",
+    "wf_publish.py",
+)
+
+
+def scripts_signature() -> str:
+    digest = hashlib.sha256()
+    for name in WATCHED_SCRIPTS:
+        path = os.path.join(SCRIPTS, name)
+        if os.path.exists(path):
+            digest.update(name.encode("utf-8"))
+            digest.update(b"\0")
+            with open(path, "rb") as fh:
+                digest.update(fh.read())
+            digest.update(b"\0")
+    return digest.hexdigest()[:16]
+
+
 def acquire_lock():
     """单实例。开机自启和手动双击同时发生的话，两个进程会重复推同一条。
 
@@ -373,13 +394,16 @@ def main(argv: list[str] | None = None) -> int:
     log(f"开始监听 {args.dat}（每 {args.interval:.0f}s 检查）")
     last_seen = (0, 0) if args.force else (
         int(state.get("datTs") or 0), int(state.get("datSize") or 0))
-    if last_seen == (0, 0):
-        log("没有历史记录，先同步一次当前文件")
+    last_scripts = None if args.force else state.get("scriptsSig")
+    current_scripts = scripts_signature()
+    if last_seen == (0, 0) or last_scripts != current_scripts:
+        log("没有历史记录或解析脚本已更新，先同步一次当前文件")
         ok = sync(args.dat, not args.no_publish)
         if ok:
             fp = fingerprint(args.dat)
             last_seen = fp
-            state.update(datTs=fp[0], datSize=fp[1])
+            last_scripts = current_scripts
+            state.update(datTs=fp[0], datSize=fp[1], scriptsSig=current_scripts)
     # 刷价动辄十几分钟，放在主循环里会把「背包一变就同步」拖成十几分钟后。
     # 所以扔进线程，主线程只负责盯文件；刷完再回来重建一次发布。
     state_lock = threading.Lock()
@@ -431,8 +455,20 @@ def main(argv: list[str] | None = None) -> int:
                 fp = fingerprint(args.dat)
             except FileNotFoundError:
                 continue
-            if fp == last_seen:
+            current_scripts = scripts_signature()
+            if fp == last_seen and current_scripts == last_scripts:
                 pending = None
+                continue
+            if current_scripts != last_scripts and fp == last_seen:
+                pending = None
+                log("检测到本地解析脚本更新，重建并发布")
+                if sync(args.dat, not args.no_publish):
+                    last_scripts = current_scripts
+                    with state_lock:
+                        state.update(scriptsSig=current_scripts)
+                    save_state()
+                else:
+                    log("脚本变更同步失败，下一轮再试")
                 continue
             if fp != pending:
                 # 还在写：记下来，下一轮再确认
@@ -442,8 +478,9 @@ def main(argv: list[str] | None = None) -> int:
             log(f"检测到更新 size={fp[1]}，开始同步")
             if sync(args.dat, not args.no_publish):
                 last_seen = fp
+                last_scripts = current_scripts
                 with state_lock:
-                    state.update(datTs=fp[0], datSize=fp[1])
+                    state.update(datTs=fp[0], datSize=fp[1], scriptsSig=current_scripts)
                 kick_market()
                 save_state()
             else:

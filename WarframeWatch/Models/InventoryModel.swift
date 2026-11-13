@@ -135,12 +135,20 @@ public struct InventoryData: Decodable {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             id = try c.decode(String.self, forKey: .id)
             calcName = try c.decodeIfPresent(String.self, forKey: .n)
-            z = try c.decode(String.self, forKey: .z)
+            z = Self.stripArchwingPrefix(try c.decode(String.self, forKey: .z))
             category = try c.decodeIfPresent(String.self, forKey: .c) ?? "Unknown"
             inventoryCategory = try c.decodeIfPresent(String.self, forKey: .k) ?? "Unknown"
             progenitorElements = try c.decodeIfPresent([String: Double].self, forKey: .p) ?? [:]
             incarnonChoices = try c.decodeIfPresent([Int].self, forKey: .inc) ?? []
             configs = try c.decodeIfPresent([Config].self, forKey: .cfg) ?? []
+        }
+
+        private static func stripArchwingPrefix(_ raw: String) -> String {
+            raw.replacingOccurrences(
+                of: "^<ARCHWING>\\s*",
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
         }
 
         public var isCalculable: Bool { calcName != nil }
@@ -545,7 +553,12 @@ public struct InventoryData: Decodable {
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             id = try c.decode(String.self, forKey: .id)
-            z = try c.decodeIfPresent(String.self, forKey: .z) ?? "未命名装备"
+            let rawName = try c.decodeIfPresent(String.self, forKey: .z) ?? "未命名装备"
+            z = rawName.replacingOccurrences(
+                of: "^<ARCHWING>\\s*",
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
             inventoryCategory = try c.decodeIfPresent(String.self, forKey: .k) ?? "Unknown"
             configs = try c.decodeIfPresent([Config].self, forKey: .cfg) ?? []
         }

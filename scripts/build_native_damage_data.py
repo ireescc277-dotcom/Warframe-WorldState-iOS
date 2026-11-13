@@ -32,6 +32,7 @@ ICON_SOURCE = ROOT / "assets" / "weapon-icons"
 MOD_ICON_SOURCE = ROOT / "assets" / "mod-icons"
 EXTRA_ICON_SOURCE = ROOT / "assets" / "extra-icons"
 EXTRA_ZH_SOURCE = ROOT / "assets" / "extra-zh.json"
+MOD_CARDS_ZH_SOURCE = ROOT / "assets" / "mod-cards-zh.json"
 NODE = shutil.which("node") or "node"
 
 CAT_ORDER = {
@@ -193,6 +194,9 @@ def main() -> int:
     if EXTRA_ICON_SOURCE.exists():
         shutil.copytree(EXTRA_ICON_SOURCE, DEST / "extra-icons")
         extra_icon_count = sum(1 for _ in (DEST / "extra-icons").glob("*.webp"))
+
+    if MOD_CARDS_ZH_SOURCE.exists():
+        shutil.copy2(MOD_CARDS_ZH_SOURCE, DEST / "mod-cards-zh.json")
 
     all_size = sum(path.stat().st_size for path in DEST.rglob("*") if path.is_file())
     print(

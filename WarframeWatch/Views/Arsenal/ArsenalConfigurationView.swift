@@ -22,6 +22,7 @@ struct ArsenalWeaponConfigurationView: View {
     @State private var currentWarframeConfigIndex: Int
     @State private var openCalculator = false
     @State private var showExtraDetails = false
+    @State private var inspectedModCard: ModCardPresentation?
 
     init(ownedWeapon: InventoryData.OwnedWeapon,
          availableWarframes: [InventoryData.OwnedWarframe],
@@ -112,6 +113,9 @@ struct ArsenalWeaponConfigurationView: View {
                 availableCompanions: availableCompanions,
                 title: ownedWeapon.z
             )
+        }
+        .sheet(item: $inspectedModCard) { card in
+            VerticalModCardModal(card: card)
         }
     }
 
@@ -231,15 +235,40 @@ struct ArsenalWeaponConfigurationView: View {
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                     ForEach(Array(mods.enumerated()), id: \.offset) { _, pair in
-                        let specialSlot = pair.0 >= 8 ? slotLabel(pair.0) : nil
-                        let rankText = config.metadata(at: pair.0).flatMap(compactRank)
-                        let detail = [specialSlot, rankText].compactMap { $0 }.joined(separator: " · ")
-                        buildPill(pair.1, detail: detail.isEmpty ? nil : detail)
+                        let specialTag: String? = pair.0 == 8 ? "特殊功能" : (pair.0 == 9 ? "架势" : (pair.0 == 10 ? "赋能" : nil))
+                        let meta = config.metadata(at: pair.0)
+                        let card = ModCardPresentation.make(
+                            rawName: pair.1,
+                            slotTag: specialTag,
+                            rank: meta?.rank,
+                            maxRank: meta?.maxRank,
+                            id: "weapon-\(pair.0)-\(pair.1)"
+                        )
+                        Button {
+                            inspectedModCard = card
+                        } label: {
+                            HorizontalModCardView(card: card)
+                        }
+                        .buttonStyle(.plain)
                     }
                     if let riven = config.riven {
-                        buildPill(riven.name, detail: "紫卡", accent: WFTheme.purple)
+                        let card = ModCardPresentation.make(
+                            rawName: riven.name,
+                            slotTag: "紫卡",
+                            rank: 8,
+                            maxRank: 8,
+                            isRiven: true,
+                            rivenLines: Self.rivenStatLines(riven),
+                            id: "weapon-riven-\(riven.name)"
+                        )
+                        Button {
+                            inspectedModCard = card
+                        } label: {
+                            HorizontalModCardView(card: card)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -366,12 +395,22 @@ struct ArsenalWeaponConfigurationView: View {
         let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
         return VStack(alignment: .leading, spacing: WFUI.s2) {
             if !upgrades.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                     ForEach(upgrades) { upgrade in
-                        buildPill(
-                            upgrade.name,
-                            detail: "\(localizedKindLabel(upgrade.kind)) · \(compactUpgradeRank(upgrade))"
+                        let slotTag = upgrade.kind.lowercased() == "mod" ? nil : localizedKindLabel(upgrade.kind)
+                        let card = ModCardPresentation.make(
+                            rawName: upgrade.name,
+                            slotTag: slotTag,
+                            rank: upgrade.rank,
+                            maxRank: upgrade.maxRank,
+                            id: "wf-select-\(upgrade.slot)-\(upgrade.name)"
                         )
+                        Button {
+                            inspectedModCard = card
+                        } label: {
+                            HorizontalModCardView(card: card)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -497,6 +536,44 @@ struct ArsenalWeaponConfigurationView: View {
         default: return "槽位 \(slot + 1)"
         }
     }
+
+    private static func rivenStatLines(_ riven: InventoryData.OwnedWeapon.Config.ImportedRiven) -> [String] {
+        var lines: [String] = []
+        let fmt: (String, Double?) -> Void = { label, value in
+            guard let value, abs(value) > 0.0001 else { return }
+            lines.append(String(format: "%+.1f%% %@", value * 100, label))
+        }
+        fmt("伤害", riven.damage)
+        fmt("多重射击", riven.multishot)
+        fmt("暴击率", riven.critChance)
+        fmt("暴击伤害", riven.critDamage)
+        fmt("触发几率", riven.statusChance)
+        fmt("异常持续时间", riven.statusDuration)
+        fmt("射速 / 攻速", riven.fireRate)
+        fmt("装填速度", riven.reloadSpeed)
+        fmt("弹匣容量", riven.magazineSize)
+        fmt("弹药效率", riven.ammoEfficiency)
+        fmt("重击效率", riven.meleeComboEfficiency)
+        fmt("派系伤害", riven.faction)
+        for (faction, val) in (riven.factionBonuses ?? [:]).sorted(by: { $0.key < $1.key }) where abs(val) > 0.0001 {
+            lines.append(String(format: "%+.1f%% 对 %@ 伤害", val * 100, faction))
+        }
+        let elemNames = ["heat": "火焰", "cold": "冰冻", "electricity": "电击", "toxin": "毒素"]
+        for (elem, val) in (riven.elements ?? [:]).sorted(by: { $0.key < $1.key }) where abs(val) > 0.0001 {
+            lines.append(String(format: "%+.1f%% %@", val * 100, elemNames[elem.lowercased()] ?? elem))
+        }
+        let physNames = ["impact": "冲击", "puncture": "穿刺", "slash": "切割"]
+        for (phys, val) in (riven.physical ?? [:]).sorted(by: { $0.key < $1.key }) where abs(val) > 0.0001 {
+            lines.append(String(format: "%+.1f%% %@", val * 100, physNames[phys.lowercased()] ?? phys))
+        }
+        for effect in riven.displayOnly ?? [] {
+            lines.append(String(format: "%+.1f%% %@", effect.value * 100, effect.label))
+        }
+        for effect in riven.unresolved ?? [] {
+            lines.append(effect.label)
+        }
+        return lines
+    }
 }
 
 /// Configuration inspection for a companion or Archwing body.  Its Mod/Arcane
@@ -505,6 +582,7 @@ struct ArsenalWeaponConfigurationView: View {
 struct ArsenalEquipmentConfigurationView: View {
     let equipment: InventoryData.OwnedEquipment
     @State private var configIndex: Int
+    @State private var inspectedModCard: ModCardPresentation?
 
     init(equipment: InventoryData.OwnedEquipment, initialConfigIndex: Int = 0) {
         self.equipment = equipment
@@ -533,6 +611,9 @@ struct ArsenalEquipmentConfigurationView: View {
         .toolbarBackground(WFTheme.bgSecondary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(item: $inspectedModCard) { card in
+            VerticalModCardModal(card: card)
+        }
     }
 
     private var buildCard: some View {
@@ -592,9 +673,22 @@ struct ArsenalEquipmentConfigurationView: View {
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.textMuted)
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                             ForEach(upgrades) { upgrade in
-                                upgradePill(upgrade)
+                                let slotTag = upgrade.kind.lowercased() == "mod" ? nil : localizedKindLabel(upgrade.kind)
+                                let card = ModCardPresentation.make(
+                                    rawName: upgrade.name,
+                                    slotTag: slotTag,
+                                    rank: upgrade.rank,
+                                    maxRank: upgrade.maxRank,
+                                    id: "equip-\(upgrade.slot)-\(upgrade.name)"
+                                )
+                                Button {
+                                    inspectedModCard = card
+                                } label: {
+                                    HorizontalModCardView(card: card)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -637,6 +731,7 @@ struct ArsenalEquipmentConfigurationView: View {
 struct ArsenalWarframeConfigurationView: View {
     let warframe: InventoryData.OwnedWarframe
     @State private var configIndex: Int
+    @State private var inspectedModCard: ModCardPresentation?
 
     init(warframe: InventoryData.OwnedWarframe, initialConfigIndex: Int = 0) {
         self.warframe = warframe
@@ -667,6 +762,9 @@ struct ArsenalWarframeConfigurationView: View {
         .toolbarBackground(WFTheme.bgSecondary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .sheet(item: $inspectedModCard) { card in
+            VerticalModCardModal(card: card)
+        }
     }
 
     private var buildCard: some View {
@@ -685,7 +783,7 @@ struct ArsenalWarframeConfigurationView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(WFTheme.textPrimary)
                         .lineLimit(1)
-                    Text(String(format: "通用技能强度 %.0f%%", strength.multiplier * 100))
+                    Text(String(format: "技能强度 %.0f%%", strength.multiplier * 100))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(WFTheme.gold)
                 }
@@ -722,13 +820,22 @@ struct ArsenalWarframeConfigurationView: View {
                     }
                     let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
                     if !upgrades.isEmpty {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                             ForEach(upgrades) { upgrade in
-                                ArsenalUpgradePill(
+                                let slotTag = upgrade.kind.lowercased() == "mod" ? nil : localizedKindLabel(upgrade.kind)
+                                let card = ModCardPresentation.make(
                                     rawName: upgrade.name,
-                                    detail: "\(localizedKindLabel(upgrade.kind)) · \(upgrade.rankLabel)",
-                                    accent: WFTheme.textSecondary
+                                    slotTag: slotTag,
+                                    rank: upgrade.rank,
+                                    maxRank: upgrade.maxRank,
+                                    id: "wf-\(upgrade.slot)-\(upgrade.name)"
                                 )
+                                Button {
+                                    inspectedModCard = card
+                                } label: {
+                                    HorizontalModCardView(card: card)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }

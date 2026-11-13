@@ -453,7 +453,7 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
                 "ItemId": "test-doughty",
                 "ItemType": "/Lotus/Weapons/Tenno/Melee/Staff/Bo",
                 "Configs": [{
-                    "Upgrades": ["u-stance", "u-doughty", "u-animosity"],
+                    "Upgrades": ["u-stance", "u-doughty", "u-animosity", "u-afflictions"],
                 }],
             }],
             "Upgrades": [
@@ -482,6 +482,11 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
                     "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee",
                     "UpgradeFingerprint": json.dumps({"lvl": 5}),
                 },
+                {
+                    "ItemId": "u-afflictions",
+                    "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DuplicateStatusOnKnock",
+                    "UpgradeFingerprint": json.dumps({"lvl": 5}),
+                },
             ],
             "RawUpgrades": [],
         }, game_data_override={
@@ -495,6 +500,7 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
                 "/Lotus/Weapons/Tenno/Melee/MeleeTrees/StaffCmbOneMeleeTree": {"n": "StaffCmbOneMeleeTree", "mx": 3},
                 "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus": {"n": "CritDamageForPunctureStatus", "mx": 5},
                 "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee": {"n": "HeavyCritOnRegularMelee", "mx": 5},
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DuplicateStatusOnKnock": {"n": "DuplicateStatusOnKnock", "mx": 5},
             },
             "rivenTags": {},
         })
@@ -502,10 +508,10 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
         by_cat = {row["c"]: row for row in result}
         self.assertEqual([x for x in by_cat["Primary"]["cfg"][0]["s"] if x], ["Primary Bulwark", "Primary Crux"])
         self.assertEqual(by_cat["Primary"]["cfg"][0]["u"], [])
-        self.assertEqual([x for x in by_cat["Melee"]["cfg"][0]["s"] if x], ["Clashing Forest", "Melee Doughty"])
+        self.assertEqual([x for x in by_cat["Melee"]["cfg"][0]["s"] if x], ["Clashing Forest", "Melee Doughty", "Melee Animosity"])
         self.assertEqual(len(by_cat["Melee"]["cfg"][0]["u"]), 1)
-        self.assertEqual(by_cat["Melee"]["cfg"][0]["u"][0]["n"], "Melee Animosity")
-        self.assertIn("暂未接入重击叠层模型", by_cat["Melee"]["cfg"][0]["u"][0]["why"])
+        self.assertEqual(by_cat["Melee"]["cfg"][0]["u"][0]["n"], "Melee Afflictions")
+        self.assertIn("击倒或浮空", by_cat["Melee"]["cfg"][0]["u"][0]["why"])
 
 
 if __name__ == "__main__":

@@ -91,6 +91,15 @@ GEAR_STACK_CATEGORIES = (
 )
 
 
+def strip_archwing_prefix(text: str | None) -> str | None:
+    if not isinstance(text, str):
+        return text
+    stripped = text.strip()
+    if stripped.upper().startswith("<ARCHWING>"):
+        stripped = stripped[len("<ARCHWING>"):].strip()
+    return stripped
+
+
 def is_companion_special_weapon(item: dict) -> bool:
     """Pet weapons live in `SpecialItems`, not in `SentinelWeapons`.
 
@@ -216,6 +225,16 @@ UPGRADE_ALIASES = {
         ("Cascadia Overcharge", 5),
     "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnStatusProcBonusDamage":
         ("Cascadia Empowered", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee":
+        ("Melee Animosity", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyAttackDamageAndShieldOnShieldBreak":
+        ("Melee Assimilation", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryOnRollCritChanceOnHeadshot":
+        ("Cascadia Accuracy", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnRollCritChanceOnHeadshot":
+        ("Cascadia Accuracy", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/WeaponDamageOnResidualContact":
+        ("Theorem Demulcent", 5),
     "/Lotus/Upgrades/Mods/Melee/Expert/WeaponHeavyAttackEfficiencySPSubMod":
         ("Galvanized Reflex", 10),
     "/Lotus/Upgrades/Mods/Melee/Expert/WeaponMeleeStatusChanceSPSubMod":
@@ -225,10 +244,6 @@ UPGRADE_ALIASES = {
 }
 
 UNSUPPORTED_UPGRADE_DISPLAY_NAMES = {
-    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee": (
-        "Melee Animosity",
-        "每次近战轻击叠加重击暴击率；暂未接入重击叠层模型",
-    ),
     "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DuplicateStatusOnKnock": (
         "Melee Afflictions",
         "击倒或浮空敌人时额外施加异常层数；暂未接入单次攻击模型",
@@ -236,6 +251,50 @@ UNSUPPORTED_UPGRADE_DISPLAY_NAMES = {
     "/Lotus/Upgrades/CosmeticEnhancers/Zariman/OperatorOnOperatorAbilityIncreaseDamage": (
         "Eternal Eradicate",
         "指挥官技能增伤（增幅器赋能）；当前武器计算器不计入增幅器",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryEnergyRegenOnImpactProc": (
+        "Primary Exhilarate",
+        "只提供能量回复速度；不直接改变本次伤害数值",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryJamEnemyWeaponsOnMagneticProc": (
+        "Primary Obstruct",
+        "只提供缴械控制效果；不直接改变本次伤害数值",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryColdOnPuncture": (
+        "Secondary Cryogenic",
+        "穿刺时向周围目标施加冰冻状态；暂未接入群控状态联动",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ConvergeRadialAttackOnAim": (
+        "Primary Compression",
+        "按被压缩的爆炸半径比例增伤；暂未接入自定义半径压缩公式",
+    ),
+    "/Lotus/Upgrades/Grimoire/LohkAuraMod": (
+        "Lohk Canticle",
+        "魔典光环增益（提升射速）；暂未接入辅助魔典增益",
+    ),
+    "/Lotus/Upgrades/Grimoire/VomeStrikeMod": (
+        "Vome Invocation",
+        "魔典技能强度叠层（次要击中回馈技能强度）；当前武器面板暂不计入",
+    ),
+    "/Lotus/Upgrades/Grimoire/FassAuraMod": (
+        "Fass Canticle",
+        "魔典光环（护盾充能）；不直接改变伤害数值",
+    ),
+    "/Lotus/Upgrades/Grimoire/JahuAuraMod": (
+        "Jahu Canticle",
+        "魔典光环（护甲/护盾削减）；请用战斗环境削甲选项模拟",
+    ),
+    "/Lotus/Upgrades/Grimoire/NetraStrikeMod": (
+        "Netra Invocation",
+        "魔典技能效率叠层；不直接改变伤害数值",
+    ),
+    "/Lotus/Upgrades/Grimoire/RisStrikeMod": (
+        "Ris Invocation",
+        "魔典技能持续时间叠层；不直接改变伤害数值",
+    ),
+    "/Lotus/Upgrades/Grimoire/XataStrikeMod": (
+        "Xata Invocation",
+        "魔典能量回复叠层；不直接改变伤害数值",
     ),
 }
 
@@ -731,6 +790,19 @@ def damagekit_ranked_action_values() -> dict[str, list[float]]:
         action = row.get("action")
         if isinstance(name, str) and isinstance(action, dict):
             result[name] = leaves(action)
+    # Match supplemental Swift definitions kept outside `mods.json`.
+    supplemental = {
+        "Bane of Infested": [0.3],
+        "Bane of Corpus": [0.3],
+        "Bane of Orokin": [0.3],
+        "Primed Bane of Orokin": [0.55],
+        "Melee Animosity": [4.2],
+        "Melee Assimilation": [1.5],
+        "Cascadia Accuracy": [3.0],
+        "Theorem Demulcent": [1.8],
+    }
+    for name, vals in supplemental.items():
+        result.setdefault(name, vals)
     return result
 
 
@@ -1030,7 +1102,7 @@ def resolve_calculator_weapon_names(
         "/Lotus/Weapons/Tenno/Bayonet/TnBayonetMeleeWeapon": ("Vinquibus (Melee)", "制胜者（近战）"),
     }
     raw_calc = weapon_data.get("n") if isinstance(weapon_data.get("n"), str) else None
-    raw_zh = weapon_data.get("z") if isinstance(weapon_data.get("z"), str) else None
+    raw_zh = strip_archwing_prefix(weapon_data.get("z")) if isinstance(weapon_data.get("z"), str) else None
     if item_type in explicit_aliases:
         alias_calc, alias_zh = explicit_aliases[item_type]
         return alias_calc, raw_zh or alias_zh
@@ -1079,6 +1151,20 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
     # the iOS app.
     local_mods = _rows_by_unique_name(ALECA_MODS)
     local_arcanes = _rows_by_unique_name(ALECA_ARCANES)
+    arcanes_path = os.path.join(ROOT, "data", "gamedata", "raw", "ExportRelicArcane_en.json")
+    if os.path.exists(arcanes_path):
+        try:
+            raw_relic_arc = load_json(arcanes_path)
+            for row in (raw_relic_arc.get("ExportRelicArcane") or []) if isinstance(raw_relic_arc, dict) else []:
+                if isinstance(row, dict) and isinstance(row.get("uniqueName"), str) and ("levelStats" in row or "CosmeticEnhancers" in row["uniqueName"]):
+                    local_arcanes.setdefault(row["uniqueName"], {**row, "type": "Arcane"})
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+    mod_types_with_stances = {
+        row["name"]
+        for row in (load_json(DAMAGEKIT_MODS) if os.path.exists(DAMAGEKIT_MODS) else [])
+        if isinstance(row, dict) and str(row.get("type") or "").lower() == "stance" and isinstance(row.get("name"), str)
+    }
     site_weapons = load_json(SITE_WEAPONS) if os.path.exists(SITE_WEAPONS) else {}
 
     upgrades, upgrades_by_type, raw_upgrade_counts = upgrade_indexes(inv)
@@ -1099,6 +1185,7 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
             if not display_name:
                 raw_name = weapon.get("ItemName")
                 display_name = raw_name if isinstance(raw_name, str) and raw_name else short_type_name(item_type)
+            display_name = strip_archwing_prefix(display_name) or display_name
             raw_instance_id = object_id(weapon.get("ItemId")) or f"{inventory_category}:{ordinal}:{item_type}"
             opaque_id = sha256(raw_instance_id.encode("utf-8"))[:20]
             incarnon, incarnon_issue = incarnon_choices(weapon)
@@ -1204,9 +1291,15 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                                 fp = fingerprint(upgrade.get("UpgradeFingerprint"))
                                 raw_rank = as_number((fp or {}).get("lvl"))
                                 rank = int(raw_rank) if raw_rank is not None else None
+                            fallback_meta = local_mods.get(upgrade_type) or local_arcanes.get(upgrade_type) or {}
+                            fallback_name = (
+                                fallback_meta.get("name")
+                                if isinstance(fallback_meta, dict) and isinstance(fallback_meta.get("name"), str)
+                                else short_type_name(upgrade_type)
+                            )
                             known_name, known_why = UNSUPPORTED_UPGRADE_DISPLAY_NAMES.get(
                                 upgrade_type,
-                                (short_type_name(upgrade_type), "DamageKit 尚无该升级的伤害公式"),
+                                (fallback_name, "DamageKit 尚无该升级的伤害公式"),
                             )
                             unresolved = {
                                 "s": slot,
@@ -1277,7 +1370,8 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                             "why": direct_rank_issue or "背包快照没有该 Mod 的等级，不能写入计算",
                         })
                         continue
-                    if rank != maximum:
+                    is_stance = (slot == 9) or (name in mod_types_with_stances)
+                    if rank != maximum and not is_stance:
                         action_scale = source_proven_rank_action_scale(
                             name, rank, maximum, game_mod_data, simple_action_percents
                         )
@@ -1384,6 +1478,15 @@ def frame_static_catalogues() -> tuple[dict[str, dict], dict[str, dict], dict[st
     game_mods = game_mods if isinstance(game_mods, dict) else {}
     local_mods = _rows_by_unique_name(ALECA_MODS)
     arcanes = _rows_by_unique_name(ALECA_ARCANES)
+    raw_relic_arc_path = os.path.join(ROOT, "data", "gamedata", "raw", "ExportRelicArcane_en.json")
+    if os.path.exists(raw_relic_arc_path):
+        try:
+            raw_relic_arc = load_json(raw_relic_arc_path)
+            for row in (raw_relic_arc.get("ExportRelicArcane") or []) if isinstance(raw_relic_arc, dict) else []:
+                if isinstance(row, dict) and isinstance(row.get("uniqueName"), str) and ("levelStats" in row or "CosmeticEnhancers" in row["uniqueName"]):
+                    arcanes.setdefault(row["uniqueName"], {**row, "type": "Arcane"})
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
     frames = _rows_by_unique_name(ALECA_WARFRAMES)
     return game_mods, local_mods, arcanes, frames
 
@@ -1598,7 +1701,7 @@ def localized_item_name(item: dict, inventory_category: str, ordinal: int,
         # Companion names can be encoded as
         # `/Lotus/Language/Pets/...|VISIBLE NAME`.  The left part is a
         # localization key, not a label the player should ever see.
-        visible_name = raw_name.rsplit("|", 1)[-1].strip()
+        visible_name = strip_archwing_prefix(raw_name.rsplit("|", 1)[-1].strip())
         if visible_name and not visible_name.startswith("/"):
             return visible_name
 
@@ -1610,13 +1713,13 @@ def localized_item_name(item: dict, inventory_category: str, ordinal: int,
                 locale = entry.get(language)
                 name = locale.get("name") if isinstance(locale, dict) else None
                 if isinstance(name, str) and name.strip():
-                    return name.strip()
+                    return strip_archwing_prefix(name.strip()) or name.strip()
 
     rows = display_rows.get(inventory_category) or []
     display = rows[ordinal] if ordinal < len(rows) else {}
     name = display.get("zh") if isinstance(display, dict) else None
     if isinstance(name, str) and name.strip():
-        return name.strip()
+        return strip_archwing_prefix(name.strip()) or name.strip()
     return short_type_name(item_type) if isinstance(item_type, str) else "未命名装备"
 
 

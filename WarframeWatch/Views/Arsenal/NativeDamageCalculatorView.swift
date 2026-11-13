@@ -68,7 +68,16 @@ struct NativeDamageCalculatorView: View {
     let title: String
     @StateObject private var model: NativeDamageCalculatorModel
     @State private var sheet: NativeCalcSheet?
+    @State private var inspectedCalcCard: InspectableCalcCard?
+    @State private var showWarframeMods = false
     @State private var showAdvanced = false
+
+    private struct InspectableCalcCard: Identifiable {
+        let id = UUID()
+        let card: ModCardPresentation
+        let replaceSlot: Int?
+        let isRiven: Bool
+    }
     /// Simulator screenshots cannot tap or scroll.  This launch-only flag is
     /// deliberately separate from normal calculator state: it lets CI prove
     /// that an actual result renders after DamageKit has completed, without
@@ -176,6 +185,27 @@ struct NativeDamageCalculatorView: View {
                     sheet = nil
                 }
             }
+        }
+        .sheet(item: $inspectedCalcCard) { item in
+            VerticalModCardModal(
+                card: item.card,
+                onReplace: item.replaceSlot.map { slot in
+                    {
+                        DispatchQueue.main.async {
+                            sheet = .mod(slot: slot)
+                        }
+                    }
+                },
+                onRemove: item.replaceSlot.map { slot in
+                    {
+                        if item.isRiven {
+                            model.setRivenSlot(nil)
+                        } else {
+                            model.setMod(nil, in: slot)
+                        }
+                    }
+                }
+            )
         }
     }
 
@@ -379,12 +409,9 @@ struct NativeDamageCalculatorView: View {
                     .font(.wfBody)
                     .foregroundColor(WFTheme.textMuted)
             } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: WFUI.s2) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                     ForEach(model.activeWeaponSlots, id: \.self) { slot in
-                        Button { sheet = .mod(slot: slot) } label: {
-                            modSlot(slot)
-                        }
-                        .buttonStyle(.plain)
+                        modSlot(slot)
                     }
                 }
                 if !model.availableStanceCombos.isEmpty {
@@ -417,52 +444,99 @@ struct NativeDamageCalculatorView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
+    @ViewBuilder
     private func modSlot(_ slot: Int) -> some View {
         let isRiven = model.isRivenPlaced(in: slot)
         let selected = isRiven ? nil : model.weaponSlots[slot]
-        return HStack(spacing: 8) {
-            if let selected, let mod = ModLibrary.shared.mod(named: selected) {
-                let urls = model.catalog.modIconURLs(forName: mod.name)
-                NativeThumb(local: urls.local,
-                            remote: urls.remote, size: 30)
-            } else if isRiven {
-                NativeThumb(local: model.catalog.localModIcon(named: "riven.webp"),
-                            remote: URL(string: "https://warframe-damage.com/data/mods/riven.webp"), size: 30)
-            } else {
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted)
-                    .frame(width: 30, height: 30)
-                    .background(WFTheme.panelElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        let slotTag: String? = slot == 8 ? "特殊" : (slot == 9 ? "架势" : (slot == 10 ? "赋能" : nil))
+        if isRiven {
+            let rivenTitle = model.riven.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "自定义紫卡" : model.riven.name
+            let card = ModCardPresentation.make(
+                rawName: rivenTitle,
+                slotTag: "紫卡",
+                rank: 8,
+                maxRank: 8,
+                isRiven: true,
+                rivenLines: calculatorRivenLines,
+                id: "calc-slot-\(slot)-riven"
+            )
+            Button {
+                inspectedCalcCard = InspectableCalcCard(card: card, replaceSlot: slot, isRiven: true)
+            } label: {
+                HorizontalModCardView(card: card)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(slotLabel(slot))
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-                Text(isRiven ? "自定义紫卡" : (selected.map(model.catalog.local) ?? "选择 Mod"))
-                    .font(.wfBody)
-                    .foregroundColor(selected == nil && !isRiven ? WFTheme.textSecondary : WFTheme.textPrimary)
-                    .lineLimit(1)
+            .buttonStyle(.plain)
+        } else if let selected {
+            let canonicalName = ModLibrary.shared.mod(named: selected)?.name ?? selected
+            let meta = model.catalog.modCard(for: canonicalName)
+            let inferredRank: Int? = {
+                guard let maxR = meta?.maxRank else { return nil }
+                if model.weaponSlotActionScales.indices.contains(slot),
+                   let scale = model.weaponSlotActionScales[slot] {
+                    return Int((scale * Double(maxR)).rounded())
+                }
+                return maxR
+            }()
+            let card = ModCardPresentation.make(
+                rawName: canonicalName,
+                slotTag: slotTag,
+                rank: inferredRank,
+                maxRank: meta?.maxRank,
+                id: "calc-slot-\(slot)-\(canonicalName)"
+            )
+            Button {
+                inspectedCalcCard = InspectableCalcCard(card: card, replaceSlot: slot, isRiven: false)
+            } label: {
+                HorizontalModCardView(card: card)
             }
-            Spacer(minLength: 0)
-            if selected != nil || isRiven {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundColor(WFTheme.textMuted)
-                    .onTapGesture {
-                        if isRiven {
-                            model.setRivenSlot(nil)
-                        } else {
-                            model.setMod(nil, in: slot)
-                        }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                sheet = .mod(slot: slot)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                        .frame(width: 28, height: 28)
+                        .background(WFTheme.panelElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(slotLabel(slot))
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                        Text("选择 Mod")
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textSecondary)
+                            .lineLimit(1)
                     }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 10)
+                .frame(height: 66)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(WFUI.raised)
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(WFTheme.border.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                )
             }
+            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(WFUI.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var calculatorRivenLines: [String] {
+        let base = model.riven.selectedStats
+            .sorted { $0.rawValue < $1.rawValue }
+            .map { stat in
+                String(format: "%+.1f%% %@", model.riven.value(for: stat), stat.title)
+            }
+        let extra = model.riven.displayOnlyEffects.map {
+            String(format: "%+.1f%% %@", $0.value * 100, $0.label)
+        } + model.riven.unresolvedEffects.map(\.label)
+        return base + extra
     }
 
     private var rivenControls: some View {
@@ -659,33 +733,53 @@ struct NativeDamageCalculatorView: View {
     @ViewBuilder
     private var incarnonCard: some View {
         if let weapon = model.selectedWeapon, let tiers = weapon.incarnon, !tiers.isEmpty {
-            VStack(alignment: .leading, spacing: WFUI.s3) {
+            VStack(alignment: .leading, spacing: WFUI.s2) {
                 WFSectionHeader("灵化进化")
                 ForEach(tiers, id: \.tier) { tier in
-                    Picker("第 \(tier.tier) 层", selection: incarnonBinding(tier.tier)) {
-                        ForEach(Array(tier.options.enumerated()), id: \.offset) { index, option in
-                            Text(option.name.isEmpty
-                                 ? "选项 \(index + 1)"
-                                 : model.catalog.localIncarnon(option.name))
-                                .font(.wfBody)
-                                .tag(index)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(WFTheme.gold)
                     let selectedIndex = model.incarnonSelections[tier.tier] ?? 0
-                    if tier.options.indices.contains(selectedIndex) {
-                        let selected = tier.options[selectedIndex].name
-                        if !selected.isEmpty {
-                            Text(model.catalog.localIncarnon(selected))
-                                .font(.wfBody)
-                                .foregroundColor(WFTheme.textSecondary)
-                            if model.catalog.localIncarnon(selected) != selected {
-                                Text(selected)
-                                    .font(.wfLabel)
-                                    .foregroundColor(WFTheme.textMuted)
+                    let selectedLabel: String = {
+                        guard tier.options.indices.contains(selectedIndex) else { return "选择进化" }
+                        let raw = tier.options[selectedIndex].name
+                        return raw.isEmpty ? "选项 \(selectedIndex + 1)" : model.catalog.localIncarnon(raw)
+                    }()
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("进化 \(tier.tier)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(WFTheme.gold)
+                            .frame(width: 48, alignment: .center)
+                            .padding(.vertical, 5)
+                            .background(WFTheme.gold.opacity(0.14))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        Menu {
+                            ForEach(Array(tier.options.enumerated()), id: \.offset) { index, option in
+                                Button {
+                                    incarnonBinding(tier.tier).wrappedValue = index
+                                } label: {
+                                    Text(option.name.isEmpty
+                                         ? "选项 \(index + 1)"
+                                         : model.catalog.localIncarnon(option.name))
+                                }
                             }
+                        } label: {
+                            HStack(alignment: .top, spacing: 6) {
+                                Text(selectedLabel)
+                                    .font(.system(size: 13.5, weight: .medium))
+                                    .foregroundColor(WFTheme.textPrimary)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 4)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(WFTheme.textMuted)
+                                    .padding(.top, 3)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(WFUI.raised)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -734,24 +828,27 @@ struct NativeDamageCalculatorView: View {
 
     private var warframeCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("战甲")
-            Text("技能强度不手填。当前战甲与外部施法者各自从其 A/B/C 配置、Mod 和执政官石结算，互不借用数值。")
+            WFSectionHeader("战甲与专精")
+            Text("当前战甲配卡、执政官石与指挥官专精处于同一装备层，共同累加自身技能强度；外部队友 Buff 彼此独立、按单技能单独设置施法者强度。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
             currentWarframeSelection
             if let frame = model.currentWarframe {
                 currentWarframeConfiguration(frame)
-                currentWarframeStrengthSummary
                 archonShardControls
                 currentWarframeBuffControls
             } else {
-                Text("未选择当前战甲：本次武器按 100% 技能强度且不带战甲石头或自身技能计算。")
+                Text("未选择当前战甲：基础技能强度按 100% 起算。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             }
             WFHairline()
+            operatorFocusControls
+            currentWarframeStrengthSummary
+            WFHairline()
             externalWarframeBuffControls
         }
+        .onChange(of: model.operatorFocus) { _ in model.calculate() }
         .wfCardStyle()
     }
 
@@ -822,11 +919,106 @@ struct NativeDamageCalculatorView: View {
                     .buttonStyle(.plain)
                 }
             }
-            if let config = model.currentWarframeConfig, !config.isExactImport {
-                Text(config.issues.joined(separator: "\n"))
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.gold)
+            if let config = model.currentWarframeConfig {
+                if !config.isExactImport {
+                    Text(config.issues.joined(separator: "\n"))
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.gold)
+                }
+                let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
+                if !upgrades.isEmpty {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            showWarframeMods.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("战甲 Mod 与赋能（\(upgrades.count)）")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textSecondary)
+                            Spacer()
+                            Image(systemName: showWarframeMods ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                        .padding(.top, 2)
+                    }
+                    .buttonStyle(.plain)
+
+                    if showWarframeMods {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            ForEach(upgrades) { upgrade in
+                                let slotTag = upgrade.kind.lowercased() == "mod" ? nil : upgrade.kind
+                                let card = ModCardPresentation.make(
+                                    rawName: upgrade.name,
+                                    slotTag: slotTag,
+                                    rank: upgrade.rank,
+                                    maxRank: upgrade.maxRank,
+                                    id: "calc-wf-\(upgrade.slot)-\(upgrade.name)"
+                                )
+                                Button {
+                                    inspectedCalcCard = InspectableCalcCard(card: card, replaceSlot: nil, isRiven: false)
+                                } label: {
+                                    HorizontalModCardView(card: card)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    private var operatorFocusControls: some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            Text("指挥官专精技能")
+                .font(.wfBody)
+                .foregroundColor(WFTheme.textSecondary)
+            Text("强化技能强度的专精会直接与当前战甲配置相加（不会影响下方外部队友 Buff）。")
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            scenarioRow(
+                title: "马杜莱 · 弹弓强化（+40% 技能强度）",
+                detail: "连续虚空弹射切回战甲后提升自身战甲技能强度",
+                enabled: $model.operatorFocus.slingStrength,
+                value: nil,
+                suffix: ""
+            )
+            scenarioRow(
+                title: "泽努里 · 硬化泉源（+20% 技能强度）",
+                detail: "处于硬化泉源内提升自身战甲技能强度",
+                enabled: $model.operatorFocus.hardenedWellspring,
+                value: nil,
+                suffix: ""
+            )
+            scenarioRow(
+                title: "马杜莱 · 虚空突击（最高 +1000% 伤害）",
+                detail: "按消耗能量百分比增加武器伤害，持续 8 秒",
+                enabled: $model.operatorFocus.voidStrike,
+                value: $model.operatorFocus.voidStrikePercent,
+                suffix: "%"
+            )
+            HStack(spacing: WFUI.s2) {
+                Toggle("纳拉蒙 · 致命浮空", isOn: $model.operatorFocus.lethalLevitation)
+                    .tint(WFTheme.gold)
+                    .font(.wfBody)
+                    .foregroundColor(WFTheme.textPrimary)
+                if model.operatorFocus.lethalLevitation {
+                    Stepper("\(model.operatorFocus.lethalLevitationStacks) 层 (+\(model.operatorFocus.lethalLevitationStacks * 50)%)",
+                            value: $model.operatorFocus.lethalLevitationStacks,
+                            in: 1...4)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.gold)
+                }
+            }
+            scenarioRow(
+                title: "纳拉蒙 · 杀手急袭（近战暴击率 +50%）",
+                detail: "指挥官处决切换战甲后提升近战暴击率",
+                enabled: $model.operatorFocus.killersRush,
+                value: nil,
+                suffix: ""
+            )
         }
     }
 
@@ -896,8 +1088,13 @@ struct NativeDamageCalculatorView: View {
         // The display resolution is useful even before the toggle is enabled;
         // it tells the player exactly what this configuration would provide.
         let preview = model.currentWarframe.map {
-            WarframeWeaponBuffResolver.resolve(candidate, caster: $0,
-                                                configIndex: model.currentWarframeConfigIndex)
+            WarframeWeaponBuffResolver.resolve(
+                candidate,
+                caster: $0,
+                configIndex: model.currentWarframeConfigIndex,
+                extraStrength: model.operatorFocus.strengthBonus,
+                extraContributions: model.operatorFocus.strengthContributions
+            )
         }
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: WFUI.s2) {
@@ -929,24 +1126,27 @@ struct NativeDamageCalculatorView: View {
     private var externalWarframeBuffControls: some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
             HStack {
-                Text("外部施法战甲 Buff")
+                Text("外部队友 Buff")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.textSecondary)
                 Spacer()
-                Button("添加") { model.addExternalWarframeBuff() }
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.gold)
-                    .disabled(model.availableExternalWarframes.isEmpty)
+                Menu {
+                    ForEach(ExternalTeamBuffTemplate.allCases) { template in
+                        Button(template.title) {
+                            model.addExternalWarframeBuff(template: template)
+                        }
+                    }
+                } label: {
+                    Label("添加队友技能", systemImage: "plus.circle")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.gold)
+                }
             }
-            Text("每一行是一条外部施放来源。选择其他施法者、其 A/B/C 配置和实际可给队友的技能；它的技能强度不会使用当前战甲的配置，当前战甲也不能重复作为外部来源。")
+            Text("可直接添加任一队友增益并单独设置该技能的施法者强度（%），完全独立于自身战甲与指挥官专精。")
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textMuted)
-            if model.availableExternalWarframes.isEmpty {
-                Text("没有可选择的其他背包战甲。当前战甲仅在上方按自身来源结算，不会重复计入这里。")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-            } else if model.externalWarframeBuffs.isEmpty {
-                Text("尚未添加外部施法者。")
+            if model.externalWarframeBuffs.isEmpty {
+                Text("尚未添加外部队友 Buff。")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             } else {
@@ -958,28 +1158,30 @@ struct NativeDamageCalculatorView: View {
     }
 
     private func externalWarframeBuffEditor(_ draft: NativeExternalWarframeBuffDraft) -> some View {
-        let caster = model.externalCaster(for: draft)
-        let candidates = model.externalCandidates(for: draft)
-        let selected = model.externalCandidate(for: draft)
-        let preview: WarframeWeaponBuffResolution? = {
-            guard let caster, let selected else { return nil }
-            return WarframeWeaponBuffResolver.resolve(selected, caster: caster,
-                                                      configIndex: draft.configIndex)
-        }()
+        let strengthBinding = Binding<Double>(
+            get: { draft.abilityStrengthPercent },
+            set: { model.setExternalBuffStrength($0, for: draft.id) }
+        )
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Menu {
-                    ForEach(model.availableExternalWarframes) { frame in
-                        Button(frame.z) { model.setExternalCaster(frame.id, for: draft.id) }
+                    ForEach(ExternalTeamBuffTemplate.allCases) { template in
+                        Button(template.title) {
+                            model.setExternalBuffTemplate(template, for: draft.id)
+                        }
                     }
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "person.2")
-                        Text(caster?.z ?? "选择施法者")
+                            .foregroundColor(WFTheme.gold)
+                        Text(draft.template.title)
+                            .font(.wfBody)
+                            .foregroundColor(WFTheme.textPrimary)
+                            .lineLimit(1)
                         Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(WFTheme.textMuted)
                     }
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textPrimary)
                 }
                 .buttonStyle(.plain)
                 Spacer()
@@ -988,80 +1190,25 @@ struct NativeDamageCalculatorView: View {
                     set: { model.setExternalWarframeBuffActive($0, for: draft.id) }
                 ))
                 .tint(WFTheme.gold)
-                .font(.wfLabel)
+                .labelsHidden()
                 Button(role: .destructive) { model.removeExternalWarframeBuff(draft.id) } label: {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(WFTheme.red)
             }
-            if caster == nil {
-                Text("请选择另一名背包战甲作为外部施法者；当前战甲不能同时作为外部来源。")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.gold)
-            } else if let caster {
-                HStack(spacing: 6) {
-                    Text("配置")
+
+            HStack(spacing: WFUI.s2) {
+                DamageNumberField("施法者强度", value: strengthBinding, suffix: "%")
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(draft.template.previewLabel(strengthPercent: draft.abilityStrengthPercent))
+                        .font(.wfBody)
+                        .foregroundColor(draft.active ? WFTheme.gold : WFTheme.textMuted)
+                    Text(draft.active ? "已计入计算" : "已暂停")
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
-                    ForEach(Array(caster.configs.enumerated()), id: \.element.id) { entry in
-                        let index = entry.offset
-                        Button(entry.element.label) {
-                            model.setExternalCasterConfig(index, for: draft.id)
-                        }
-                        .font(.wfLabel)
-                        .foregroundColor(index == draft.configIndex ? Color(hex: "1A1408") : WFTheme.textSecondary)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(index == draft.configIndex ? WFTheme.gold : WFTheme.panelElevated))
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
                 }
-                if let config = caster.config(at: draft.configIndex), !config.isExactImport {
-                    Text(config.issues.joined(separator: "\n"))
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.gold)
-                }
-            }
-            if caster != nil, candidates.isEmpty {
-                Text("这套施法者配置没有已接入、且能施加给队友的武器增益。")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-            } else if caster != nil {
-                Menu {
-                    ForEach(candidates) { candidate in
-                        Button(candidate.name) {
-                            model.setExternalWarframeBuffCandidate(candidate.id, for: draft.id)
-                        }
-                    }
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(selected?.name ?? "选择施放技能")
-                                .font(.wfBody)
-                                .foregroundColor(WFTheme.textPrimary)
-                            Text(selected?.detail ?? "只列出实际可给队友的技能")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.textMuted)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                        if let preview {
-                            Text(warframeBuffValueLabel(preview))
-                                .font(.wfLabel)
-                                .foregroundColor(draft.active ? WFTheme.gold : WFTheme.textMuted)
-                                .multilineTextAlignment(.trailing)
-                        }
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(WFTheme.textMuted)
-                    }
-                    .padding(9)
-                    .background(WFTheme.panelElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                }
-                .buttonStyle(.plain)
             }
         }
         .padding(10)

@@ -190,7 +190,8 @@ public struct InventoryAdapter: Sendable {
             if let alias = Self.upgradeAliases[upgradeType] {
                 var actionScale: Double?
                 var conditionalStepScale: Double?
-                if rank != alias.maximumRank {
+                let isStance = modLibrary.mod(named: alias.name)?.type?.lowercased() == "stance"
+                if rank != alias.maximumRank && !isStance {
                     if let mod = Self.objectMap(mods[upgradeType]) {
                         conditionalStepScale = Self.sourceProvenConditionalStepScale(
                             name: alias.name, rank: rank, maximum: alias.maximumRank,
@@ -223,7 +224,8 @@ public struct InventoryAdapter: Sendable {
             let maximum = Int(Self.number(mod["mx"]) ?? 0)
             var actionScale: Double?
             var conditionalStepScale: Double?
-            if rank != maximum {
+            let isStance = slot == 9 || modLibrary.mod(named: name)?.type?.lowercased() == "stance"
+            if rank != maximum && !isStance {
                 if Self.isSourceProvenNonDamage(name: name, gameMod: mod) {
                     // Proven non-damage utility cards do not contribute direct
                     // damage coefficients; retain their real slot and metadata.
@@ -375,6 +377,16 @@ public struct InventoryAdapter: Sendable {
             ("Cascadia Overcharge", 5),
         "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnStatusProcBonusDamage":
             ("Cascadia Empowered", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee":
+            ("Melee Animosity", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyAttackDamageAndShieldOnShieldBreak":
+            ("Melee Assimilation", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryOnRollCritChanceOnHeadshot":
+            ("Cascadia Accuracy", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnRollCritChanceOnHeadshot":
+            ("Cascadia Accuracy", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/WeaponDamageOnResidualContact":
+            ("Theorem Demulcent", 5),
         "/Lotus/Upgrades/Mods/Melee/Expert/WeaponHeavyAttackEfficiencySPSubMod":
             ("Galvanized Reflex", 10),
         "/Lotus/Upgrades/Mods/Melee/Expert/WeaponMeleeStatusChanceSPSubMod":

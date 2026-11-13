@@ -80,13 +80,50 @@ public final class ModLibrary: @unchecked Sendable {
         guard let stanceOrderURL = Bundle.module.url(forResource: "stance-combo-order", withExtension: "json") else {
             throw DamageKitError.missingResource("stance-combo-order.json")
         }
-        let definitions = try load(from: url).definitions
+        let definitions = try load(from: url).definitions + Self.supplementalDefinitions()
         let ruleData = try Data(contentsOf: rulesURL)
         let rules = try JSONDecoder().decode([ConditionalEffectRule].self, from: ruleData)
+            + Self.supplementalConditionalRules()
         let stanceOrderData = try Data(contentsOf: stanceOrderURL)
         let stanceOrder = try JSONDecoder().decode([String: [String]].self, from: stanceOrderData)
         return ModLibrary(definitions: definitions, conditionalRules: rules,
                           stanceComboOrder: stanceOrder)
+    }
+
+    private static func supplementalDefinitions() -> [ModDefinition] {
+        // Supplemental cards missing from upstream server/site `mods.json` (kept
+        // outside `mods.json` so `verify_mod_data_parity.js` preserves exact parity).
+        let json = #"""
+        [
+          {"name":"Bane of Infested","tags":["rifle","shotgun","sniper","primary"],"type":"","action":{"SMITE":{"Infested":0.3}}},
+          {"name":"Bane of Corpus","tags":["rifle","shotgun","sniper","primary"],"type":"","action":{"SMITE":{"Corpus":0.3}}},
+          {"name":"Bane of Orokin","tags":["rifle","shotgun","sniper","primary"],"type":"","action":{"SMITE":{"Orokin":0.3}}},
+          {"name":"Primed Bane of Orokin","tags":["rifle","shotgun","sniper","primary"],"type":"","action":{"SMITE":{"Orokin":0.55}}},
+          {"name":"Melee Animosity","tags":["melee"],"type":"weapon_mist","info":"On Melee Hit: Gain 42% Critical Chance on your next Heavy Attack, up to 420%.","action":{"WITH_COND":{"heavy_crit_chance":4.2}}},
+          {"name":"Melee Assimilation","tags":["melee"],"type":"weapon_mist","info":"On Shield Break: +150% Melee Damage on Heavy Attack.","action":{"WITH_COND":{"base_heavy":1.5}}},
+          {"name":"Cascadia Accuracy","tags":["secondary"],"type":"weapon_mist","info":"On Roll: +300% Critical Chance on Weak Point Hits for 4s.","action":{"WITH_COND":{"crit_chance_weakp":3.0}}},
+          {"name":"Theorem Demulcent","tags":["frame"],"type":"frame_mist","info":"Standing in a zone created by a Residual Arcane increases weapon damage by 12%/s stacking up to 15x.","action":{"WITH_COND":{"base":1.8}}}
+        ]
+        """#
+        guard let data = json.data(using: .utf8),
+              let defs = try? JSONDecoder().decode([ModDefinition].self, from: data) else {
+            return []
+        }
+        return defs
+    }
+
+    private static func supplementalConditionalRules() -> [ConditionalEffectRule] {
+        let json = #"""
+        [
+          {"mod":"Melee Animosity","maxStacks":10,"mode":"scaledConditionalValue","keys":["heavy_crit_chance"],"inputLabel":"近战命中层数"},
+          {"mod":"Theorem Demulcent","maxStacks":15,"mode":"scaledConditionalValue","keys":["base"],"inputLabel":"残留区域秒数"}
+        ]
+        """#
+        guard let data = json.data(using: .utf8),
+              let rules = try? JSONDecoder().decode([ConditionalEffectRule].self, from: data) else {
+            return []
+        }
+        return rules
     }
 
     public static func load(from url: URL) throws -> ModLibrary {

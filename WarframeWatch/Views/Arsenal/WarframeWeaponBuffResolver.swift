@@ -128,11 +128,19 @@ enum WarframeWeaponBuffResolver {
 
     static func resolve(_ candidate: WarframeWeaponBuffCandidate,
                         caster: InventoryData.OwnedWarframe,
-                        configIndex: Int) -> WarframeWeaponBuffResolution {
-        let strength = WarframeStrengthResolver.resolve(
+                        configIndex: Int,
+                        extraStrength: Double = 0,
+                        extraContributions: [WarframeStrengthResolution.Contribution] = []) -> WarframeWeaponBuffResolution {
+        let baseStrength = WarframeStrengthResolver.resolve(
             caster,
             configIndex: configIndex,
             abilityOrdinal: candidate.abilityOrdinal > 0 ? candidate.abilityOrdinal : nil
+        )
+        let strength = WarframeStrengthResolution(
+            multiplier: baseStrength.multiplier + extraStrength,
+            contributions: baseStrength.contributions + extraContributions,
+            inactiveConditionalTerms: baseStrength.inactiveConditionalTerms,
+            importIssues: baseStrength.importIssues
         )
 
         switch candidate.route {
