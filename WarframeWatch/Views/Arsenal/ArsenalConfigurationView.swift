@@ -16,10 +16,12 @@ struct ArsenalWeaponConfigurationView: View {
     /// an instance whose static definition is not actually in this app build.
     private let calculatorAvailable: Bool
 
+    @ObservedObject private var catalog = WeaponCatalog.shared
     @State private var weaponConfigIndex: Int
     @State private var currentWarframeID: String?
     @State private var currentWarframeConfigIndex: Int
     @State private var openCalculator = false
+    @State private var showExtraDetails = false
 
     init(ownedWeapon: InventoryData.OwnedWeapon,
          availableWarframes: [InventoryData.OwnedWarframe],
@@ -83,10 +85,9 @@ struct ArsenalWeaponConfigurationView: View {
             WFTheme.bgPrimary.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: WFUI.s4) {
-                    heading
                     weaponBuildCard
                     warframeBuildCard
-                    calculationCard
+                    calculationButton
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -98,6 +99,9 @@ struct ArsenalWeaponConfigurationView: View {
         .toolbarBackground(WFTheme.bgSecondary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .task {
+            catalog.load()
+        }
         .navigationDestination(isPresented: $openCalculator) {
             DamageCalcView(
                 ownedWeapon: ownedWeapon,
@@ -111,34 +115,44 @@ struct ArsenalWeaponConfigurationView: View {
         }
     }
 
-    private var heading: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("武器配置")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(WFTheme.textPrimary)
-            Text("先核对这把武器和当前战甲的 A/B/C 配置；伤害计算会原样带入。")
-                .font(.wfBody)
-                .foregroundColor(WFTheme.textMuted)
+    private var weaponCatalogEntry: WeaponEntry? {
+        guard let calcName = ownedWeapon.calcName else { return nil }
+        return catalog.weapons.first { $0.n == calcName }
+    }
+
+    private var weaponMetaLine: String {
+        var parts = [ownedWeapon.categoryLabel]
+        if let (element, ratio) = ownedWeapon.progenitorElements
+            .sorted(by: { $0.key < $1.key })
+            .first,
+           ratio > 0 {
+            let pct = Int((ratio * 100).rounded())
+            parts.append("+\(pct)% \(elementLabel(element))")
         }
+        if !ownedWeapon.incarnonChoices.isEmpty {
+            parts.append("灵化")
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var weaponBuildCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("武器", trailing: ownedWeapon.categoryLabel)
-            HStack(alignment: .top, spacing: WFUI.s3) {
-                Image(systemName: "scope")
-                    .font(.system(size: 22, weight: .light))
-                    .foregroundColor(WFTheme.cyan)
-                    .frame(width: 38, height: 38)
-                    .background(WFTheme.cyan.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: WFUI.s3) {
+                ArsenalItemThumb(
+                    weaponEntry: weaponCatalogEntry,
+                    displayName: ownedWeapon.z,
+                    fallbackSymbol: "scope",
+                    fallbackColor: WFTheme.cyan,
+                    size: 58
+                )
+                VStack(alignment: .leading, spacing: 3) {
                     Text(ownedWeapon.z)
-                        .font(.wfTitle)
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(WFTheme.textPrimary)
-                    Text(ownedWeapon.calcName ?? "该武器尚未接入本机伤害数据")
+                        .lineLimit(1)
+                    Text(weaponMetaLine)
                         .font(.wfLabel)
-                        .foregroundColor(ownedWeapon.calcName == nil ? WFTheme.gold : WFTheme.textMuted)
+                        .foregroundColor(WFTheme.textSecondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -146,7 +160,7 @@ struct ArsenalWeaponConfigurationView: View {
             configPicker(
                 configs: ownedWeapon.configs.map(\.label),
                 selection: $weaponConfigIndex,
-                emptyText: "快照中没有这把武器的 A/B/C 配置。"
+                emptyText: "无 A/B/C 配卡记录"
             )
 
             if let config = selectedWeaponConfig {
@@ -158,61 +172,73 @@ struct ArsenalWeaponConfigurationView: View {
 
     private func weaponBuildDetail(_ config: InventoryData.OwnedWeapon.Config) -> some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
-            if !config.isExactImport {
-                Label("以下来源槽位没有写进当前伤害结果；它们不会被当成空槽或满级卡。",
-                      systemImage: "exclamationmark.triangle.fill")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.gold)
-                if !config.unresolvedUpgrades.isEmpty {
-                    Text("已从快照读到，但尚未有可验证的计算规则")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textSecondary)
-                    ForEach(config.unresolvedUpgrades) { upgrade in
-                        let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
-                        Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
-                            .font(.wfLabel)
-                            .foregroundColor(WFTheme.textMuted)
-                    }
-                }
-                ForEach(config.issues, id: \.self) { issue in
-                    Text("• \(issue)")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
-            }
-
-            if !config.nonDamageUpgrades.isEmpty {
-                Text("已导入、但不改变本次伤害数值的卡")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textSecondary)
-                ForEach(config.nonDamageUpgrades) { upgrade in
-                    let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
-                    Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
-            }
-
             let mods = config.normalizedSlots.enumerated().compactMap { index, name -> (Int, String)? in
                 guard let name else { return nil }
                 return (index, name)
             }
             if mods.isEmpty, config.riven == nil {
-                Text("这个配置没有已导入的 Mod。")
+                Text("当前配置没有已装 Mod")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             } else {
-                Text("已导入的 Mod")
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textSecondary)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
                     ForEach(Array(mods.enumerated()), id: \.offset) { _, pair in
-                        buildPill(slotLabel(pair.0), pair.1,
-                                  detail: config.metadata(at: pair.0)?.rankLabel)
+                        let specialSlot = pair.0 >= 8 ? slotLabel(pair.0) : nil
+                        let rankText = config.metadata(at: pair.0).flatMap(compactRank)
+                        let detail = [specialSlot, rankText].compactMap { $0 }.joined(separator: " · ")
+                        buildPill(pair.1, detail: detail.isEmpty ? nil : detail)
                     }
                     if let riven = config.riven {
-                        buildPill("紫卡", riven.name)
+                        buildPill(riven.name, detail: "紫卡", accent: WFTheme.purple)
                     }
+                }
+            }
+
+            let extraCount = config.unresolvedUpgrades.count + config.nonDamageUpgrades.count + config.issues.count
+            if extraCount > 0 {
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        showExtraDetails.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: config.isExactImport ? "info.circle" : "exclamationmark.triangle.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(config.isExactImport ? WFTheme.textMuted : WFTheme.gold)
+                        Text(config.isExactImport
+                             ? "含 \(config.nonDamageUpgrades.count) 张非伤害类 Mod"
+                             : "有 \(config.unresolvedUpgrades.count + config.issues.count) 项未参与计算")
+                            .font(.wfLabel)
+                            .foregroundColor(config.isExactImport ? WFTheme.textMuted : WFTheme.gold)
+                        Spacer()
+                        Image(systemName: showExtraDetails ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    .padding(.top, 2)
+                }
+                .buttonStyle(.plain)
+
+                if showExtraDetails {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(config.unresolvedUpgrades) { upgrade in
+                            let rank = upgrade.rankLabel.map { "（\($0)）" } ?? ""
+                            Text("未计算：\(upgrade.name)\(rank) · \(upgrade.reason)")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.gold)
+                        }
+                        ForEach(config.issues, id: \.self) { issue in
+                            Text("• \(issue)")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.gold)
+                        }
+                        ForEach(config.nonDamageUpgrades) { upgrade in
+                            Text("非伤害卡：\(upgrade.name)")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                    }
+                    .padding(.top, 2)
                 }
             }
         }
@@ -220,10 +246,18 @@ struct ArsenalWeaponConfigurationView: View {
 
     private var warframeBuildCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("当前战甲", trailing: "自身技能与执政官石")
-            Text("这里的战甲只决定你自己持有的技能和石头。另一名战甲给你的 Buff 在下一页以独立施法者加入。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
+            HStack {
+                Text("携带战甲")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
+                Spacer()
+                if let frame = selectedWarframe {
+                    let strength = WarframeStrengthResolver.resolve(frame, configIndex: currentWarframeConfigIndex)
+                    Text(String(format: "技能强度 %.0f%%", strength.multiplier * 100))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(WFTheme.gold)
+                }
+            }
 
             Menu {
                 Button("不带当前战甲") {
@@ -237,13 +271,27 @@ struct ArsenalWeaponConfigurationView: View {
                     }
                 }
             } label: {
-                selectionLabel(
-                    icon: "person.crop.square",
-                    title: selectedWarframe?.z ?? "不带当前战甲",
-                    subtitle: selectedWarframe == nil
-                        ? "不会带入自身技能、技能强度或执政官石"
-                        : "使用其已导入的 A/B/C 配置"
-                )
+                HStack(spacing: WFUI.s3) {
+                    ArsenalItemThumb(
+                        weaponEntry: nil,
+                        displayName: selectedWarframe?.z,
+                        fallbackSymbol: "person.crop.square",
+                        fallbackColor: WFTheme.gold,
+                        size: 38
+                    )
+                    Text(selectedWarframe?.z ?? "不带当前战甲")
+                        .font(.wfBody)
+                        .foregroundColor(selectedWarframe == nil ? WFTheme.textMuted : WFTheme.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(WFUI.raised)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             .buttonStyle(.plain)
 
@@ -251,7 +299,7 @@ struct ArsenalWeaponConfigurationView: View {
                 configPicker(
                     configs: frame.configs.map(\.label),
                     selection: $currentWarframeConfigIndex,
-                    emptyText: "快照中没有这套战甲配置。"
+                    emptyText: "无战甲 A/B/C 配置"
                 )
                 if let config = selectedWarframeConfig {
                     warframeBuildDetail(frame, config)
@@ -263,37 +311,12 @@ struct ArsenalWeaponConfigurationView: View {
 
     private func warframeBuildDetail(_ frame: InventoryData.OwnedWarframe,
                                      _ config: InventoryData.OwnedWarframe.Config) -> some View {
-        let strength = WarframeStrengthResolver.resolve(frame, configIndex: currentWarframeConfigIndex)
+        let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
         return VStack(alignment: .leading, spacing: WFUI.s2) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("通用技能强度")
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textSecondary)
-                Spacer()
-                Text(String(format: "%.0f%%", strength.multiplier * 100))
-                    .font(.wfNumSmall)
-                    .foregroundColor(WFTheme.gold)
-            }
-            Text("由该战甲的已导入 Mod 和执政官石结算，不可手填；仅作用于第 4 技能的加成会在选择具体技能时加入。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-
-            if !config.isExactImport {
-                ForEach(config.issues, id: \.self) { issue in
-                    Text("• \(issue)")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.gold)
-                }
-            }
-
-            let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
             if !upgrades.isEmpty {
-                Text("已导入的战甲 Mod / 赋能")
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textSecondary)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
                     ForEach(upgrades) { upgrade in
-                        buildPill(upgrade.kind, "\(upgrade.name) · \(upgrade.rankLabel)")
+                        buildPill(upgrade.name, detail: "\(upgrade.kind) · \(compactUpgradeRank(upgrade))")
                     }
                 }
             }
@@ -306,36 +329,36 @@ struct ArsenalWeaponConfigurationView: View {
         }
     }
 
-    private var calculationCard: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("伤害计算")
-            Text(calculatorIsAvailable
-                 ? "会带入武器配置 \(selectedWeaponConfig?.label ?? "—")，以及当前战甲配置。外部施法者 Buff 在计算器中独立添加。"
-                 : "这把武器的背包配置已经保留，但本机伤害数据尚未包含它，暂时不能打开计算。")
-                .font(.wfBody)
-                .foregroundColor(calculatorIsAvailable ? WFTheme.textSecondary : WFTheme.gold)
+    private var calculationButton: some View {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
             Button {
                 openCalculator = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "function")
-                    Text("按此配置计算伤害")
+                    Text("计算此配装伤害")
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                 }
-                .font(.wfBody)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(Color(hex: "1A1408"))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
                 .background(WFTheme.gold)
-                .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!calculatorIsAvailable)
             .opacity(calculatorIsAvailable ? 1 : 0.45)
+
+            if !calculatorIsAvailable {
+                Text("该武器暂未收录进本地伤害数据库。")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.gold)
+                    .padding(.horizontal, 4)
+            }
         }
-        .wfCardStyle()
     }
 
     private func configPicker(configs: [String], selection: Binding<Int>, emptyText: String) -> some View {
@@ -367,54 +390,53 @@ struct ArsenalWeaponConfigurationView: View {
         }
     }
 
-    private func selectionLabel(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: WFUI.s2) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(WFTheme.gold)
-                .frame(width: 30, height: 30)
-                .background(WFTheme.gold.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textPrimary)
-                Text(subtitle)
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(WFTheme.textMuted)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(WFUI.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func buildPill(_ label: String, _ name: String, detail: String? = nil) -> some View {
+    private func buildPill(_ name: String, detail: String? = nil, accent: Color = WFTheme.textSecondary) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(WFTheme.textMuted)
             Text(name)
                 .font(.wfLabel)
-                .foregroundColor(WFTheme.textSecondary)
+                .foregroundColor(WFTheme.textPrimary)
                 .lineLimit(2)
             if let detail {
                 Text(detail)
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(WFTheme.textMuted)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(accent)
+                    .lineLimit(1)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
         .background(WFUI.raised)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func compactRank(_ metadata: InventoryData.OwnedWeapon.Config.SlotMetadata) -> String? {
+        switch (metadata.rank, metadata.maxRank) {
+        case let (.some(rank), .some(maximum)): return "\(rank)/\(maximum)"
+        case let (.some(rank), .none): return "Lv.\(rank)"
+        default: return nil
+        }
+    }
+
+    private func compactUpgradeRank(_ upgrade: InventoryData.OwnedWarframe.Upgrade) -> String {
+        switch (upgrade.rank, upgrade.maxRank) {
+        case let (.some(rank), .some(maximum)): return "\(rank)/\(maximum)"
+        case let (.some(rank), .none): return "Lv.\(rank)"
+        default: return "未确认"
+        }
+    }
+
+    private func elementLabel(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "toxin": return "毒素"
+        case "heat": return "火焰"
+        case "cold": return "冰冻"
+        case "electricity": return "电击"
+        case "impact": return "冲击"
+        case "radiation": return "辐射"
+        case "magnetic": return "磁力"
+        default: return raw
+        }
     }
 
     private func slotLabel(_ slot: Int) -> String {
@@ -449,14 +471,6 @@ struct ArsenalEquipmentConfigurationView: View {
             WFTheme.bgPrimary.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: WFUI.s4) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("\(equipment.categoryLabel) 配置")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(WFTheme.textPrimary)
-                        Text("\(equipment.z) 的 A/B/C 配置来自账号快照。这里展示已装 Mod 和赋能的实际等级，不把它们改写成手填属性。")
-                            .font(.wfBody)
-                            .foregroundColor(WFTheme.textMuted)
-                    }
                     buildCard
                 }
                 .padding(.horizontal, 16)
@@ -473,9 +487,28 @@ struct ArsenalEquipmentConfigurationView: View {
 
     private var buildCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("已导入配置", trailing: equipment.categoryLabel)
+            HStack(alignment: .center, spacing: WFUI.s3) {
+                ArsenalItemThumb(
+                    weaponEntry: nil,
+                    displayName: equipment.z,
+                    fallbackSymbol: equipment.inventoryCategory == "SpaceSuits" ? "airplane" : "pawprint",
+                    fallbackColor: WFTheme.cyan,
+                    size: 54
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(equipment.z)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(WFTheme.textPrimary)
+                        .lineLimit(1)
+                    Text(equipment.categoryLabel)
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+
             if equipment.configs.isEmpty {
-                Text("这份快照没有此装备的 A/B/C 配置。")
+                Text("暂无 A/B/C 配卡记录")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.gold)
             } else {
@@ -497,27 +530,19 @@ struct ArsenalEquipmentConfigurationView: View {
                 }
                 if let config = selectedConfig {
                     if !config.isExactImport {
-                        Label("有槽位无法从快照确认完整等级；下方保留了来源原因。",
+                        Label(config.issues.first ?? "部分槽位等级未能完全确认",
                               systemImage: "exclamationmark.triangle.fill")
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.gold)
-                        ForEach(config.issues, id: \.self) { issue in
-                            Text("• \(issue)")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.textMuted)
-                        }
                     }
 
                     let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
                     if upgrades.isEmpty {
-                        Text("这个配置没有已导入的 Mod 或赋能。")
+                        Text("当前配置没有已装 Mod")
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.textMuted)
                     } else {
-                        Text("已导入的 Mod / 赋能")
-                            .font(.wfBody)
-                            .foregroundColor(WFTheme.textSecondary)
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 7)], spacing: 7) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
                             ForEach(upgrades) { upgrade in
                                 upgradePill(upgrade)
                             }
@@ -530,20 +555,25 @@ struct ArsenalEquipmentConfigurationView: View {
     }
 
     private func upgradePill(_ upgrade: InventoryData.OwnedEquipment.Upgrade) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("槽位 \(upgrade.slot + 1) · \(upgrade.kind)")
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(WFTheme.textMuted)
+        let rankText: String = {
+            switch (upgrade.rank, upgrade.maxRank) {
+            case let (.some(r), .some(m)): return "\(r)/\(m)"
+            case let (.some(r), .none): return "Lv.\(r)"
+            default: return "未确认"
+            }
+        }()
+        return VStack(alignment: .leading, spacing: 2) {
             Text(upgrade.name)
                 .font(.wfLabel)
                 .foregroundColor(WFTheme.textPrimary)
                 .lineLimit(2)
-            Text(upgrade.rankLabel)
-                .font(.system(size: 10))
+            Text("\(upgrade.kind) · \(rankText)")
+                .font(.system(size: 10, weight: .medium))
                 .foregroundColor(WFTheme.gold)
         }
-        .frame(maxWidth: .infinity, minHeight: 63, alignment: .leading)
-        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
         .background(WFUI.raised)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -572,14 +602,6 @@ struct ArsenalWarframeConfigurationView: View {
             WFTheme.bgPrimary.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: WFUI.s4) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("战甲配置")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(WFTheme.textPrimary)
-                        Text("\(warframe.z) 的配置决定自身技能和作为外部施法者时的 Buff 数值。")
-                            .font(.wfBody)
-                            .foregroundColor(WFTheme.textMuted)
-                    }
                     buildCard
                     abilityCard
                 }
@@ -597,9 +619,29 @@ struct ArsenalWarframeConfigurationView: View {
 
     private var buildCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("已导入配置")
+            let strength = WarframeStrengthResolver.resolve(warframe, configIndex: configIndex)
+            HStack(alignment: .center, spacing: WFUI.s3) {
+                ArsenalItemThumb(
+                    weaponEntry: nil,
+                    displayName: warframe.z,
+                    fallbackSymbol: "person.crop.square",
+                    fallbackColor: WFTheme.gold,
+                    size: 54
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(warframe.z)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(WFTheme.textPrimary)
+                        .lineLimit(1)
+                    Text(String(format: "通用技能强度 %.0f%%", strength.multiplier * 100))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(WFTheme.gold)
+                }
+                Spacer(minLength: 0)
+            }
+
             if warframe.configs.isEmpty {
-                Text("这份快照没有此战甲的 A/B/C 配置。")
+                Text("暂无 A/B/C 配卡记录")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.gold)
             } else {
@@ -620,49 +662,40 @@ struct ArsenalWarframeConfigurationView: View {
                     }
                 }
                 if let config = selectedConfig {
-                    let strength = WarframeStrengthResolver.resolve(warframe, configIndex: configIndex)
-                    HStack {
-                        Text("通用技能强度")
-                            .font(.wfBody)
-                            .foregroundColor(WFTheme.textSecondary)
-                        Spacer()
-                        Text(String(format: "%.0f%%", strength.multiplier * 100))
-                            .font(.wfNumSmall)
+                    if !config.isExactImport {
+                        Label(config.issues.first ?? "部分槽位等级未能完全确认",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.wfLabel)
                             .foregroundColor(WFTheme.gold)
                     }
-                    Text("由实际装备的 Mod 和执政官石得出；第 4 技能专属加成会在选择具体技能时加入。")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                    if !config.isExactImport {
-                        ForEach(config.issues, id: \.self) { issue in
-                            Text("• \(issue)")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.gold)
-                        }
-                    }
-                    ForEach(config.upgrades.sorted { $0.slot < $1.slot }) { upgrade in
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(upgrade.name)
-                                .font(.wfBody)
-                                .foregroundColor(WFTheme.textPrimary)
-                            Spacer()
-                            Text("\(upgrade.kind) · \(upgrade.rankLabel)")
-                                .font(.wfLabel)
-                                .foregroundColor(WFTheme.textMuted)
+                    let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
+                    if !upgrades.isEmpty {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
+                            ForEach(upgrades) { upgrade in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(upgrade.name)
+                                        .font(.wfLabel)
+                                        .foregroundColor(WFTheme.textPrimary)
+                                        .lineLimit(2)
+                                    Text("\(upgrade.kind) · \(upgrade.rankLabel)")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor(WFTheme.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 6)
+                                .background(WFUI.raised)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            }
                         }
                     }
                 }
             }
             if !warframe.shards.isEmpty {
                 WFHairline()
-                Text("执政官石")
-                    .font(.wfBody)
-                    .foregroundColor(WFTheme.textSecondary)
-                ForEach(warframe.shards) { shard in
-                    Text("槽位 \(shard.slot + 1) · \(shard.name)\(shard.isTauforged ? "（Tau）" : "")")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                }
+                Text("执政官石：\(warframe.shards.map { "\($0.name)\($0.isTauforged ? " (Tau)" : "")" }.joined(separator: " · "))")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textMuted)
             }
         }
         .wfCardStyle()
@@ -671,9 +704,6 @@ struct ArsenalWarframeConfigurationView: View {
     private var abilityCard: some View {
         VStack(alignment: .leading, spacing: WFUI.s2) {
             WFSectionHeader("技能")
-            Text("实际能用于武器伤害的自身技能或外部 Buff，会在武器的伤害计算页按该配置结算。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
             ForEach(warframe.abilities) { ability in
                 HStack {
                     Text("\(ability.ordinal)")
@@ -688,7 +718,7 @@ struct ArsenalWarframeConfigurationView: View {
             }
             if let helminth = selectedConfig?.helminth {
                 WFHairline()
-                Text("Helminth：第 \((helminth.replacedIndex ?? 0) + 1) 槽已替换为 \(helminth.name)")
+                Text("Helminth：第 \((helminth.replacedIndex ?? 0) + 1) 槽 → \(helminth.name)")
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
             }

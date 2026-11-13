@@ -98,9 +98,11 @@ public struct EnemyProfile: Sendable {
         var notes: [String] = []
 
         // `showEnemy` in the checked-in warframe-damage source clamps the typed
-        // level to the source-data base level before it evaluates a target.
-        // Steel Path does not add 100 here: its website branch changes the base
-        // health/shields before the level curve is evaluated.
+        // level to the source-data base level (`b_lvl` in `enemies-min.json`,
+        // e.g. `Corrupted Heavy Gunner` has `b_lvl = 8`, so `level = 100`
+        // evaluates at `q = 100 - 8 = 92`) before scaling health, armor, shield,
+        // and Overguard.  Steel Path does not add 100 here: its website branch
+        // multiplies base health and shield by 2.5 before evaluating `q`.
         let effectiveLevel = max(level, enemy.baseLevel)
         self.level = effectiveLevel
         let q = max(0, effectiveLevel - enemy.baseLevel)
@@ -160,8 +162,11 @@ public struct EnemyProfile: Sendable {
             h *= partyHealthMultiplier
         }
 
-        // Website order is whole-number rounding, then [200, 2700] clamping;
-        // zero armor stays zero. Dynamic removal still happens in the simulator.
+        // Website order (matching Update 36 "Jade Shadows" enemy armor scaling,
+        // except zero armor stays zero rather than defaulting to minimum) is
+        // whole-number rounding, then [200, 2700] clamping where non-zero armor
+        // never drops below 200 (DR ~40%) or rises above 2700 (DR 90%).
+        // Dynamic armor removal still happens in the simulator.
         if a > Rules.armorClampMax {
             a = Rules.armorClampMax
         } else if a > 0 && a <= Rules.armorClampMin {

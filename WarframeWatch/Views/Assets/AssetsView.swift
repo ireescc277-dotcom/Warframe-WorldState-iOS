@@ -129,9 +129,9 @@ public struct AssetsView: View {
             HStack(alignment: .top, spacing: 0) {
                 bigNumber("\(AssetFormat.plat(allPlat))", unit: "p", label: "全部 Prime 散件市价")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber(AssetFormat.grouped(allDucats), unit: "", label: "全部可换 Ducats")
+                bigNumber(AssetFormat.grouped(allDucats), unit: "", label: "散件可换 Ducats")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已制成套装")
+                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "收录套装已有")
             }
             .padding(.vertical, 16)
 
@@ -157,10 +157,10 @@ public struct AssetsView: View {
             WFHairline()
 
             HStack(spacing: 0) {
-                miniStat("可制造", t.setsReady)
-                miniStat("缺 ≤2 件", t.setsClose)
-                miniStat("遗物", t.relicKinds, suffix: " 代号")
-                miniStat("Mod", t.mods, suffix: " 张")
+                miniStat("可制造", t.setsReady, suffix: " 套")
+                miniStat("缺 ≤2 件", t.setsClose, suffix: " 套")
+                miniStat("遗物 (共 \(t.relicUnits) 颗)", t.relicKinds, suffix: " 种")
+                miniStat("Mod 堆叠", t.mods, suffix: " 组")
             }
             .padding(.vertical, 11)
         }

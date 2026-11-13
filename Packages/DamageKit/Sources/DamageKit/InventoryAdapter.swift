@@ -96,18 +96,37 @@ public struct InventoryAdapter: Sendable {
     }
 
     public func resolve(_ reference: OwnedWeaponReference, using store: DataStore) throws -> OwnedWeaponBuild {
+        try resolve(reference, using: store, modLibrary: .shared)
+    }
+
+    public func resolve(_ reference: OwnedWeaponReference,
+                        using store: DataStore,
+                        modLibrary: ModLibrary) throws -> OwnedWeaponBuild {
         let snapshot = try Self.object(from: Self.readSnapshot(at: snapshotURL))
         let gameData = try Self.object(from: Self.readJSON(at: gameDataURL))
-        guard let weaponObject = findWeapon(reference.weaponId, in: snapshot) else {
+        guard let weaponMatch = findWeaponEntry(reference.weaponId, in: snapshot) else {
             throw InventoryAdapterError.weaponNotFound(reference.weaponId)
         }
+        let weaponObject = weaponMatch.weapon
         guard let itemType = Self.string(weaponObject["ItemType"]),
-              let weapons = Self.objectMap(gameData["weapons"]),
-              let weaponData = Self.objectMap(weapons[itemType]),
-              let weaponName = Self.string(weaponData["n"]) else {
+              let weapons = Self.objectMap(gameData["weapons"]) else {
             throw InventoryAdapterError.gameDataNotFound("weapon ItemType")
         }
-        let weapon = try store.weapon(named: weaponName)
+        let weaponData = Self.objectMap(weapons[itemType])
+        guard let rawWeaponName = Self.weaponItemTypeAliases[itemType]
+                ?? weaponData.flatMap({ Self.string($0["n"]) }) else {
+            throw InventoryAdapterError.gameDataNotFound("weapon ItemType")
+        }
+        let weapon: Weapon
+        if weaponMatch.category == "SpaceGuns",
+           let atmoWeapon = try? store.weapon(named: "\(rawWeaponName) (Atmo-mode)") {
+            weapon = atmoWeapon
+        } else {
+            weapon = try store.weapon(named: rawWeaponName)
+        }
+        let isMeleeWeapon = weaponMatch.category == "Melee"
+            || weapon.category?.lowercased() == "melee"
+            || (weapon.categories?.contains { $0.lowercased() == "melee" } ?? false)
         let configs = Self.array(weaponObject["Configs"])
         guard configs.indices.contains(reference.configIndex),
               let config = Self.object(configs[reference.configIndex]) else {
@@ -119,25 +138,30 @@ public struct InventoryAdapter: Sendable {
         guard let mods = Self.objectMap(gameData["mods"]) else {
             throw InventoryAdapterError.gameDataNotFound("mods")
         }
-        // Current game-data builds carry Riven coefficient entries directly
-        // from DE's ExportUpgrades `upgradeEntries`, which includes newer
-        // completed-element terms such as Corrosive. Keep the old sidecar as
-        // a compatibility fallback for an already-generated legacy cache.
-        let rivenTags: [String: Any]
-        if let exportedTags = Self.objectMap(gameData["rivenTags"]), !exportedTags.isEmpty {
-            rivenTags = exportedTags
-        } else {
-            let rivenTagsURL = gameDataURL.deletingLastPathComponent()
-                .appendingPathComponent("ref/riven/riven_tags.json")
-            rivenTags = try Self.object(from: Self.readJSON(at: rivenTagsURL))
+        var loadedRivenTags: [String: Any]?
+        func resolveRivenTags() throws -> [String: Any] {
+            if let loadedRivenTags { return loadedRivenTags }
+            let tags: [String: Any]
+            if let exportedTags = Self.objectMap(gameData["rivenTags"]), !exportedTags.isEmpty {
+                tags = exportedTags
+            } else {
+                let rivenTagsURL = gameDataURL.deletingLastPathComponent()
+                    .appendingPathComponent("ref/riven/riven_tags.json")
+                tags = try Self.object(from: Self.readJSON(at: rivenTagsURL))
+            }
+            loadedRivenTags = tags
+            return tags
         }
-        let disposition = Self.number(weaponData["om"]) ?? 1.2
+        let disposition = Self.number(weaponData?["om"]) ?? 1.2
 
         var names: [String] = []
+        var slottedMods: [SlottedMod] = []
         var installed: [InstalledMod] = []
         var riven: Riven?
-        for (slot, rawValue) in slotValues.enumerated() {
+        var rivenSlot: Int?
+        for (rawSlot, rawValue) in slotValues.enumerated() {
             guard let upgradeID = rawValue as? String, !upgradeID.isEmpty else { continue }
+            let slot = (!isMeleeWeapon && rawSlot == 9) ? 10 : rawSlot
             let upgrade: [String: Any]
             let instanceID: String
             if upgradeID.hasPrefix("/") {
@@ -157,18 +181,38 @@ public struct InventoryAdapter: Sendable {
             let rank = Int(Self.number(fingerprint?["lvl"]) ?? 0)
             if upgradeType.contains("Randomized") {
                 riven = try decodeRiven(id: instanceID, fingerprint: fingerprint, type: upgradeType,
-                                        disposition: disposition, tagRoot: rivenTags)
+                                        disposition: disposition, tagRoot: try resolveRivenTags())
+                rivenSlot = slot
                 installed.append(InstalledMod(slot: slot, instanceId: instanceID,
                                                name: riven?.name ?? "Riven", rank: rank))
                 continue
             }
             if let alias = Self.upgradeAliases[upgradeType] {
-                guard rank == alias.maximumRank else {
-                    throw InventoryAdapterError.unsupportedModRank(name: alias.name,
-                                                                   rank: rank,
-                                                                   maximum: alias.maximumRank)
+                var actionScale: Double?
+                var conditionalStepScale: Double?
+                if rank != alias.maximumRank {
+                    if let mod = Self.objectMap(mods[upgradeType]) {
+                        conditionalStepScale = Self.sourceProvenConditionalStepScale(
+                            name: alias.name, rank: rank, maximum: alias.maximumRank,
+                            gameMod: mod, modLibrary: modLibrary
+                        )
+                        if conditionalStepScale == nil {
+                            actionScale = Self.sourceProvenWholeActionScale(
+                                name: alias.name, rank: rank, maximum: alias.maximumRank,
+                                gameMod: mod, modLibrary: modLibrary
+                            )
+                        }
+                    }
+                    if actionScale == nil && conditionalStepScale == nil {
+                        throw InventoryAdapterError.unsupportedModRank(name: alias.name,
+                                                                       rank: rank,
+                                                                       maximum: alias.maximumRank)
+                    }
                 }
                 names.append(alias.name)
+                slottedMods.append(SlottedMod(slot: slot, name: alias.name,
+                                              actionScale: actionScale,
+                                              conditionalStepScale: conditionalStepScale))
                 installed.append(InstalledMod(slot: slot, instanceId: instanceID,
                                                name: alias.name, rank: rank))
                 continue
@@ -177,22 +221,48 @@ public struct InventoryAdapter: Sendable {
                 throw InventoryAdapterError.gameDataNotFound(upgradeType)
             }
             let maximum = Int(Self.number(mod["mx"]) ?? 0)
-            guard rank == maximum else {
-                throw InventoryAdapterError.unsupportedModRank(name: name, rank: rank, maximum: maximum)
+            var actionScale: Double?
+            var conditionalStepScale: Double?
+            if rank != maximum {
+                if Self.isSourceProvenNonDamage(name: name, gameMod: mod) {
+                    // Proven non-damage utility cards do not contribute direct
+                    // damage coefficients; retain their real slot and metadata.
+                } else {
+                    conditionalStepScale = Self.sourceProvenConditionalStepScale(
+                        name: name, rank: rank, maximum: maximum, gameMod: mod, modLibrary: modLibrary
+                    )
+                    if conditionalStepScale == nil {
+                        actionScale = Self.sourceProvenWholeActionScale(
+                            name: name, rank: rank, maximum: maximum, gameMod: mod, modLibrary: modLibrary
+                        )
+                    }
+                    if actionScale == nil && conditionalStepScale == nil {
+                        throw InventoryAdapterError.unsupportedModRank(name: name, rank: rank, maximum: maximum)
+                    }
+                }
             }
             names.append(name)
+            slottedMods.append(SlottedMod(slot: slot, name: name,
+                                          actionScale: actionScale,
+                                          conditionalStepScale: conditionalStepScale))
             installed.append(InstalledMod(slot: slot, instanceId: instanceID, name: name, rank: rank))
         }
 
         let progenitor = Self.progenitorElements(from: try fingerprint(weaponObject))
         return OwnedWeaponBuild(itemId: reference.weaponId, itemType: itemType,
                                 configIndex: reference.configIndex, weapon: weapon,
-                                build: Build(mods: names, riven: riven,
+                                build: Build(mods: names, slottedMods: slottedMods,
+                                             riven: riven, rivenSlot: rivenSlot,
                                              progenitorElements: progenitor),
                                 installedMods: installed)
     }
 
     // MARK: - Snapshot decoding
+
+    private static let weaponItemTypeAliases: [String: String] = [
+        "/Lotus/Weapons/Tenno/Bayonet/TnBayonetRifleWeapon": "Vinquibus (Rifle)",
+        "/Lotus/Weapons/Tenno/Bayonet/TnBayonetMeleeWeapon": "Vinquibus (Melee)",
+    ]
 
     private static let upgradeAliases: [String: (name: String, maximumRank: Int)] = [
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnKill":
@@ -213,17 +283,180 @@ public struct InventoryAdapter: Sendable {
             ("Melee Exposure", 5)
     ]
 
-    private func findWeapon(_ id: String, in snapshot: [String: Any]) -> [String: Any]? {
+    private func findWeaponEntry(_ id: String, in snapshot: [String: Any]) -> (category: String, weapon: [String: Any])? {
         let categories = ["LongGuns", "Pistols", "Melee", "SentinelWeapons", "SpaceGuns", "SpaceMelee"]
         for category in categories {
             for raw in Self.array(snapshot[category]) {
                 guard let candidate = Self.object(raw),
                       let item = Self.object(candidate["ItemId"]),
                       Self.string(item["$oid"]) == id else { continue }
-                return candidate
+                return (category, candidate)
             }
         }
         return nil
+    }
+
+    // MARK: - Source-proven rank scaling
+
+    private static let nonDamageSourcePatterns: [String: String] = [
+        "Hush": #"\breduces the chance an enemy will hear gunfire\b"#,
+        "Reach": #"^[+-]?\d+(?:\.\d+)?\s+range$"#,
+        "Khra Canticle": #"\bchance to drop a universal orb on death\b"#,
+    ]
+
+    private static func isSourceProvenNonDamage(name: String, gameMod: [String: Any]) -> Bool {
+        guard let pattern = nonDamageSourcePatterns[name],
+              let levels = gameMod["lv"] as? [Any], !levels.isEmpty else {
+            return false
+        }
+        let lines = levels.flatMap(levelStatLines).map(compactStatLine).filter { !$0.isEmpty }
+        guard !lines.isEmpty else { return false }
+        return lines.allSatisfy { $0.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil }
+    }
+
+    /// Returns a whole-card rank ratio only when every numeric action leaf
+    /// consumed by DamageKit matches an exact max-rank source number and all
+    /// matched entries scale by the identical `rank / max` ratio.
+    static func sourceProvenWholeActionScale(name: String, rank: Int, maximum: Int,
+                                             gameMod: [String: Any],
+                                             modLibrary: ModLibrary = .shared) -> Double? {
+        guard rank >= 0, maximum > 0, rank < maximum,
+              let levels = gameMod["lv"] as? [Any],
+              rank < levels.count, maximum < levels.count,
+              let action = modLibrary.mod(named: name)?.action else {
+            return nil
+        }
+        let actionValues = rankActionLeaves(action).filter { abs($0) > 1e-12 }
+        guard !actionValues.isEmpty else { return nil }
+
+        let equippedValues = sourceStatCoefficients(levels[rank])
+        let fullValues = sourceStatCoefficients(levels[maximum])
+        guard !equippedValues.isEmpty, equippedValues.count == fullValues.count else {
+            return nil
+        }
+
+        var scales: [Double] = []
+        for actionValue in actionValues {
+            let matchingIndices = fullValues.indices.filter {
+                abs(actionValue - fullValues[$0]) <= 1e-6 && abs(fullValues[$0]) > 1e-12
+            }
+            guard !matchingIndices.isEmpty else { return nil }
+            let ratios = matchingIndices.map { equippedValues[$0] / fullValues[$0] }
+            guard ratios.allSatisfy({ $0.isFinite && $0 >= 0 && $0 <= 1 }),
+                  let firstRatio = ratios.first,
+                  ratios.dropFirst().allSatisfy({ abs($0 - firstRatio) <= 1e-6 }) else {
+                return nil
+            }
+            scales.append(firstRatio)
+        }
+        guard let shared = scales.first,
+              scales.dropFirst().allSatisfy({ abs($0 - shared) <= 1e-6 }) else {
+            return nil
+        }
+        return shared
+    }
+
+    /// Returns a lower-rank multiplier for a stacking condition input when the
+    /// cap remains invariant across ranks and `increment * maxStacks == cap`.
+    static func sourceProvenConditionalStepScale(name: String, rank: Int, maximum: Int,
+                                                 gameMod: [String: Any],
+                                                 modLibrary: ModLibrary = .shared) -> Double? {
+        guard rank >= 0, maximum > 0, rank < maximum,
+              let levels = gameMod["lv"] as? [Any],
+              rank < levels.count, maximum < levels.count,
+              let rule = modLibrary.conditionalRule(named: name),
+              let movedKeys = rule.conditionalActionKeys,
+              !rule.keys.isEmpty,
+              Set(rule.keys) == Set(movedKeys),
+              rule.maxStacks > 0,
+              let action = modLibrary.mod(named: name)?.action,
+              action.count == 1,
+              case .number(let capScalar)? = action.values.first,
+              capScalar > 0 else {
+            return nil
+        }
+        let actionPercent = (abs(capScalar) * 100 * 1_000_000_000).rounded() / 1_000_000_000
+
+        func capAndIncrement(at levelIndex: Int) -> (cap: Double, increment: Double)? {
+            let text = levelStatLines(levels[levelIndex]).map(compactStatLine).joined(separator: " ")
+            let percents = regexMatches(#"([+-]?\d+(?:\.\d+)?)\s*%"#, in: text).compactMap { Double($0[1]) }
+            let capIndices = percents.indices.filter { abs(abs(percents[$0]) - actionPercent) <= 1e-6 }
+            guard capIndices.count == 1 else { return nil }
+            let cap = percents[capIndices[0]]
+            let increments = percents.indices.filter { $0 != capIndices[0] }.map { percents[$0] }
+            guard cap > 0, increments.count == 1, increments[0] > 0 else { return nil }
+            return (cap, increments[0])
+        }
+
+        guard let equipped = capAndIncrement(at: rank),
+              let full = capAndIncrement(at: maximum),
+              abs(equipped.cap - full.cap) <= 1e-6,
+              abs(full.increment * rule.maxStacks - actionPercent) <= 1e-6 else {
+            return nil
+        }
+        let scale = equipped.increment / full.increment
+        return (0...1).contains(scale) ? scale : nil
+    }
+
+    private static func rankActionLeaves(_ value: JSONValue, key: String? = nil) -> [Double] {
+        if let key, ["stances", "set", "double_crit"].contains(key) { return [] }
+        switch value {
+        case .number(let n): return [n]
+        case .array(let items): return items.flatMap { rankActionLeaves($0) }
+        case .object(let dict): return dict.flatMap { rankActionLeaves($0.value, key: $0.key) }
+        default: return []
+        }
+    }
+
+    private static func rankActionLeaves(_ action: [String: JSONValue]) -> [Double] {
+        action.flatMap { rankActionLeaves($0.value, key: $0.key) }
+    }
+
+    private static func levelStatLines(_ level: Any) -> [String] {
+        if let list = level as? [Any] { return list.compactMap { $0 as? String } }
+        if let single = level as? String { return [single] }
+        return []
+    }
+
+    private static func compactStatLine(_ line: String) -> String {
+        line.replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+    }
+
+    private static func sourceStatCoefficients(_ level: Any) -> [Double] {
+        var result: [Double] = []
+        for raw in levelStatLines(level) {
+            let line = compactStatLine(raw)
+            for match in regexMatches(#"([+-]?\d+(?:\.\d+)?)\s*%"#, in: line) {
+                if let val = Double(match[1]) { result.append(val / 100) }
+            }
+            for match in regexMatches(#"(?i)([+-]?\d+(?:\.\d+)?)\s*%[^()]*\(\s*x\s*(\d+(?:\.\d+)?)\s+for\s+Bows?\s*\)"#, in: line) {
+                if let pct = Double(match[1]), let mult = Double(match[2]) {
+                    result.append(pct / 100 * mult)
+                }
+            }
+            for match in regexMatches(#"(?i)\bx\s*(\d+(?:\.\d+)?)\b(?!\s*for\s+Bows?\b)"#, in: line) {
+                if let val = Double(match[1]) { result.append(val - 1) }
+            }
+            // Match flat stats without partially matching percentages (`+48%`).
+            for match in regexMatches(#"(?<![0-9A-Za-z_.])([+-]\d+(?:\.\d+)?)(?![0-9.]*\s*%)"#, in: line) {
+                if let val = Double(match[1]) { result.append(val) }
+            }
+        }
+        return result
+    }
+
+    private static func regexMatches(_ pattern: String, in text: String) -> [[String]] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        return regex.matches(in: text, range: range).map { match in
+            (0..<match.numberOfRanges).map { idx in
+                let r = match.range(at: idx)
+                return r.location == NSNotFound ? "" : nsText.substring(with: r)
+            }
+        }
     }
 
     private func upgradeIndex(_ snapshot: [String: Any]) -> [String: [String: Any]] {

@@ -92,4 +92,63 @@ final class EnemyScalingFormulaTests: XCTestCase {
         XCTAssertEqual(anarch.multiplier(for: .electricity), 1.5, accuracy: 1e-12)
         XCTAssertEqual(anarch.multiplier(for: .radiation), 0.5, accuracy: 1e-12)
     }
+
+    private static var dataRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("server/site")
+    }
+
+    func testCorruptedHeavyGunnerUsesSourceBaseLevelEightAndJadeShadowsArmorClamp() throws {
+        let store = DataStore(root: Self.dataRoot)
+        let gunner = try store.enemy(named: "Corrupted Heavy Gunner")
+        XCTAssertEqual(gunner.baseLevel, 8)
+        XCTAssertEqual(gunner.health, 700, accuracy: 1e-9)
+        XCTAssertEqual(gunner.armor, 500, accuracy: 1e-9)
+
+        // At level 100 (`q = 100 - 8 = 92`), Orokin late health/armor curves put
+        // armor well above 2700 before the Update 36 Jade Shadows cap clamps it to 2700 (90% DR).
+        let l100Normal = EnemyProfile(enemy: gunner, level: 100, options: Options())
+        let l100Steel = EnemyProfile(enemy: gunner, level: 100, options: Options(steelPath: true))
+        let l145Eximus = EnemyProfile(enemy: gunner, level: 145,
+                                      options: Options(steelPath: true, eximus: true))
+
+        XCTAssertEqual(l100Normal.level, 100)
+        XCTAssertEqual(l100Normal.armor, 2700, accuracy: 1e-9)
+        XCTAssertEqual(l100Normal.armorDR, 0.9, accuracy: 1e-6)
+        XCTAssertEqual(l100Steel.health, l100Normal.health * 2.5, accuracy: 5)
+        XCTAssertEqual(l100Steel.armor, 2700, accuracy: 1e-9)
+        XCTAssertGreaterThan(l145Eximus.overguard, 0)
+
+        // Non-zero base armor is clamped up to the Jade Shadows floor of 200 at low level;
+        // zero armor remains zero.
+        let lowArmorEnemy = Enemy(name: "Low", faction: "Grineer", baseLevel: 1,
+                                  health: 100, armor: 50)
+        let unarmoredEnemy = Enemy(name: "Unarmored", faction: "Corpus", baseLevel: 1,
+                                   health: 100, armor: 0)
+        XCTAssertEqual(EnemyProfile(enemy: lowArmorEnemy, level: 1, options: Options()).armor,
+                       200, accuracy: 1e-9)
+        XCTAssertEqual(EnemyProfile(enemy: unarmoredEnemy, level: 1, options: Options()).armor,
+                       0, accuracy: 1e-9)
+    }
+
+    func testWebsiteOverguardBoundaryAtQ44ToQ51() {
+        // `websiteOverguard` switches from early (`1 + 0.0015 * q^4`) to late
+        // (`1 + 260 * q^0.9`) at `q = 45`, because in `min.js` `eOGTrans` already
+        // evaluates to the late curve across q = 45...50 and >50.
+        let base = 12.0
+        let q44 = EnemyProfile.websiteOverguard(base: base, level: 52, baseLevel: 8)
+        let q45 = EnemyProfile.websiteOverguard(base: base, level: 53, baseLevel: 8)
+        let q50 = EnemyProfile.websiteOverguard(base: base, level: 58, baseLevel: 8)
+        let q51 = EnemyProfile.websiteOverguard(base: base, level: 59, baseLevel: 8)
+
+        XCTAssertEqual(q44, base * (1 + 0.0015 * pow(44.0, 4)), accuracy: 1e-6)
+        XCTAssertEqual(q45, base * (1 + 260.0 * pow(45.0, 0.9)), accuracy: 1e-6)
+        XCTAssertEqual(q50, base * (1 + 260.0 * pow(50.0, 0.9)), accuracy: 1e-6)
+        XCTAssertEqual(q51, base * (1 + 260.0 * pow(51.0, 0.9)), accuracy: 1e-6)
+    }
 }

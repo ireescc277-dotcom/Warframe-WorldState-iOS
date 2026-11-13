@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import DamageKit
 
 @testable import WarframeWatch
 
@@ -234,5 +235,146 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         XCTAssertEqual(draft.resolved?.meleeComboEfficiency ?? 0, 0.50, accuracy: 0.000_001)
         XCTAssertEqual(draft.displayOnlyEffects.map(\.tag), ["WeaponZoomFovMod"])
         XCTAssertEqual(draft.displayOnlyEffects.map(\.value), [0.18])
+    }
+
+    func testFullOwnedWeaponAndWarframeEndToEndThroughCalculatorModel() throws {
+        let dataRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("ios/DamageData", isDirectory: true)
+        let catalog = NativeDamageCatalog(root: dataRoot)
+        XCTAssertNil(catalog.loadError)
+        let store = try XCTUnwrap(catalog.store)
+
+        let weaponJSON = """
+        {
+          "id": "synthetic-torid-instance",
+          "n": "Torid",
+          "z": "托里德",
+          "c": "Primary",
+          "k": "LongGuns",
+          "p": {"toxin": 0.42},
+          "inc": [1, 0, 2],
+          "cfg": [{
+            "l": "A",
+            "s": [
+              "Galvanized Chamber",
+              "Critical Delay",
+              "Vital Sense",
+              "Serration",
+              "Vile Acceleration",
+              "Rime Rounds",
+              "Malignant Force",
+              "Hammer Shot",
+              null,
+              null,
+              "Primary Merciless"
+            ],
+            "sm": [
+              null,
+              null,
+              null,
+              {"r": 8, "m": 10, "a": 0.8181818181818182},
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "u": [],
+            "nd": [],
+            "rs": null,
+            "exact": true,
+            "issues": []
+          }]
+        }
+        """.data(using: .utf8)!
+        let ownedWeapon = try JSONDecoder().decode(InventoryData.OwnedWeapon.self, from: weaponJSON)
+        let rhino = try frame(id: "rhino", name: "Rhino", abilityName: "Roar", strengthBonus: 0.30)
+
+        let model = NativeDamageCalculatorModel(
+            initialOwnedWeapon: ownedWeapon,
+            initialOwnedWarframe: rhino,
+            availableWarframes: [rhino],
+            catalog: catalog
+        )
+        model.setCurrentWarframeBuff("scenario-roar", active: true)
+        model.steelPath = true
+        model.level = 250
+
+        XCTAssertEqual(model.selectedWeapon?.name, "Torid")
+        XCTAssertEqual(model.selectedEnemy?.name, "Corrupted Heavy Gunner")
+        XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65, accuracy: 0.000_001)
+        XCTAssertEqual(model.incarnonSelections[19], 1)
+        XCTAssertEqual(model.incarnonSelections[20], 0)
+        XCTAssertEqual(model.incarnonSelections[21], 2)
+
+        let slottedSerration = try XCTUnwrap(model.selectedSlottedMods.first { $0.slot == 3 })
+        XCTAssertEqual(slottedSerration.name, "Serration")
+        XCTAssertEqual(try XCTUnwrap(slottedSerration.actionScale), 9.0 / 11.0, accuracy: 0.000_001)
+
+        let weapon = try XCTUnwrap(model.selectedWeapon)
+        let enemy = try XCTUnwrap(model.selectedEnemy)
+        let input = DamageInput(
+            weapon: weapon,
+            enemy: enemy,
+            level: model.level,
+            build: Build(
+                mods: model.selectedMods,
+                slottedMods: model.selectedSlottedMods,
+                riven: model.riven.resolved,
+                rivenSlot: model.riven.slot,
+                progenitorElements: ownedWeapon.progenitorElements,
+                incarnonPerks: ["19:1", "20:0", "21:2"],
+                stanceCombo: model.stanceCombo
+            ),
+            options: Options(
+                window: 20,
+                steelPath: model.steelPath,
+                conditionalModStacks: model.conditionalStacks,
+                allModConditionsMet: model.allWeaponConditionsMaxed,
+                abilityStrength: model.currentWarframeStrength.multiplier,
+                scenarioEffects: model.resolvedScenarioEffects
+            )
+        )
+        let output = Calculator(store: store).evaluate(input)
+        let incarnonForm = try XCTUnwrap(output.attacks.first { $0.name == "Incarnon Form" })
+        XCTAssertGreaterThan(incarnonForm.targetDps, 0)
+        XCTAssertGreaterThan(incarnonForm.targetDirectDamage, 0)
+
+        // Verify Vinquibus (Melee) and Archgun (Atmo-mode) weapon aliases resolve
+        // end-to-end against bundled DamageData via NativeDamageCalculatorModel.
+        let aliasWeaponsJSON = """
+        [
+          {
+            "id": "synthetic-vinquibus-melee",
+            "n": "Vinquibus (Melee)",
+            "z": "制胜者（近战）",
+            "c": "Melee",
+            "k": "Melee",
+            "p": {},
+            "inc": [],
+            "cfg": [{"l": "A", "s": [], "sm": [], "u": [], "nd": [], "exact": true, "issues": []}]
+          },
+          {
+            "id": "synthetic-mausolon-atmo",
+            "n": "Mausolon (Atmo-mode)",
+            "z": "摩索隆（大气层模式）",
+            "c": "Archgun",
+            "k": "SpaceGuns",
+            "p": {},
+            "inc": [],
+            "cfg": [{"l": "A", "s": [], "sm": [], "u": [], "nd": [], "exact": true, "issues": []}]
+          }
+        ]
+        """.data(using: .utf8)!
+        let aliasedWeapons = try JSONDecoder().decode([InventoryData.OwnedWeapon].self, from: aliasWeaponsJSON)
+        for aliased in aliasedWeapons {
+            let aliasedModel = NativeDamageCalculatorModel(initialOwnedWeapon: aliased, catalog: catalog)
+            XCTAssertNil(aliasedModel.calculationError)
+            XCTAssertEqual(aliasedModel.selectedWeapon?.name, aliased.calcName)
+        }
     }
 }

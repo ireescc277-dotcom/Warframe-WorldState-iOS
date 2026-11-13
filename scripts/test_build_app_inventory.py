@@ -404,5 +404,42 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertAlmostEqual(config["r"]["elements"]["corrosive"], 1.782)
 
 
+class CalculatorWeaponAliasTests(unittest.TestCase):
+    def test_vinquibus_and_archgun_resolve_to_exact_site_calculator_names(self):
+        result = build_owned_weapons({
+            "LongGuns": [{
+                "ItemId": "test-vinq-rifle",
+                "ItemType": "/Lotus/Weapons/Tenno/Bayonet/TnBayonetRifleWeapon",
+                "Configs": [{}],
+            }],
+            "Melee": [{
+                "ItemId": "test-vinq-melee",
+                "ItemType": "/Lotus/Weapons/Tenno/Bayonet/TnBayonetMeleeWeapon",
+                "Configs": [{}],
+            }],
+            "SpaceGuns": [{
+                "ItemId": "test-mausolon",
+                "ItemType": "/Lotus/Weapons/Tenno/Archwing/Primary/ThanoTechArchLongGun/ThanoTechLongGun",
+                "Configs": [{}],
+            }],
+            "Upgrades": [],
+            "RawUpgrades": [],
+        }, game_data_override={
+            "weapons": {
+                "/Lotus/Weapons/Tenno/Bayonet/TnBayonetRifleWeapon": {"n": "Vinquibus", "z": "制胜者", "om": 1.2},
+                "/Lotus/Weapons/Tenno/Archwing/Primary/ThanoTechArchLongGun/ThanoTechLongGun": {"n": "Mausolon", "z": "巨浪", "om": 0.8},
+            },
+            "mods": {},
+            "rivenTags": {},
+        })
+
+        by_cat = {row["c"]: row for row in result}
+        self.assertEqual(by_cat["Primary"]["n"], "Vinquibus (Rifle)")
+        self.assertEqual(by_cat["Primary"]["z"], "制胜者")
+        self.assertEqual(by_cat["Melee"]["n"], "Vinquibus (Melee)")
+        self.assertEqual(by_cat["Melee"]["z"], "制胜者（近战）")
+        self.assertEqual(by_cat["Archgun"]["n"], "Mausolon (Atmo-mode)")
+
+
 if __name__ == "__main__":
     unittest.main()

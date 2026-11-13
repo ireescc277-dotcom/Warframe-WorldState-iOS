@@ -866,6 +866,21 @@
       "targetTolerance": 0.005,
       "attack": "Normal Attack",
       "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "Dex Pixia uses weapon battery recharge (reloadDelay / (1 + reloadSpeed) + magazine / reloadRate = 0.25 + 60/50 = 1.45s, 109 shots in 20s). Under its shipped Modded Base / 16 quantization, the 61-seed direct mean is 39431.2772 versus DamageKit's 36689.4349 (6.9535%); switching only setQuantize to /32 in scripts/verify_website_quantization_counterfactual.js moves the 61-seed direct mean to 36692.9941 (0.0097% difference). Additionally, scripts/verify_website_status_tail_cases.js records seed 1 row 108 at t=19.9748714s inside the 20s window with curr_dmg=319.8548, Slash per-tick=168, and totalDmg=1327.8548 = 319.8548 + 6 * 168, folding all six post-window Slash ticks into the 20s queue total (leaving 6.5513% total-DPS difference even under /32).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "Warframe quantizes each direct-hit damage component in steps of Modded Base Damage / 32 (not / 16)."
+          },
+          {
+            "url": "https://wiki.warframe.com/w/Damage/Slash_Damage",
+            "claim": "Slash status deals six ticks over six seconds starting one second after application; ticks occurring after t = 20s do not land within a 20-second DPS window."
+          }
+        ],
+        "explanation": "Once Dex Pixia's battery recharge (1.45s, matching min.js) replaced the stale 0.3s reloadTime fallback, the remaining 6.9535% direct difference is isolated cleanly to the site's /16 quantization branch (dropping to 0.0097% under /32), and the remaining 6.5513% queue-total difference comes from folding six full post-window Slash ticks onto shots fired in the final second."
+      },
       "site": {
         "weapon": "Dex Pixia (Titania)",
         "enemy": "Lancer",
@@ -1249,6 +1264,17 @@
       "targetTolerance": 0.005,
       "attack": "Normal Attack",
       "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "With Dex Pixia's battery recharge restored (1.45s, matching min.js) and Strength at 150%, the shipped Modded Base / 16 quantization yields a 61-seed queueDirectTotal.armor mean of 19715.6386 versus DamageKit's 18344.7175 (6.9535% difference). Switching only setQuantize to /32 in scripts/verify_website_quantization_counterfactual.js moves the 61-seed direct mean to 18346.4970 (0.0097% difference).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "Warframe quantizes each direct-hit damage component in steps of Modded Base Damage / 32 (not / 16)."
+          }
+        ],
+        "explanation": "Once Dex Pixia's battery reload matches min.js and Strength applies uniformly (1.5x), this direct comparison shares the same isolated /16 versus /32 quantization divergence as dex-pixia-ability-combo-lancer-l50, shrinking from 6.9535% to 0.0097% under /32 while the paired relative-strength case passes within machine precision (6.66e-13%)."
+      },
       "site": {
         "weapon": "Dex Pixia (Titania)",
         "enemy": "Lancer",
@@ -1377,6 +1403,284 @@
         "level": 50,
         "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
         "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "torid-incarnon-full-build-gunner-sp250",
+      "description": "真实满槽实战配装：Torid Incarnon（8 Mod + 主要无情赋能 + 3 项灵化进化，含 EVO4 Survivor's Edge 基础暴击加成）在钢铁之路 250 级 Corrupted Heavy Gunner 下全口径对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Incarnon Form",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Torid",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 250,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Vile Acceleration",
+          "5": "Rime Rounds",
+          "6": "Malignant Force",
+          "7": "Hammer Shot",
+          "10": "Primary Merciless"
+        },
+        "incarnon": { "19": 1, "20": 0, "21": 2 },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Torid",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 250,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Vile Acceleration" },
+            { "slot": 5, "name": "Rime Rounds" },
+            { "slot": 6, "name": "Malignant Force" },
+            { "slot": 7, "name": "Hammer Shot" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ],
+          "incarnonPerks": ["19:1", "20:0", "21:2"]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "kuva-tonkor-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Kuva Tonkor（8 Mod + 主要无情赋能 + Hunter Munitions 触发流）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证直击与含 DOT 总 DPS 对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Grenade Explosion",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Malignant Force",
+          "5": "Rime Rounds",
+          "6": "Hunter Munitions",
+          "7": "Primed Firestorm",
+          "10": "Primary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Malignant Force" },
+            { "slot": 5, "name": "Rime Rounds" },
+            { "slot": 6, "name": "Hunter Munitions" },
+            { "slot": 7, "name": "Primed Firestorm" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "tenet-plinx-semi-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Tenet Plinx（8 Mod 含 Ice Storm + 次要无情赋能，电池装填曲线）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证直击与总 DPS 对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Semi-Auto",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Tenet Plinx",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Diffusion",
+          "1": "Lethal Torrent",
+          "2": "Primed Target Cracker",
+          "3": "Creeping Bullseye",
+          "4": "Hornet Strike",
+          "5": "Ice Storm",
+          "6": "Convulsion",
+          "7": "Primed Heated Charge",
+          "10": "Secondary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Tenet Plinx",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Diffusion" },
+            { "slot": 1, "name": "Lethal Torrent" },
+            { "slot": 2, "name": "Primed Target Cracker" },
+            { "slot": 3, "name": "Creeping Bullseye" },
+            { "slot": 4, "name": "Hornet Strike" },
+            { "slot": 5, "name": "Ice Storm" },
+            { "slot": 6, "name": "Convulsion" },
+            { "slot": 7, "name": "Primed Heated Charge" },
+            { "slot": 10, "name": "Secondary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Diffusion": 4,
+            "Secondary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "kuva-zarr-barrage-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Kuva Zarr 散弹齐射模式（8 Mod 含 Galvanized Aptitude + 主要无情赋能）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证多弹片与 Gun CO 直击对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Barrage Mode",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Kuva Zarr",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Primed Cryo Rounds",
+          "5": "Malignant Force",
+          "6": "Galvanized Aptitude",
+          "7": "Vile Acceleration",
+          "10": "Primary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Zarr",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Primed Cryo Rounds" },
+            { "slot": 5, "name": "Malignant Force" },
+            { "slot": 6, "name": "Galvanized Aptitude" },
+            { "slot": 7, "name": "Vile Acceleration" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Galvanized Aptitude": 2,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "tenet-cycron-battery-full-build-gunner-sp150",
+      "description": "真实满槽实战配装：Tenet Cycron 连续光束电池武器（8 Mod 含镀层多重与元素双修 + 次要死首）在钢铁之路 150 级 Corrupted Heavy Gunner 下验证直击伤害与 261 发采样时间轴。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Tenet Cycron",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 150,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Diffusion",
+          "1": "Lethal Torrent",
+          "2": "Primed Target Cracker",
+          "3": "Creeping Bullseye",
+          "4": "Hornet Strike",
+          "5": "Pistol Pestilence",
+          "6": "Frostbite",
+          "7": "Seeker",
+          "10": "Secondary Deadhead"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Tenet Cycron",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 150,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Diffusion" },
+            { "slot": 1, "name": "Lethal Torrent" },
+            { "slot": 2, "name": "Primed Target Cracker" },
+            { "slot": 3, "name": "Creeping Bullseye" },
+            { "slot": 4, "name": "Hornet Strike" },
+            { "slot": 5, "name": "Pistol Pestilence" },
+            { "slot": 6, "name": "Frostbite" },
+            { "slot": 7, "name": "Seeker" },
+            { "slot": 10, "name": "Secondary Deadhead" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Diffusion": 4,
+            "Secondary Deadhead": 3
+          }
+        }
       }
     }
   ]

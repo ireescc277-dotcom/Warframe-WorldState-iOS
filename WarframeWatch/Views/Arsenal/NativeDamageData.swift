@@ -56,12 +56,16 @@ final class NativeDamageCatalog: ObservableObject {
         load()
     }
 
-    func load() {
+    init(root: URL?) {
+        load(root: root)
+    }
+
+    func load(root explicitRoot: URL? = nil) {
         // Keep the calculator on the exact same resolver as the weapon list.
         // Folder references exist at `.app/DamageData`; asking Bundle to look
         // up the directory as a single resource can return nil even when the
         // directory was copied into the app correctly.
-        guard let root = DamageDataBundle.root() else {
+        guard let root = explicitRoot ?? DamageDataBundle.root() else {
             store = nil
             dataRoot = nil
             weapons = []

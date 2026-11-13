@@ -505,7 +505,7 @@ public struct BuildResolver: Sendable {
         let weakPointCritChance = options.weakPoint
             ? agg.critChanceWeakPoint + options.customStat(.weakPointCritChance)
             : 0
-        let critChance = max(0, ((attack.critChance / 100)
+        let critChance = max(0, (((attack.critChance / 100) + agg.critChanceBaseAdditive)
             * (1 + agg.critChanceRelative + options.warframe.critChanceBonus
                + options.customStat(.critChance) + weakPointCritChance)
             + agg.critChanceAbsolute + options.customStat(.flatCritChance)
@@ -553,8 +553,29 @@ public struct BuildResolver: Sendable {
             magazine = max(1, ((weapon.magazineSize ?? 1) + agg.flatMagazine)
                 * (1 + agg.magazine + options.customStat(.magazineSize)))
         }
-        let reload = max(0, (weapon.reloadTime ?? 0)
-            / (1 + agg.reloadSpeed + options.customStat(.reloadTime)))
+        let reloadTimeBonus = agg.reloadSpeed + options.customStat(.reloadTime)
+        let reload: Double
+        if let reloadDelay = weapon.reloadDelay,
+           let reloadRate = weapon.reloadRate, reloadRate > 0 {
+            // Battery weapons recharge after a delay reduced by Reload Speed
+            // mods, then refill at `magazine / reloadRate`.  Matching `min.js`
+            // (and game behavior), magazine mods extend recharge time while
+            // reload-speed mods shorten `reloadDelay`.
+            reload = max(0, reloadDelay / max(1e-9, 1 + reloadTimeBonus))
+                + magazine / reloadRate
+        } else {
+            reload = max(0, (weapon.reloadTime ?? 0) / max(1e-9, 1 + reloadTimeBonus))
+        }
+        let magazineBonusMultiplier: Double
+        if agg.magazineSizeDamageMultiplierPerRound != 0 {
+            let baseMagazine = weapon.magazineSize ?? 1
+            magazineBonusMultiplier = max(
+                0,
+                1 + agg.magazineSizeDamageMultiplierPerRound * max(0, magazine - baseMagazine)
+            )
+        } else {
+            magazineBonusMultiplier = 1
+        }
         // Website weapon data can omit `ammoCost`.  Its contract is 0.5 for
         // beam-class attacks and 1 otherwise; explicit attack costs (including
         // the string `all`) always take precedence.
@@ -719,10 +740,10 @@ public struct BuildResolver: Sendable {
             // Elementalist-style status damage.
             statusDamageVulnerabilityMultiplier: statusDamageVulnerabilityMultiplier,
             directDamageMultiplier: eclipseMultiplier * maduraiMultiplier * siteComboMultiplier
-                * simpleStrengthMultiplier * additionalWeaponMultiplier,
+                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier,
             weaponVectorDamageMultiplier: cyteWeaponVectorMultiplier,
             statusDamageMultiplier: eclipseMultiplier * siteComboMultiplier
-                * simpleStrengthMultiplier * additionalWeaponMultiplier,
+                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier,
             xataDamageRatio: max(0, options.scenarioEffects.value(for: .xata)),
             toxicLashDamageRatio: max(0, options.scenarioEffects.value(for: .toxicLash))
                 * (isMelee ? 2 : 1),
@@ -897,6 +918,9 @@ struct ModAggregate {
     var externalDotElementBonuses: [(DamageType, Double)] = []
     var physical: [DamageType: Double] = [:]
     var critChanceRelative: Double = 0
+    /// 灵化 `add_crit_chance`：直接加在基础暴击率上，再参与相对暴击 % Mod 乘算。
+    var critChanceBaseAdditive: Double = 0
+    /// `flat_crit_chance`（如 Arcane Avenger、Laetum Elemental Excess）：加在 % Mod 乘算之后。
     var critChanceAbsolute: Double = 0
     var critChanceWeakPoint: Double = 0
     /// Blood Rush / Gladiator-style relative chance granted for each combo
@@ -933,6 +957,7 @@ struct ModAggregate {
     var reloadSpeed: Double = 0
     var magazine: Double = 0
     var flatMagazine: Double = 0
+    var magazineSizeDamageMultiplierPerRound: Double = 0
     var ammoEfficiency: Double = 0
     var hasInfiniteAmmo = false
     /// 灵化 `flat_change_dmg`：直接加在基础伤害上的固定值。
@@ -1375,10 +1400,13 @@ struct ModAggregate {
                 critChanceRelative += v ?? 0
             case "crit_chance_per_combo":
                 critChancePerCombo += v ?? 0
-            // 灵化："Increase Base Critical Chance by +20%" —— 加在**基础**暴击率上的
-            // 绝对百分点，不是相对百分比。`add_` / `flat_` 两个前缀是同一件事的两个写法。
-            // 来源：<https://wiki.warframe.com/w/Torid>（EVO4 Commodore's Fortune / Survivor's Edge）
-            case "add_crit_chance", "flat_crit_chance":
+            // 灵化 `"add_crit_chance"`（EVO4 Commodore's Fortune / Survivor's Edge）
+            // 直接加在**基础**暴击率上，随后再乘相对暴击率 % Mod；而 `"flat_crit_chance"`
+            // （例如 Arcane Avenger、Elemental Excess）则在相对乘算之后加算。
+            // 来源：<https://wiki.warframe.com/w/Torid> & `server/site/min.js` `((a.crit_chance+t)*h*G+f+r)*k`
+            case "add_crit_chance":
+                critChanceBaseAdditive += v ?? 0
+            case "flat_crit_chance":
                 critChanceAbsolute += v ?? 0
             // 灵化："Increase Base Critical Damage Multiplier by +2x"，值是倍率的绝对增量。
             case "flat_critmult", "crit_mult_add":
@@ -1432,6 +1460,8 @@ struct ModAggregate {
                 reloadSpeed += v ?? 0
             case "magazineSize":
                 magazine += v ?? 0
+            case "magazineSizeMult":
+                magazineSizeDamageMultiplierPerRound += v ?? 0
             case "ammoEff":
                 ammoEfficiency += v ?? 0
             case "ammoEffFull":
@@ -1507,7 +1537,10 @@ struct ModAggregate {
                  "beam_length", "shot_speed", "lifesteal", "punch_through", "ammoCapacity",
                  "set_ammoCapacity":
                 break
-            case "FOR_WEAPON", "WITH_COND", "set", "unique", "force_procs", "mutator", "na",
+            // `Attack.decodeForceProcs` 已把 `attack.unique["force_procs"]` 放入 `ResolvedAttack.forceProcs`。
+            case "force_procs":
+                break
+            case "FOR_WEAPON", "WITH_COND", "set", "unique", "mutator", "na",
                  "comboDuration", "slam_mult",
                   "finisherDmg", "add_slash_on_impact", "electricityBonus",
                  "comboIn", "f_multiple",

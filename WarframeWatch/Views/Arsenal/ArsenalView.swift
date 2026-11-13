@@ -40,6 +40,7 @@ public struct ArsenalView: View {
     @State private var showWarframeConfiguration = false
     @State private var showEquipmentConfiguration = false
     @State private var showCalc = false
+    @State private var showGearWheel = false
     @State private var openCalc = ArsenalView.seededCalc
 
     public init() {}
@@ -226,7 +227,7 @@ public struct ArsenalView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "function")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("空计算器")
+                    Text("自由计算")
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(WFTheme.gold)
@@ -369,23 +370,22 @@ public struct ArsenalView: View {
 
     private var arsenalSubtitle: String {
         guard inventory.data != nil else {
-            return inventory.fetching ? "正在读取背包快照…" : "尚未取得背包快照"
+            return inventory.fetching ? "正在同步军械库…" : "暂无军械库数据"
         }
         if page == .inventory {
             return weaponSubtitle
         }
         if let loadout = selectedLoadout {
-            let marked = loadout.snapshotMarkedActive ? " · 快照标记" : ""
-            return "配置 \(loadout.name)\(marked) · 进入装备后查看 A/B/C"
+            return "当前预设：\(loadout.name)"
         }
-        return "军械库配置由账号快照导入"
+        return "军械库配置"
     }
 
     private var weaponSubtitle: String {
         if catalog.failed {
-            return "背包 \(ownedWeapons.count) 把 · 计算器数据不可用"
+            return "共 \(ownedWeapons.count) 把武器 · 伤害数据不可用"
         }
-        return "背包 \(ownedWeapons.count) 把 · 先进入配置页，再预填伤害计算"
+        return "共 \(ownedWeapons.count) 把武器"
     }
 
     private func selectDefaultLoadoutIfNeeded() {
@@ -419,120 +419,132 @@ public struct ArsenalView: View {
         Group {
             if inventory.data == nil {
                 Text(inventory.failed
-                     ? "没有可用的背包快照。下拉重试；装备列表仍可在有快照后使用。"
-                     : "正在读取背包快照…")
+                     ? "未能读取军械库数据，下拉刷新或使用右上角「自由计算」。"
+                     : "正在读取军械库…")
                     .font(.wfBody)
                     .foregroundColor(inventory.failed ? WFTheme.red : WFTheme.textMuted)
                     .padding(.vertical, WFUI.s4)
             } else {
                 VStack(alignment: .leading, spacing: WFUI.s4) {
-                    Text("普通军械库、同伴和 Archwing 是账号快照中的三组独立预设；物品轮是账号级条目。这里按游戏军械库分区展示，不虚构它们之间的预设关联。")
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
-                        .padding(.horizontal, WFUI.s1)
                     normalLoadoutSection
                     companionLoadoutSection
-                    gearWheelSection
                     archwingLoadoutSection
+                    gearWheelSection
                 }
             }
         }
     }
 
     private var normalLoadoutSection: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("战甲与武器", trailing: "普通军械库")
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            sectionHeaderWithPicker(
+                title: "当前配装",
+                choices: normalLoadouts,
+                selection: $selectedLoadoutID,
+                selectedName: selectedLoadout?.name
+            )
             if let loadout = selectedLoadout {
-                loadoutPicker(
-                    normalLoadouts,
-                    selection: $selectedLoadoutID,
-                    title: loadout.name,
-                    subtitle: "普通军械库配置 · 来自账号快照",
-                    symbol: "square.grid.2x2"
-                )
                 loadoutCard(loadout)
             } else {
-                sourceEmptyCard("账号快照没有普通军械库预设。")
+                sourceEmptyCard("暂无战甲配装预设")
             }
         }
     }
 
     private var companionLoadoutSection: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("同伴", trailing: "独立预设")
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            sectionHeaderWithPicker(
+                title: "同伴",
+                choices: companionLoadouts,
+                selection: $selectedCompanionLoadoutID,
+                selectedName: selectedCompanionLoadout?.name
+            )
             if let loadout = selectedCompanionLoadout {
-                loadoutPicker(
-                    companionLoadouts,
-                    selection: $selectedCompanionLoadoutID,
-                    title: loadout.name,
-                    subtitle: "同伴预设 · 来自账号快照",
-                    symbol: "hare"
-                )
                 loadoutCard(loadout)
             } else if let companion = ownedCompanions.first {
-                Text("账号快照没有同伴预设；下方显示已导入的第一个同伴配置。")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
                 equipmentFallbackRow(companion, role: .companion)
             } else {
-                sourceEmptyCard("账号快照没有已导入的同伴或同伴预设。")
+                sourceEmptyCard("暂无同伴预设")
             }
         }
     }
 
     private var gearWheelSection: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("物品", trailing: "账号级装备轮")
-            Text("顺序来自快照的 EquippedGear。数量只在同一快照的消耗品堆栈有记录时显示。")
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textMuted)
-            if equippedGear.isEmpty {
-                sourceEmptyCard("账号快照没有装备轮条目。")
-            } else {
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            Button {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    showGearWheel.toggle()
+                }
+            } label: {
+                HStack(spacing: WFUI.s3) {
+                    Image(systemName: "circle.grid.cross")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(WFTheme.gold)
+                        .frame(width: 40, height: 40)
+                        .background(WFTheme.panel)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("物品轮")
+                            .font(.wfTitle)
+                            .foregroundColor(WFTheme.textPrimary)
+                        Text(equippedGear.isEmpty ? "暂无携带物品" : "已装备 \(equippedGear.count) 项")
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                    }
+                    Spacer()
+                    Image(systemName: showGearWheel ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if showGearWheel && !equippedGear.isEmpty {
+                WFHairline().padding(.vertical, 2)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 142), spacing: 7)], spacing: 7) {
                     ForEach(equippedGear) { gear in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("槽位 \(gear.slot + 1)")
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundColor(WFTheme.textMuted)
+                        HStack(spacing: 6) {
                             Text(gear.name)
                                 .font(.wfLabel)
                                 .foregroundColor(WFTheme.textPrimary)
                                 .lineLimit(2)
-                            Text(gear.count.map { "数量 \($0)" } ?? "无堆栈数量记录")
-                                .font(.system(size: 10))
-                                .foregroundColor(gear.count == nil ? WFTheme.textMuted : WFTheme.gold)
+                            Spacer(minLength: 4)
+                            if let count = gear.count {
+                                Text("×\(count)")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .foregroundColor(WFTheme.gold)
+                            }
                         }
-                        .frame(maxWidth: .infinity, minHeight: 66, alignment: .leading)
-                        .padding(8)
+                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
                         .background(WFUI.raised)
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
             }
         }
-        .wfCardStyle()
+        .padding(.horizontal, WFUI.s3)
+        .padding(.vertical, 10)
+        .background(WFUI.surface)
+        .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
     }
 
     private var archwingLoadoutSection: some View {
-        VStack(alignment: .leading, spacing: WFUI.s3) {
-            WFSectionHeader("Archwing", trailing: "独立预设")
+        VStack(alignment: .leading, spacing: WFUI.s2) {
+            sectionHeaderWithPicker(
+                title: "Archwing",
+                choices: archwingLoadouts,
+                selection: $selectedArchwingLoadoutID,
+                selectedName: selectedArchwingLoadout?.name
+            )
             if let loadout = selectedArchwingLoadout {
-                loadoutPicker(
-                    archwingLoadouts,
-                    selection: $selectedArchwingLoadoutID,
-                    title: loadout.name,
-                    subtitle: "Archwing 预设 · 来自账号快照",
-                    symbol: "airplane"
-                )
                 loadoutCard(loadout)
             } else if let archwing = ownedArchwings.first {
-                Text("账号快照没有 Archwing 预设；下方显示已导入的第一个 Archwing 配置。")
-                    .font(.wfLabel)
-                    .foregroundColor(WFTheme.textMuted)
                 equipmentFallbackRow(archwing, role: .archwing)
             } else {
-                sourceEmptyCard("账号快照没有已导入的 Archwing 或 Archwing 预设。")
+                sourceEmptyCard("暂无 Archwing 预设")
             }
         }
     }
@@ -547,48 +559,48 @@ public struct ArsenalView: View {
             .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
     }
 
-    private func loadoutPicker(_ choices: [InventoryData.Loadout],
-                               selection: Binding<String?>,
-                               title: String,
-                               subtitle: String,
-                               symbol: String) -> some View {
-        Menu {
-            ForEach(choices) { loadout in
-                Button(loadoutMenuLabel(loadout)) {
-                    selection.wrappedValue = loadout.id
-                }
-            }
-        } label: {
-            HStack(spacing: WFUI.s2) {
-                Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .medium))
+    private func sectionHeaderWithPicker(title: String,
+                                         choices: [InventoryData.Loadout],
+                                         selection: Binding<String?>,
+                                         selectedName: String?) -> some View {
+        HStack(alignment: .center) {
+            Text(title)
+                .font(.wfLabel)
+                .foregroundColor(WFTheme.textMuted)
+            Spacer()
+            if choices.count > 1, let selectedName {
+                Menu {
+                    ForEach(choices) { loadout in
+                        Button(loadoutMenuLabel(loadout)) {
+                            selection.wrappedValue = loadout.id
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(selectedName)
+                            .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
                     .foregroundColor(WFTheme.gold)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.wfBody)
-                        .foregroundColor(WFTheme.textPrimary)
-                    Text(subtitle)
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(WFTheme.gold.opacity(0.12)))
                 }
-                Spacer()
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted)
+                .buttonStyle(.plain)
+            } else if let selectedName {
+                Text(selectedName)
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textSecondary)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, WFUI.s3)
-            .padding(.vertical, 10)
-            .background(WFUI.surface)
-            .clipShape(RoundedRectangle(cornerRadius: WFUI.radius, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, WFUI.s1)
     }
 
     private func loadoutMenuLabel(_ loadout: InventoryData.Loadout) -> String {
-        var labels = [loadout.name]
-        if loadout.isFavorite { labels.append("收藏") }
-        if loadout.snapshotMarkedActive { labels.append("快照标记") }
-        return labels.joined(separator: " · ")
+        loadout.isFavorite ? "★ \(loadout.name)" : loadout.name
     }
 
     private func loadoutCard(_ loadout: InventoryData.Loadout) -> some View {
@@ -597,7 +609,7 @@ public struct ArsenalView: View {
             ForEach(Array(roles.enumerated()), id: \.element) { index, role in
                 loadoutEquipmentRow(role, slot: loadout.slot(role), in: loadout)
                 if index < roles.count - 1 {
-                    WFHairline().padding(.leading, 48)
+                    WFHairline().padding(.leading, 68)
                 }
             }
         }
@@ -623,9 +635,9 @@ public struct ArsenalView: View {
         let equipment = equipment(for: slot)
         let weapon = role == .warframe || equipment != nil ? nil : weapon(for: slot)
         let name = frame?.z ?? equipment?.z ?? weapon?.z ?? slot?.displayName ?? "未装备"
-        let config = slot?.configLabel.map { "配置 \($0)" } ?? "没有配置记录"
-        let sourceDetail = slot?.sourceIssue
-            ?? (slot?.isHidden == true ? "\(config) · 快照标记为隐藏" : config)
+        let weaponEntry = weapon.flatMap { catalogEntry(for: $0) }
+            ?? catalogEntry(named: equipment?.z ?? slot?.displayName)
+        let configPill = slot?.configLabel.map { "配置 \($0)" }
         let isAvailable = frame != nil || equipment != nil || weapon != nil
 
         return Button {
@@ -640,37 +652,60 @@ public struct ArsenalView: View {
             }
         } label: {
             HStack(spacing: WFUI.s3) {
-                Image(systemName: symbol(for: role))
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(color(for: role))
-                    .frame(width: 28, height: 28)
-                    .background(color(for: role).opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                ArsenalItemThumb(
+                    weaponEntry: weaponEntry,
+                    displayName: name == "未装备" ? nil : name,
+                    fallbackSymbol: symbol(for: role),
+                    fallbackColor: color(for: role),
+                    size: 44
+                )
+
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role.label)
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
                     Text(name)
                         .font(.wfTitle)
                         .foregroundColor(isAvailable ? WFTheme.textPrimary : WFTheme.textMuted)
                         .lineLimit(1)
-                    Text(sourceDetail)
-                        .font(.wfLabel)
-                        .foregroundColor(slot?.sourceIssue == nil ? WFTheme.textSecondary : WFTheme.gold)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(role.label)
+                            .font(.wfLabel)
+                            .foregroundColor(WFTheme.textMuted)
+                        if let issue = slot?.sourceIssue {
+                            Text("· \(issue)")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.gold)
+                                .lineLimit(1)
+                        } else if slot?.isHidden == true {
+                            Text("· 隐藏")
+                                .font(.wfLabel)
+                                .foregroundColor(WFTheme.textMuted)
+                        }
+                    }
                 }
+
                 Spacer(minLength: WFUI.s2)
-                Image(systemName: isAvailable ? "chevron.right" : "minus")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted)
+
+                if let configPill {
+                    Text(configPill)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(isAvailable ? WFTheme.gold : WFTheme.textMuted)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(WFUI.raised))
+                }
+
+                if isAvailable {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                }
             }
             .padding(.horizontal, WFUI.s3)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!isAvailable)
-        .opacity(isAvailable ? 1 : 0.58)
+        .opacity(isAvailable ? 1 : 0.52)
     }
 
     private func equipmentFallbackRow(_ equipment: InventoryData.OwnedEquipment,
@@ -679,22 +714,21 @@ public struct ArsenalView: View {
             openEquipmentConfiguration(equipment, initialConfigIndex: 0)
         } label: {
             HStack(spacing: WFUI.s3) {
-                Image(systemName: symbol(for: role))
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(color(for: role))
-                    .frame(width: 28, height: 28)
-                    .background(color(for: role).opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                ArsenalItemThumb(
+                    weaponEntry: catalogEntry(named: equipment.z),
+                    displayName: equipment.z,
+                    fallbackSymbol: symbol(for: role),
+                    fallbackColor: color(for: role),
+                    size: 44
+                )
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role.label)
-                        .font(.wfLabel)
-                        .foregroundColor(WFTheme.textMuted)
                     Text(equipment.z)
                         .font(.wfTitle)
                         .foregroundColor(WFTheme.textPrimary)
-                    Text("背包中已导入 · (equipment.configs.count) 套配卡")
+                        .lineLimit(1)
+                    Text("\(role.label) · \(equipment.configs.count) 套配置")
                         .font(.wfLabel)
-                        .foregroundColor(WFTheme.textSecondary)
+                        .foregroundColor(WFTheme.textMuted)
                 }
                 Spacer(minLength: WFUI.s2)
                 Image(systemName: "chevron.right")
@@ -702,7 +736,7 @@ public struct ArsenalView: View {
                     .foregroundColor(WFTheme.textMuted)
             }
             .padding(.horizontal, WFUI.s3)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -819,13 +853,13 @@ public struct ArsenalView: View {
         return LazyVStack(spacing: 0) {
             if inventory.data == nil {
                 Text(inventory.failed
-                     ? "没有可用的背包快照。下拉重试；空计算器仍可手动选武器。"
-                     : "正在读取背包快照…")
+                     ? "未能读取军械库数据，下拉刷新或使用右上角「自由计算」。"
+                     : "正在读取军械库…")
                     .font(.wfBody)
                     .foregroundColor(inventory.failed ? WFTheme.red : WFTheme.textMuted)
                     .padding(.vertical, WFUI.s4)
             } else if rows.isEmpty {
-                Text(ownedWeapons.isEmpty ? "这份背包快照没有武器实例。" : "没有匹配的背包武器")
+                Text(ownedWeapons.isEmpty ? "暂无武器数据" : "没有匹配的武器")
                     .font(.wfBody)
                     .foregroundColor(WFTheme.textMuted)
                     .padding(.vertical, WFUI.s5)
@@ -838,7 +872,7 @@ public struct ArsenalView: View {
                     }
                     .buttonStyle(.plain)
                     if idx < rows.count - 1 {
-                        WFHairline().padding(.leading, 56)
+                        WFHairline().padding(.leading, 68)
                     }
                 }
             }
@@ -848,8 +882,21 @@ public struct ArsenalView: View {
     }
 
     private func catalogEntry(for weapon: InventoryData.OwnedWeapon) -> WeaponEntry? {
-        guard let name = weapon.calcName else { return nil }
-        return catalog.weapons.first(where: { $0.n == name })
+        if let name = weapon.calcName,
+           let exact = catalog.weapons.first(where: { $0.n == name }) {
+            return exact
+        }
+        return catalogEntry(named: weapon.z)
+    }
+
+    private func catalogEntry(named rawName: String?) -> WeaponEntry? {
+        guard let rawName, !rawName.isEmpty else { return nil }
+        let clean = ArsenalItemThumb.stripAnnotation(rawName)
+        guard !clean.isEmpty else { return nil }
+        return catalog.weapons.first {
+            $0.n.caseInsensitiveCompare(clean) == .orderedSame
+                || $0.z.caseInsensitiveCompare(clean) == .orderedSame
+        }
     }
 
     private func canCalculate(_ weapon: InventoryData.OwnedWeapon) -> Bool {
@@ -860,9 +907,9 @@ public struct ArsenalView: View {
         let entry = catalogEntry(for: w)
         let supported = canCalculate(w)
         return HStack(spacing: WFUI.s3) {
-            WeaponThumb(name: entry?.img, remote: entry?.iconURL, size: 40)
+            WeaponThumb(name: entry?.img, remote: entry?.iconURL, size: 46)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(w.z)
                     .font(.wfTitle)
                     .foregroundColor(WFTheme.textPrimary)
@@ -871,11 +918,11 @@ public struct ArsenalView: View {
                     Text(w.categoryLabel)
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textSecondary)
-                    Text("\(w.configs.count) 套配卡")
+                    Text("· \(w.configs.count) 套")
                         .font(.wfLabel)
                         .foregroundColor(WFTheme.textMuted)
                     if w.configs.contains(where: { !$0.isExactImport }) {
-                        Text("有未导入槽位")
+                        Text("· 缺项")
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.gold)
                     }
@@ -884,19 +931,23 @@ public struct ArsenalView: View {
 
             Spacer(minLength: WFUI.s2)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(supported ? "配置 · 可计算" : "查看配置")
-                    .font(.wfLabel)
-                    .foregroundColor(supported ? WFTheme.cyan : WFTheme.textMuted)
-                Image(systemName: "chevron.right")
+            if supported {
+                Text("可计算")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(WFTheme.textMuted.opacity(0.7))
+                    .foregroundColor(WFTheme.cyan)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(WFTheme.cyan.opacity(0.12)))
             }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(WFTheme.textMuted.opacity(0.7))
         }
         .padding(.horizontal, WFUI.s3)
-        .padding(.vertical, 9)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .opacity(supported ? 1 : 0.82)
+        .opacity(supported ? 1 : 0.85)
     }
 }
 
@@ -1012,5 +1063,82 @@ struct WeaponThumb: View {
         Image(systemName: "scope")
             .font(.system(size: size * 0.36, weight: .light))
             .foregroundColor(WFTheme.textMuted.opacity(0.45))
+    }
+}
+
+/// 军械库栏位缩略图：武器优先展示 DamageData 武器图，战甲/同伴复用 Asset Catalog 套装图，
+/// 无图时显示对应分类的系统图标。
+struct ArsenalItemThumb: View {
+    let weaponEntry: WeaponEntry?
+    let displayName: String?
+    let fallbackSymbol: String
+    let fallbackColor: Color
+    let size: CGFloat
+
+    @ObservedObject private var catalog = WeaponCatalog.shared
+    @ObservedObject private var inventory = InventoryFeed.shared
+
+    var body: some View {
+        if let entry = resolvedWeaponEntry {
+            WeaponThumb(name: entry.img, remote: entry.iconURL, size: size)
+        } else if let asset = resolvedSetIcon {
+            ItemIcon(asset.local, remote: asset.remote, size: size - 6)
+                .frame(width: size, height: size)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(WFTheme.panel)
+                )
+        } else {
+            Image(systemName: fallbackSymbol)
+                .font(.system(size: size * 0.42, weight: .medium))
+                .foregroundColor(fallbackColor)
+                .frame(width: size, height: size)
+                .background(fallbackColor.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+
+    private var resolvedWeaponEntry: WeaponEntry? {
+        if let weaponEntry { return weaponEntry }
+        guard let displayName else { return nil }
+        let clean = Self.stripAnnotation(displayName)
+        guard !clean.isEmpty else { return nil }
+        return catalog.weapons.first {
+            $0.n.caseInsensitiveCompare(clean) == .orderedSame
+                || $0.z.caseInsensitiveCompare(clean) == .orderedSame
+        }
+    }
+
+    private var resolvedSetIcon: (local: String?, remote: String?)? {
+        guard let displayName else { return nil }
+        let clean = Self.stripAnnotation(displayName)
+        guard !clean.isEmpty else { return nil }
+
+        if let matchedSet = inventory.data?.sets.first(where: {
+            $0.zh.caseInsensitiveCompare(clean) == .orderedSame
+                && (!($0.i ?? "").isEmpty || !($0.u ?? "").isEmpty)
+        }) {
+            return (matchedSet.i, matchedSet.u)
+        }
+
+        let slug = clean.lowercased()
+            .replacingOccurrences(of: "&", with: "and")
+            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "-", with: "_")
+            + "_set"
+        if UIImage(named: slug) != nil {
+            return (slug, nil)
+        }
+        return nil
+    }
+
+    static func stripAnnotation(_ raw: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for marker in ["（", "("] {
+            if let range = text.range(of: marker) {
+                text = String(text[..<range.lowerBound])
+            }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

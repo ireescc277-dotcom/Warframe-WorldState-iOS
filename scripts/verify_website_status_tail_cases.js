@@ -113,6 +113,10 @@ async function main() {
     fixture(suite, 'ignis-wraith-beam-status-lancer-l50'),
     { seed: 1, rowIndex: 153, status: 'heat', minimumTime: 19 },
   ));
+  observations.push(await observeCase(
+    fixture(suite, 'dex-pixia-ability-combo-lancer-l50'),
+    { seed: 1, rowIndex: 108, status: 'slash', minimumTime: 19 },
+  ));
 
   process.stdout.write(JSON.stringify({ observations }, null, 2) + '\n');
 }

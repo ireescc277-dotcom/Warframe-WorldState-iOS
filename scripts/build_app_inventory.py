@@ -40,6 +40,7 @@ DAMAGEKIT_MODS = os.path.join(
 DAMAGEKIT_CONDITIONAL_EFFECTS = os.path.join(
     ROOT, "Packages", "DamageKit", "Sources", "DamageKit", "Resources", "conditional-effects.json"
 )
+SITE_WEAPONS = os.path.join(ROOT, "server", "site", "weapons.json")
 MARKET_ITEMS = os.path.join(ROOT, "data", "market", "items.json")
 MARKET_PRICES = os.path.join(ROOT, "data", "market", "prices.json")
 ICONS = os.path.join(ROOT, "data", "market", "icons.json")
@@ -902,6 +903,32 @@ def incarnon_choices(weapon: dict) -> tuple[list[int], str | None]:
     return [int(char) for char in raw], None
 
 
+def resolve_calculator_weapon_names(
+    item_type: str,
+    calculator_category: str,
+    weapon_data: dict,
+    site_weapons: dict,
+) -> tuple[str | None, str | None]:
+    """Map DE `ItemType` to the exact key name expected by `server/site/weapons.json`."""
+    explicit_aliases = {
+        "/Lotus/Weapons/Tenno/Bayonet/TnBayonetRifleWeapon": ("Vinquibus (Rifle)", "制胜者"),
+        "/Lotus/Weapons/Tenno/Bayonet/TnBayonetMeleeWeapon": ("Vinquibus (Melee)", "制胜者（近战）"),
+    }
+    raw_calc = weapon_data.get("n") if isinstance(weapon_data.get("n"), str) else None
+    raw_zh = weapon_data.get("z") if isinstance(weapon_data.get("z"), str) else None
+    if item_type in explicit_aliases:
+        alias_calc, alias_zh = explicit_aliases[item_type]
+        return alias_calc, raw_zh or alias_zh
+    if (
+        calculator_category == "Archgun"
+        and raw_calc
+        and raw_calc not in site_weapons
+        and f"{raw_calc} (Atmo-mode)" in site_weapons
+    ):
+        return f"{raw_calc} (Atmo-mode)", raw_zh
+    return raw_calc, raw_zh
+
+
 def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> list[dict]:
     """Convert the account-only weapon instances into an app-safe view.
 
@@ -937,6 +964,7 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
     # the iOS app.
     local_mods = _rows_by_unique_name(ALECA_MODS)
     local_arcanes = _rows_by_unique_name(ALECA_ARCANES)
+    site_weapons = load_json(SITE_WEAPONS) if os.path.exists(SITE_WEAPONS) else {}
 
     upgrades, upgrades_by_type, raw_upgrade_counts = upgrade_indexes(inv)
 
@@ -950,8 +978,9 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                 continue
             weapon_data = game_weapons.get(item_type)
             weapon_data = weapon_data if isinstance(weapon_data, dict) else {}
-            calc_name = weapon_data.get("n") if isinstance(weapon_data.get("n"), str) else None
-            display_name = weapon_data.get("z") if isinstance(weapon_data.get("z"), str) else None
+            calc_name, display_name = resolve_calculator_weapon_names(
+                item_type, calculator_category, weapon_data, site_weapons
+            )
             if not display_name:
                 raw_name = weapon.get("ItemName")
                 display_name = raw_name if isinstance(raw_name, str) and raw_name else short_type_name(item_type)

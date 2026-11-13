@@ -34,6 +34,8 @@ const CASE_IDS = [
   'lex-prime-custom-direct-stats-lancer-l50',
   'lex-prime-roar-lancer-l50',
   'lex-prime-toxic-lash-direct-armor-lancer-l50',
+  'dex-pixia-ability-combo-lancer-l50',
+  'dex-pixia-global-strength-direct-lancer-l50',
 ];
 
 function assert(condition, message) {

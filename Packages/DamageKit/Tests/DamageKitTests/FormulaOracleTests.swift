@@ -707,4 +707,111 @@ final class FormulaOracleTests: XCTestCase {
 
         XCTAssertEqual(layerDamage(result, layer: .health), 1, accuracy: 1e-9)
     }
+
+    private static var dataRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("server/site")
+    }
+
+    func testTenetPlinxAltFireAppliesMagazineSizeMultAndDecodesForceProcs() throws {
+        let store = DataStore(root: Self.dataRoot)
+        let plinx = try store.weapon(named: "Tenet Plinx")
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 100),
+                                   level: 1, options: Options())
+
+        // Ice Storm adds +40% magazine capacity (10 -> 14). Tenet Plinx's Alt-Fire and
+        // Alt-Fire AoE scale damage per round above base magazine via `magazineSizeMult: 0.1`
+        // (`1 + 0.1 * (14 - 10) = 1.4x`), and Alt-Fire's forced Impact proc decodes cleanly
+        // without reporting `force_procs` as an unsupported Mod action.
+        let baseline = BuildResolver(
+            weapon: plinx,
+            build: Build(),
+            options: Options(window: 20),
+            faction: profile.faction
+        ).resolveAll()
+        let expanded = BuildResolver(
+            weapon: plinx,
+            build: Build(mods: ["Ice Storm"]),
+            options: Options(window: 20),
+            faction: profile.faction
+        ).resolveAll()
+        let baseAlt = try XCTUnwrap(baseline.first { $0.name == "Alt-Fire" })
+        let expandedAlt = try XCTUnwrap(expanded.first { $0.name == "Alt-Fire" })
+        let baseAoe = try XCTUnwrap(baseline.first { $0.name == "Alt-Fire AoE" })
+        let expandedAoe = try XCTUnwrap(expanded.first { $0.name == "Alt-Fire AoE" })
+
+        XCTAssertEqual(expandedAlt.magazine, 14.0, accuracy: 1e-9)
+        XCTAssertEqual(expandedAlt.directDamageMultiplier / baseAlt.directDamageMultiplier,
+                       1.4, accuracy: 1e-9)
+        XCTAssertEqual(expandedAlt.statusDamageMultiplier / baseAlt.statusDamageMultiplier,
+                       1.4, accuracy: 1e-9)
+        XCTAssertEqual(Set(expandedAlt.forceProcs), ["impact"])
+        XCTAssertFalse(expandedAlt.notes.contains { $0.contains("force_procs") })
+        XCTAssertEqual(expandedAoe.directDamageMultiplier / baseAoe.directDamageMultiplier,
+                       1.4, accuracy: 1e-9)
+        XCTAssertEqual(expandedAoe.statusDamageMultiplier / baseAoe.statusDamageMultiplier,
+                       1.4, accuracy: 1e-9)
+    }
+
+    func testBatteryWeaponReloadCombinesModdedDelayAndMagazineRecharge() throws {
+        let store = DataStore(root: Self.dataRoot)
+        let cycron = try store.weapon(named: "Tenet Cycron")
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 100),
+                                   level: 1, options: Options())
+
+        // Battery recharge = reloadDelay / (1 + reloadSpeed) + moddedMagazine / reloadRate.
+        // Slip Magazine (+30% mag: 40 -> 52) lengthens recharge while Quickdraw (+48%)
+        // shortens only the recharge delay.
+        let resolved = try XCTUnwrap(BuildResolver(
+            weapon: cycron,
+            build: Build(mods: ["Slip Magazine", "Quickdraw"]),
+            options: Options(window: 20),
+            faction: profile.faction
+        ).resolveAll().first)
+        let expectedMagazine = 40.0 * 1.3
+        let delay = try XCTUnwrap(cycron.reloadDelay)
+        let rate = try XCTUnwrap(cycron.reloadRate)
+        let expectedReload = delay / 1.48 + expectedMagazine / rate
+
+        XCTAssertEqual(resolved.magazine, expectedMagazine, accuracy: 1e-9)
+        XCTAssertEqual(resolved.reload, expectedReload, accuracy: 1e-9)
+    }
+
+    func testIncarnonAddCritChanceScalesWithRelativeModsUnlikeFlatCritChance() throws {
+        let store = DataStore(root: Self.dataRoot)
+        var torid = try store.weapon(named: "Torid")
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 100),
+                                   level: 1, options: Options())
+
+        // Torid Incarnon Form has 29% base crit; EVO4 Survivor's Edge (`21:2`) gives
+        // `add_crit_chance: 0.15`, which adds to base crit BEFORE Critical Delay's +200%
+        // (`(0.29 + 0.15) * 3 = 1.32`). By contrast, `flat_crit_chance` adds after relative scaling.
+        let withAddCrit = BuildResolver(
+            weapon: torid,
+            build: Build(mods: ["Critical Delay"], incarnonPerks: ["21:2"]),
+            options: Options(window: 20),
+            faction: profile.faction
+        ).resolveAll()
+        let incarnonForm = try XCTUnwrap(withAddCrit.first { $0.name == "Incarnon Form" })
+        XCTAssertEqual(incarnonForm.critChance, 1.32, accuracy: 1e-9)
+
+        let syntheticOption = IncarnonTier.IncarnonOption(
+            name: "Flat Crit",
+            action: ["flat_crit_chance": .number(0.15)]
+        )
+        torid.incarnon = [IncarnonTier(tier: 19, options: [syntheticOption])]
+        let withFlatCrit = BuildResolver(
+            weapon: torid,
+            build: Build(mods: ["Critical Delay"], incarnonPerks: ["19:0"]),
+            options: Options(window: 20),
+            faction: profile.faction
+        ).resolveAll()
+        let flatForm = try XCTUnwrap(withFlatCrit.first { $0.name == "Incarnon Form" })
+        XCTAssertEqual(flatForm.critChance, 1.02, accuracy: 1e-9)
+    }
 }

@@ -247,6 +247,8 @@ public struct Weapon: Codable, Sendable, Equatable {
     public var magazineSize: Double?
     public var incarnonMagazineSize: Double?
     public var reloadTime: Double?
+    public var reloadDelay: Double?
+    public var reloadRate: Double?
     /// Weapon-level heavy-attack wind-up time.  It is added to a heavy combo
     /// cycle, never to normal stance contact timing.
     public var windUp: Double?
@@ -271,7 +273,7 @@ public struct Weapon: Codable, Sendable, Equatable {
     public var additionalBuff: Double?
 
     public enum CodingKeys: String, CodingKey {
-        case name, category, type, masteryReq, magazineSize, reloadTime, windUp, multishot, trigger
+        case name, category, type, masteryReq, magazineSize, reloadTime, reloadDelay, reloadRate, windUp, multishot, trigger
         case attacks, comb, tags, categories, compTags, incarnon, unique, strengthType, additionalBuff
         case incarnonMagazineSize = "incMagazineSize"
     }
@@ -285,6 +287,8 @@ public struct Weapon: Codable, Sendable, Equatable {
         magazineSize = try c.decodeIfPresent(Double.self, forKey: .magazineSize)
         incarnonMagazineSize = try c.decodeIfPresent(Double.self, forKey: .incarnonMagazineSize)
         reloadTime = try c.decodeIfPresent(Double.self, forKey: .reloadTime)
+        reloadDelay = try c.decodeIfPresent(Double.self, forKey: .reloadDelay)
+        reloadRate = try c.decodeIfPresent(Double.self, forKey: .reloadRate)
         windUp = try c.decodeIfPresent(Double.self, forKey: .windUp)
         multishot = try c.decodeIfPresent(Double.self, forKey: .multishot)
         trigger = try c.decodeIfPresent(String.self, forKey: .trigger)
@@ -309,13 +313,16 @@ public struct Weapon: Codable, Sendable, Equatable {
     }
 
     public init(name: String, attacks: [Attack], magazineSize: Double? = nil,
-                reloadTime: Double? = nil, windUp: Double? = nil,
+                reloadTime: Double? = nil, reloadDelay: Double? = nil,
+                reloadRate: Double? = nil, windUp: Double? = nil,
                 multishot: Double? = nil, trigger: String? = nil,
                 category: String? = nil, type: String? = nil) {
         self.name = name
         self.attacks = attacks
         self.magazineSize = magazineSize
         self.reloadTime = reloadTime
+        self.reloadDelay = reloadDelay
+        self.reloadRate = reloadRate
         self.windUp = windUp
         self.multishot = multishot
         self.trigger = trigger
