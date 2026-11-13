@@ -2095,7 +2095,7 @@ private struct NativeThumb: View {
         // usable offline; read those through UIKit first and use the upstream
         // URL only for a genuinely missing cached icon.
 #if canImport(UIKit)
-        if let local, let uiImage = UIImage(contentsOfFile: local.path) {
+        if let local, let uiImage = ModArtworkView.loadCroppedArtwork(path: local.path) {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFit()

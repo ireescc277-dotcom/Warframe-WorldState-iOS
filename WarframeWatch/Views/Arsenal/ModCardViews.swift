@@ -145,6 +145,13 @@ struct ModArtworkView: View {
     let isRiven: Bool
 
     var body: some View {
+        Color.clear
+            .overlay(artworkLayer)
+            .clipped()
+    }
+
+    @ViewBuilder
+    private var artworkLayer: some View {
         let urls = resolvedURLs
 #if canImport(UIKit)
         if let local = urls.local, let loaded = Self.loadCroppedArtwork(path: local.path) {
@@ -191,12 +198,13 @@ struct ModArtworkView: View {
     }
 
 #if canImport(UIKit)
-    private static func loadCroppedArtwork(path: String) -> UIImage? {
+    static func loadCroppedArtwork(path: String) -> UIImage? {
         guard let image = UIImage(contentsOfFile: path) else { return nil }
         let width = image.size.width * image.scale
         let height = image.size.height * image.scale
-        // Bundled `mod-icons/` are ~175x256 portrait cards containing top drain text and
-        // bottom English stat blocks. Cropping the upper window extracts clean artwork.
+        // Bundled `mod-icons/` are portrait cards (~175x256) with top drain badge
+        // (`y < 0.11`) and English title/stat panel (`y >= 0.30` on long-text cards
+        // like Bond and Galvanized Mods). Cropping `y: 0.11...0.30` extracts clean art.
         guard height > width * 1.12, let cgImage = image.cgImage else {
             return image
         }
@@ -206,7 +214,7 @@ struct ModArtworkView: View {
             x: cw * 0.06,
             y: ch * 0.11,
             width: cw * 0.88,
-            height: ch * 0.47
+            height: ch * 0.19
         ).integral
         guard let cropped = cgImage.cropping(to: cropRect) else { return image }
         return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
@@ -220,77 +228,76 @@ struct HorizontalModCardView: View {
 
     var body: some View {
         let style = ModRarityStyle(card: card)
-        ZStack {
-            ModArtworkView(rawName: card.rawName, isRiven: card.isRiven)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-
-            LinearGradient(
-                stops: [
-                    .init(color: style.backdrop.opacity(0.40), location: 0.0),
-                    .init(color: Color(hex: "0A0E16").opacity(0.84), location: 0.58),
-                    .init(color: Color(hex: "070A10").opacity(0.95), location: 1.0),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 4) {
-                    if let slotTag = card.slotTag, !slotTag.isEmpty {
-                        Text(slotTag)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(style.accent)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.black.opacity(0.55))
-                            .clipShape(Capsule())
-                    }
-                    Spacer(minLength: 4)
-                    if let drain = card.effectiveDrain {
-                        HStack(spacing: 2) {
-                            Text(card.isPositiveCapacity ? "+\(drain)" : "\(drain)")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                            polarityGlyph(card.metadata?.polarity ?? "")
-                        }
-                        .foregroundColor(card.isPositiveCapacity ? WFTheme.cyan : style.accent)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 4) {
+                if let slotTag = card.slotTag, !slotTag.isEmpty {
+                    Text(slotTag)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(style.accent)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1.5)
                         .background(Color.black.opacity(0.60))
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                    } else if card.metadata?.isArcane == true {
-                        Text("赋能")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(style.accent)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.black.opacity(0.55))
-                            .clipShape(Capsule())
-                    }
+                        .clipShape(Capsule())
                 }
-
                 Spacer(minLength: 4)
-
-                Text(card.displayName)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundColor(WFTheme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                    .frame(maxWidth: .infinity, alignment: .center)
-
-                if card.effectiveMaxRank > 0 {
-                    rankPips(current: card.effectiveRank, max: card.effectiveMaxRank, accent: style.accent)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 4)
-                } else {
-                    Spacer().frame(height: 5)
+                if let drain = card.effectiveDrain {
+                    HStack(spacing: 2) {
+                        Text(card.isPositiveCapacity ? "+\(drain)" : "\(drain)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                        polarityGlyph(card.metadata?.polarity ?? "")
+                    }
+                    .foregroundColor(card.isPositiveCapacity ? WFTheme.cyan : style.accent)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(Color.black.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                } else if card.metadata?.isArcane == true {
+                    Text("赋能")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(style.accent)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(Color.black.opacity(0.60))
+                        .clipShape(Capsule())
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+
+            Spacer(minLength: 4)
+
+            Text(card.displayName)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(WFTheme.textPrimary)
+                .shadow(color: Color.black.opacity(0.85), radius: 2, y: 1)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            if card.effectiveMaxRank > 0 {
+                rankPips(current: card.effectiveRank, max: card.effectiveMaxRank, accent: style.accent)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 4)
+            } else {
+                Spacer().frame(height: 5)
+            }
         }
-        .frame(height: 66)
-        .background(style.backdrop)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .frame(height: 68)
+        .background {
+            ZStack {
+                ModArtworkView(rawName: card.rawName, isRiven: card.isRiven)
+                LinearGradient(
+                    stops: [
+                        .init(color: style.backdrop.opacity(0.32), location: 0.0),
+                        .init(color: Color(hex: "0A0E16").opacity(0.76), location: 0.56),
+                        .init(color: Color(hex: "070A10").opacity(0.94), location: 1.0),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -416,9 +423,8 @@ struct VerticalModCardModal: View {
             .padding(.bottom, 8)
 
             ModArtworkView(rawName: card.rawName, isRiven: card.isRiven)
-                .frame(height: 170)
                 .frame(maxWidth: .infinity)
-                .clipped()
+                .frame(height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
