@@ -129,4 +129,23 @@ final class DataPipelineTests: XCTestCase {
         let resolved = resolve(["Vile Acceleration", "Semi-Rifle Cannonade"])
         XCTAssertEqual(resolved.fireRate, 10, accuracy: 1e-9)
     }
+
+    func testNoiseAndRangeCardsOccupyBuildWithoutAddingAFormulaWarning() {
+        let baseline = resolve([])
+        let hush = resolve(["Hush"])
+        XCTAssertEqual(hush.totalDamage, baseline.totalDamage, accuracy: 1e-12)
+        XCTAssertFalse(hush.notes.contains { $0.contains("d_sound") })
+
+        let attack = Attack(name: "Melee", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 100])
+        var melee = Weapon(name: "Test Melee", attacks: [attack])
+        melee.categories = ["melee"]
+        let reach = BuildResolver(weapon: melee, build: Build(mods: ["Reach"]),
+                                  options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+        let unmodded = BuildResolver(weapon: melee, build: Build(), options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+        XCTAssertEqual(reach.totalDamage, unmodded.totalDamage, accuracy: 1e-12)
+        XCTAssertFalse(reach.notes.contains { $0.contains("range") })
+    }
 }

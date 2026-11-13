@@ -181,6 +181,18 @@ struct ArsenalWeaponConfigurationView: View {
                 }
             }
 
+            if !config.nonDamageUpgrades.isEmpty {
+                Text("已导入、但不改变本次伤害数值的卡")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textSecondary)
+                ForEach(config.nonDamageUpgrades) { upgrade in
+                    let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
+                    Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+            }
+
             let mods = config.normalizedSlots.enumerated().compactMap { index, name -> (Int, String)? in
                 guard let name else { return nil }
                 return (index, name)

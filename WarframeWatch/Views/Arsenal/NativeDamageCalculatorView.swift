@@ -283,6 +283,17 @@ struct NativeDamageCalculatorView: View {
                         .foregroundColor(WFTheme.textMuted)
                 }
             }
+            if !model.ownedConfigNonDamageUpgrades.isEmpty {
+                Text("已装、但不改变本次伤害数值的卡")
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textSecondary)
+                ForEach(model.ownedConfigNonDamageUpgrades) { upgrade in
+                    let rank = upgrade.rankLabel.map { "，\($0)" } ?? ""
+                    Text("• \(slotLabel(upgrade.slot))：\(upgrade.name)\(rank)。\(upgrade.reason)")
+                        .font(.wfLabel)
+                        .foregroundColor(WFTheme.textMuted)
+                }
+            }
         }
     }
 

@@ -59,9 +59,6 @@ jobs:
       - name: Run DamageKit tests
         run: swift test --package-path Packages/DamageKit
 
-      - name: Verify current and external Warframe buff boundaries
-        run: swift test --package-path . --filter NativeDamageCalculatorModelTests
-
       - name: Compare website target option states
         run: node scripts/compare_target_states.js
 
@@ -184,6 +181,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP_PATH/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP_PATH/Info.plist"
           plutil -p "$APP_PATH/Info.plist"
+
+      - name: Run iOS calculator source-bound tests
+        run: |
+          xcodebuild test \
+            -project WarframeWatch.xcodeproj \
+            -scheme WarframeWatch \
+            -configuration Debug \
+            -destination "id=$SIM_UDID" \
+            -derivedDataPath build_sim
 
       - name: Install & Launch App on Simulator
         run: |

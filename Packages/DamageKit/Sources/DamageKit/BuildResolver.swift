@@ -1467,11 +1467,11 @@ struct ModAggregate {
                 locksFireRate = true
             // 这些属性不会改变单目标、命中已经成立时的一发伤害、状态或换弹时间；
             // 不把它们伪装成“未实现的伤害机制”。
-            case "recoil", "zoom", "accuracy", "spread", "range", "blast_radius",
+            case "recoil", "zoom", "accuracy", "spread", "range", "blast_radius", "d_sound",
                  "beam_length", "shot_speed", "lifesteal", "punch_through", "ammoCapacity",
                  "set_ammoCapacity", "ammoEff", "ammoEffFull":
                 break
-            case "FOR_WEAPON", "WITH_COND", "set", "unique", "force_procs", "mutator", "na", "d_sound",
+            case "FOR_WEAPON", "WITH_COND", "set", "unique", "force_procs", "mutator", "na",
                  "comboDuration", "slam_mult",
                   "finisherDmg", "add_slash_on_impact", "electricityBonus",
                  "comboIn", "f_multiple",

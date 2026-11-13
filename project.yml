@@ -68,3 +68,22 @@ targets:
         MARKETING_VERSION: "1.5.1"
         CURRENT_PROJECT_VERSION: "15"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      testTargets:
+        - WarframeWatchTests
+  WarframeWatchTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: WarframeWatchPackageTests
+    dependencies:
+      - target: WarframeWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.warframe.watch.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: ""

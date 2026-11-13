@@ -409,6 +409,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
     @Published private(set) var ownedConfigIndex = 0
     @Published private(set) var ownedConfigIssues: [String] = []
     @Published private(set) var ownedConfigUnresolvedUpgrades: [InventoryData.OwnedWeapon.Config.UnresolvedUpgrade] = []
+    @Published private(set) var ownedConfigNonDamageUpgrades: [InventoryData.OwnedWeapon.Config.NonDamageUpgrade] = []
     @Published private(set) var ownedConfigIsExact = true
     @Published var enemyName: String?
     @Published var level: Int = 100
@@ -828,6 +829,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
         ownedConfigIndex = 0
         ownedConfigIssues = []
         ownedConfigUnresolvedUpgrades = []
+        ownedConfigNonDamageUpgrades = []
         ownedConfigIsExact = true
         ownedProgenitorElements = [:]
         weaponName = name
@@ -1030,6 +1032,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
         ownedProgenitorElements = ownedWeapon.progenitorElements
         ownedConfigIssues = config.issues
         ownedConfigUnresolvedUpgrades = config.unresolvedUpgrades
+        ownedConfigNonDamageUpgrades = config.nonDamageUpgrades
         ownedConfigIsExact = config.isExactImport
         if let imported = config.riven {
             var draft = NativeRivenDraft(imported: imported)

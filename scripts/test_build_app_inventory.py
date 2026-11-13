@@ -12,9 +12,13 @@ import json
 import unittest
 
 from build_app_inventory import (
+    GAMEDATA,
+    build_owned_weapons,
     damagekit_ranked_action_values,
+    load_json,
     resolve_config_upgrade,
     source_stat_coefficients,
+    source_proven_non_damage_reason,
     source_proven_whole_action_scale,
     upgrade_indexes,
 )
@@ -147,6 +151,53 @@ class WholeActionRankScaleTests(unittest.TestCase):
             {"Test Faction": [0.3, 0.3]},
         )
         self.assertAlmostEqual(scale or -1, 1.0 / 6.0)
+
+
+class SourceProvenNonDamageTests(unittest.TestCase):
+    def test_hush_requires_every_rank_line_to_remain_noise_only(self):
+        reason = source_proven_non_damage_reason("Hush", {
+            "lv": [
+                ["Reduces the chance an enemy will hear gunfire by 25%."],
+                ["Reduces the chance an enemy will hear gunfire by 100%."],
+            ],
+        })
+        self.assertIn("听到枪声", reason or "")
+
+    def test_mixed_or_unknown_source_text_stays_unresolved(self):
+        self.assertIsNone(source_proven_non_damage_reason("Hush", {
+            "lv": [
+                ["Reduces the chance an enemy will hear gunfire by 25%."],
+                ["+90% Damage"],
+            ],
+        }))
+        self.assertIsNone(source_proven_non_damage_reason("Unknown", {
+            "lv": [["+1.5 Range"]],
+        }))
+
+    def test_rank_ambiguous_hush_remains_visible_without_tainting_damage_result(self):
+        game_data = load_json(GAMEDATA)
+        weapon_type = next(
+            key for key, value in game_data["weapons"].items()
+            if isinstance(value, dict) and value.get("n") == "Braton"
+        )
+        hush_type = "/Lotus/Upgrades/Mods/Rifle/WeaponNoiseReductionMod"
+        result = build_owned_weapons({
+            "LongGuns": [{
+                "ItemId": "test-braton",
+                "ItemType": weapon_type,
+                "Configs": [{"Upgrades": [hush_type]}],
+            }],
+            "Upgrades": [],
+            "RawUpgrades": [],
+        })
+
+        config = result[0]["cfg"][0]
+        self.assertTrue(config["exact"])
+        self.assertEqual(config["u"], [])
+        self.assertEqual(config["s"][0], "Hush")
+        self.assertEqual(config["nd"][0]["n"], "Hush")
+        self.assertNotIn("r", config["nd"][0])
+        self.assertIn("听到枪声", config["nd"][0]["why"])
 
 
 if __name__ == "__main__":

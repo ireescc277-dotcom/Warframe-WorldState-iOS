@@ -625,6 +625,51 @@ def source_stat_coefficients(level: object) -> list[float]:
     return result
 
 
+_NON_DAMAGE_UPGRADE_SOURCE_RULES: dict[str, tuple[re.Pattern[str], str]] = {
+    # These are deliberately narrow source-text proofs, not a generic list of
+    # tags we happen not to calculate.  Every rank line must retain the same
+    # non-damage meaning before a card is allowed to leave the unresolved
+    # list.  A new or reworded game record therefore falls back to visible
+    # review instead of silently disappearing from a damage build.
+    "Hush": (
+        re.compile(r"\breduces the chance an enemy will hear gunfire\b", re.IGNORECASE),
+        "只降低敌人听到枪声的概率；不直接改变本次命中的伤害数值",
+    ),
+    "Reach": (
+        re.compile(r"^[+-]?\d+(?:\.\d+)?\s+range$", re.IGNORECASE),
+        "只增加攻击范围；不改变已命中攻击的伤害数值",
+    ),
+    "Khra Canticle": (
+        re.compile(r"\bchance to drop a universal orb on death\b", re.IGNORECASE),
+        "只改变敌人死亡后的通用球掉落概率；不直接改变伤害数值",
+    ),
+}
+
+def source_proven_non_damage_reason(name: str, game_mod: dict) -> str | None:
+    """Return why an equipped card cannot alter this calculator's damage.
+
+    This does *not* mean the card is unimportant in the game. It means its
+    full rank table has a source-proven effect outside the direct hit / DOT
+    numerical result represented by DamageKit. Rank can therefore remain
+    unknown without changing that result, while the card and reason stay
+    visible in the imported configuration.
+    """
+    rule = _NON_DAMAGE_UPGRADE_SOURCE_RULES.get(name)
+    levels = game_mod.get("lv") if isinstance(game_mod, dict) else None
+    if rule is None or not isinstance(levels, list):
+        return None
+    pattern, reason = rule
+    lines = [
+        compact_stat_line(raw)
+        for level in levels
+        for raw in (level if isinstance(level, list) else [level])
+        if isinstance(raw, str) and compact_stat_line(raw)
+    ]
+    if not lines or not all(pattern.search(line) for line in lines):
+        return None
+    return reason
+
+
 def source_proven_whole_action_scale(name: str, rank: int, maximum: int,
                                      game_mod: dict,
                                      action_values_by_mod: dict[str, list[float]]) -> float | None:
@@ -871,6 +916,7 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                 slots: list[str | None] = [None] * 11
                 slot_metadata: list[dict | None] = [None] * 11
                 unresolved_upgrades: list[dict] = []
+                non_damage_upgrades: list[dict] = []
                 issues: list[str] = []
                 if incarnon_issue:
                     issues.append(incarnon_issue)
@@ -965,6 +1011,35 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                         fp = fingerprint(upgrade.get("UpgradeFingerprint"))
                         raw_rank = as_number((fp or {}).get("lvl"))
                         rank = int(raw_rank) if raw_rank is not None else None
+                    non_damage_reason = source_proven_non_damage_reason(name, game_mod_data)
+                    if non_damage_reason is not None:
+                        non_damage = {
+                            "s": slot,
+                            "n": name,
+                            "why": non_damage_reason,
+                        }
+                        if rank is not None:
+                            non_damage["r"] = rank
+                        if maximum:
+                            non_damage["m"] = maximum
+                        non_damage_upgrades.append(non_damage)
+                        # Keep a source-known card in its real physical slot
+                        # when DamageKit has its non-damage action record.
+                        # The core explicitly ignores that action for a
+                        # direct-hit/DOT result, so an uncertain fusion rank
+                        # cannot alter the number; retaining the slot still
+                        # prevents the imported configuration from pretending
+                        # the player had a free Mod slot.
+                        if name in ranked_action_values:
+                            slots[slot] = name
+                            if rank is not None or maximum:
+                                metadata: dict[str, int] = {}
+                                if rank is not None:
+                                    metadata["r"] = rank
+                                if maximum:
+                                    metadata["m"] = maximum
+                                slot_metadata[slot] = metadata
+                        continue
                     if rank is None:
                         unresolved_upgrades.append({
                             "s": slot,
@@ -1017,6 +1092,7 @@ def build_owned_weapons(inv: dict) -> list[dict]:
                     "s": slots,
                     "sm": slot_metadata,
                     "u": unresolved_upgrades,
+                    "nd": non_damage_upgrades,
                     "r": riven,
                     "rs": riven_slot,
                     "exact": not issues and not unresolved_upgrades,

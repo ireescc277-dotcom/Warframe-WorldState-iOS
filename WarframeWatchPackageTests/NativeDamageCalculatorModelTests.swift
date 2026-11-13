@@ -128,4 +128,33 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         // DamageKit receives the stronger 65% value, not their 125% sum.
         XCTAssertEqual(model.resolvedScenarioEffects.value(for: .roar), 0.65, accuracy: 0.000_001)
     }
+
+    func testNonDamageInventoryCardStaysVisibleWithoutBecomingAnUnresolvedFormula() throws {
+        let json = """
+        {
+          "l": "A",
+          "s": ["Hush"],
+          "sm": [{"r": 0, "m": 3}],
+          "u": [],
+          "nd": [{
+            "s": 0,
+            "n": "Hush",
+            "m": 3,
+            "why": "只降低敌人听到枪声的概率；不直接改变本次命中的伤害数值"
+          }],
+          "exact": true,
+          "issues": []
+        }
+        """.data(using: .utf8)!
+
+        let config = try JSONDecoder().decode(InventoryData.OwnedWeapon.Config.self, from: json)
+
+        XCTAssertTrue(config.isExactImport)
+        XCTAssertTrue(config.unresolvedUpgrades.isEmpty)
+        XCTAssertEqual(config.normalizedSlots[0], "Hush")
+        XCTAssertEqual(config.nonDamageUpgrades.count, 1)
+        XCTAssertEqual(config.nonDamageUpgrades[0].name, "Hush")
+        XCTAssertNil(config.nonDamageUpgrades[0].rank)
+        XCTAssertEqual(config.nonDamageUpgrades[0].maxRank, 3)
+    }
 }

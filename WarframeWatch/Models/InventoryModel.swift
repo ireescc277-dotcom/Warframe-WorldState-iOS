@@ -172,6 +172,12 @@ public struct InventoryData: Decodable {
             /// visible with their real slot/rank instead of disappearing as
             /// an empty slot or being treated as a full-rank card.
             public let unresolvedUpgrades: [UnresolvedUpgrade]
+            /// Equipped cards whose *entire source rank table* is proven to
+            /// affect something outside the hit/DOT number calculated here
+            /// (for example, weapon noise, range, or an orb drop chance).
+            /// They remain part of the visible imported configuration, but do
+            /// not make an otherwise exact damage result appear incomplete.
+            public let nonDamageUpgrades: [NonDamageUpgrade]
             public let riven: ImportedRiven?
             public let rivenSlot: Int?
             /// False means at least one source slot could not be brought into
@@ -209,7 +215,7 @@ public struct InventoryData: Decodable {
             }
 
             private enum CodingKeys: String, CodingKey {
-                case l, s, sm, u, r, rs, exact, issues
+                case l, s, sm, u, nd, r, rs, exact, issues
             }
 
             public init(from decoder: Decoder) throws {
@@ -218,6 +224,7 @@ public struct InventoryData: Decodable {
                 slots = try c.decodeIfPresent([String?].self, forKey: .s) ?? []
                 slotMetadata = try c.decodeIfPresent([SlotMetadata?].self, forKey: .sm) ?? []
                 unresolvedUpgrades = try c.decodeIfPresent([UnresolvedUpgrade].self, forKey: .u) ?? []
+                nonDamageUpgrades = try c.decodeIfPresent([NonDamageUpgrade].self, forKey: .nd) ?? []
                 riven = try c.decodeIfPresent(ImportedRiven.self, forKey: .r)
                 rivenSlot = try c.decodeIfPresent(Int.self, forKey: .rs)
                 isExactImport = try c.decodeIfPresent(Bool.self, forKey: .exact) ?? true
@@ -269,6 +276,41 @@ public struct InventoryData: Decodable {
                     rank = try c.decodeIfPresent(Int.self, forKey: .r)
                     maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
                     reason = try c.decodeIfPresent(String.self, forKey: .why) ?? "尚未接入伤害公式"
+                }
+
+                public var id: String { "\(slot):\(name):\(reason)" }
+
+                public var rankLabel: String? {
+                    switch (rank, maxRank) {
+                    case let (.some(rank), .some(maximum)):
+                        return "等级 \(rank)/\(maximum)"
+                    case let (.some(rank), .none):
+                        return "等级 \(rank)"
+                    default:
+                        return nil
+                    }
+                }
+            }
+
+            public struct NonDamageUpgrade: Decodable, Hashable, Identifiable {
+                /// DamageKit slot if one exists; otherwise the source slot.
+                public let slot: Int
+                public let name: String
+                public let rank: Int?
+                public let maxRank: Int?
+                /// Source-proven explanation of why the equipped card does
+                /// not change this calculator's hit/DOT number.
+                public let reason: String
+
+                private enum CodingKeys: String, CodingKey { case s, n, r, m, why }
+
+                public init(from decoder: Decoder) throws {
+                    let c = try decoder.container(keyedBy: CodingKeys.self)
+                    slot = try c.decodeIfPresent(Int.self, forKey: .s) ?? 0
+                    name = try c.decodeIfPresent(String.self, forKey: .n) ?? "未命名升级"
+                    rank = try c.decodeIfPresent(Int.self, forKey: .r)
+                    maxRank = try c.decodeIfPresent(Int.self, forKey: .m)
+                    reason = try c.decodeIfPresent(String.self, forKey: .why) ?? "不直接改变本次伤害数值"
                 }
 
                 public var id: String { "\(slot):\(name):\(reason)" }
