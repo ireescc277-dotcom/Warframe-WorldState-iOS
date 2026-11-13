@@ -150,6 +150,8 @@ def build_catalog() -> dict[str, dict]:
         ranks = dedupe_stats(level_stats)
         rarity = (item.get("rarity") or "RARE").upper()
         art_meta = art_index.get(name) or lower_art_index.get(name.lower()) or {}
+        slug = "".join(ch for ch in name if ch.isalnum())
+        arcane_icon_file = f"{slug}.webp" if (ROOT / "assets" / "arcane-icons" / f"{slug}.webp").exists() else ""
         card = {
             "name": zh_name,
             "polarity": "",
@@ -159,6 +161,7 @@ def build_catalog() -> dict[str, dict]:
             "compat": "赋能",
             "isArcane": True,
             "art": art_meta.get("art") or "",
+            "arcaneIcon": arcane_icon_file,
             "frameTier": determine_frame_tier(name, rarity, True),
             "modSet": "",
             "ranks": ranks,

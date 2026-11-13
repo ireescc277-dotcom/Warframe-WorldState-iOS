@@ -127,10 +127,30 @@ private enum ModFrameTier: String {
     var topFrameImageName: String { "\(rawValue)FrameTop.png" }
     var bottomFrameImageName: String { "\(rawValue)FrameBottom.png" }
 
+    var compactTopFrameImageName: String {
+        hasHorizontalOverhang ? "\(rawValue)FrameTopCompact.png" : "\(rawValue)FrameTopTrimmed.png"
+    }
+
+    var compactBottomFrameImageName: String {
+        hasHorizontalOverhang ? "\(rawValue)FrameBottomCompact.png" : "\(rawValue)FrameBottomTrimmed.png"
+    }
+
     var backgroundImageName: String {
         switch self {
-        case .omega: return "LegendaryBackground.png"
-        default: return "\(rawValue)Background.png"
+        case .omega: return "LegendaryBackgroundTrimmed.png"
+        default: return "\(rawValue)BackgroundTrimmed.png"
+        }
+    }
+
+    var glassTintColor: Color {
+        switch self {
+        case .bronze: return Color(hex: "BA7352")
+        case .silver: return Color(hex: "73A3CA")
+        case .gold: return Color(hex: "D8A84B")
+        case .legendary: return Color(hex: "BDD0E2")
+        case .galvanized: return Color(hex: "66A6DF")
+        case .amalgam: return Color(hex: "8FB4D8")
+        case .omega: return Color(hex: "985AE2")
         }
     }
 
@@ -262,6 +282,9 @@ struct ModArtworkView: View {
 
     private var resolvedURLs: (local: URL?, remote: URL?) {
         if isRiven {
+            if let omegaBackdrop = NativeDamageCatalog.shared.localModFrame(named: "OmegaInnerBackdrop.png") {
+                return (omegaBackdrop, nil)
+            }
             if let omegaArt = NativeDamageCatalog.shared.localModArt(named: "OmegaMod.webp") {
                 return (omegaArt, nil)
             }
@@ -288,7 +311,9 @@ struct ModArtworkView: View {
 
 #if canImport(UIKit)
     private func loadDisplayImage(url: URL) -> UIImage? {
-        if url.path.contains("/mod-art/") {
+        if url.path.contains("/mod-art/")
+            || url.path.contains("/arcane-icons/")
+            || url.path.contains("/mod-frames/") {
             return ModAssetImageCache.image(at: url)
         }
         return Self.loadCroppedArtwork(path: url.path)
@@ -376,6 +401,7 @@ private func deRankBar(current: Int, maxRank: Int, dotSize: CGFloat, spacing: CG
         if maxRank > 0 && current >= maxRank {
             deFrameImage("RankCompleteLine.png", contentMode: .fill)
                 .frame(width: lineWidth, height: max(3, dotSize * 0.55))
+                .clipped()
                 .opacity(0.95)
         }
         if count > 0 {
@@ -392,16 +418,22 @@ private func deRankBar(current: Int, maxRank: Int, dotSize: CGFloat, spacing: CG
     }
 }
 
-/// Compact in-game horizontal Mod / Arcane tile for 2-column grids.
+/// Compact in-game horizontal Mod / Arcane tile for 2-column grids (strict 2:1 DE card ratio).
 struct HorizontalModCardView: View {
     let card: ModCardPresentation
 
     var body: some View {
-        if card.isArcane {
-            arcaneTile
-        } else {
-            modTile
+        Group {
+            if card.isArcane {
+                arcaneTile
+            } else {
+                modTile
+            }
         }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(2.0, contentMode: .fit)
+        .clipped()
+        .contentShape(Rectangle())
     }
 
     private var modTile: some View {
@@ -409,57 +441,87 @@ struct HorizontalModCardView: View {
         return GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let hInset: CGFloat = tier.hasHorizontalOverhang ? 4 : 1.5
+            let hInset: CGFloat = tier.hasHorizontalOverhang ? 2 : 1
             let innerW = max(40, w - hInset * 2)
-            let vInset: CGFloat = tier == .galvanized ? 6 : 3
+            let innerH = max(24, h - 2)
+            let frameW = tier.hasHorizontalOverhang ? w : innerW
             let drainTint = card.isPositiveCapacity ? Color(hex: "77E494") : tier.textColor
 
             ZStack {
-                // 1. Inner high-res illustration clipped cleanly inside frame boundaries
-                ZStack {
-                    tier.backdropColor
-                    ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.24), location: 0.0),
-                            .init(color: Color.black.opacity(0.42), location: 0.48),
-                            .init(color: Color.black.opacity(0.84), location: 1.0),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    HStack {
-                        deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                            .frame(width: 6)
-                            .opacity(0.75)
-                        Spacer()
-                        deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                            .frame(width: 6)
-                            .scaleEffect(x: -1, y: 1)
-                            .opacity(0.75)
-                    }
-                }
-                .frame(width: innerW, height: max(36, h - vInset * 2))
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                // 1. Inner high-res illustration + DE glass tint + glass glow, shaped by ModGlassMask
+                maskedWithModGlass(
+                    ZStack {
+                        tier.backdropColor
+                        ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
+                            .frame(width: innerW, height: innerH)
+                            .clipped()
 
-                // 2. DE genuine metallic Top & Bottom sprite frames
-                VStack(spacing: 0) {
-                    deFrameImage(tier.topFrameImageName, contentMode: .fit)
-                        .frame(width: tier.hasHorizontalOverhang ? w : innerW)
-                    Spacer(minLength: 0)
-                    deFrameImage(tier.bottomFrameImageName, contentMode: .fit)
-                        .frame(width: tier.hasHorizontalOverhang ? w : innerW)
+                        // Subtle ambient rarity glass tint ("底色混色")
+                        tier.glassTintColor.opacity(card.isRiven ? 0.14 : 0.24)
+                            .blendMode(.screen)
+
+                        // Bottom vignette for crisp Chinese title contrast
+                        LinearGradient(
+                            stops: [
+                                .init(color: Color.black.opacity(0.08), location: 0.0),
+                                .init(color: Color.black.opacity(0.36), location: 0.52),
+                                .init(color: Color.black.opacity(0.84), location: 1.0),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+
+                        // DE glass sheen overlay
+                        deFrameImage("ModGlassGlowTrimmed.png", contentMode: .fill)
+                            .frame(width: innerW, height: innerH)
+                            .clipped()
+                            .opacity(0.34)
+                            .blendMode(.plusLighter)
+
+                        // Vertical edge light rails
+                        HStack(spacing: 0) {
+                            deFrameImage(tier.sideLightImageName, contentMode: .fill)
+                                .frame(width: 6, height: innerH)
+                                .clipped()
+                                .opacity(0.75)
+                            Spacer(minLength: 0)
+                            deFrameImage(tier.sideLightImageName, contentMode: .fill)
+                                .frame(width: 6, height: innerH)
+                                .clipped()
+                                .scaleEffect(x: -1, y: 1)
+                                .opacity(0.75)
+                        }
+                    }
+                    .frame(width: innerW, height: innerH),
+                    width: innerW,
+                    height: innerH
+                )
+                .allowsHitTesting(false)
+
+                // 2. Full-width DE metallic Top & Bottom compact frames (aligned independently in ZStack)
+                ZStack(alignment: .top) {
+                    Color.clear
+                    deFrameImage(tier.compactTopFrameImageName, contentMode: .fit)
+                        .frame(width: frameW)
                 }
                 .frame(width: w, height: h)
                 .allowsHitTesting(false)
 
-                // 3. Optional Set Mod top emblem (Hunter, Augur, Gladiator, Umbra, etc.)
+                ZStack(alignment: .bottom) {
+                    Color.clear
+                    deFrameImage(tier.compactBottomFrameImageName, contentMode: .fit)
+                        .frame(width: frameW)
+                }
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
+
+                // 3. Optional Set Mod top emblem
                 if let modSet = card.metadata?.modSet, !modSet.isEmpty {
-                    VStack {
+                    ZStack(alignment: .top) {
+                        Color.clear
                         deFrameImage("\(modSet)Header.png", contentMode: .fit)
                             .frame(width: innerW * 0.44)
                             .offset(y: -1)
-                        Spacer()
                     }
                     .frame(width: w, height: h)
                     .allowsHitTesting(false)
@@ -490,118 +552,132 @@ struct HorizontalModCardView: View {
                                 .padding(.horizontal, 4)
                             }
                             .frame(width: 36, height: 21)
+                            .clipped()
                         }
                     }
-                    .padding(.horizontal, hInset + 4)
-                    .padding(.top, vInset + 5)
+                    .padding(.horizontal, hInset + 5)
+                    .padding(.top, 6)
                     Spacer()
                 }
                 .frame(width: w, height: h)
+                .allowsHitTesting(false)
 
                 // 5. Official Chinese title + DE diamond rank bar
                 VStack(spacing: 0) {
                     Spacer(minLength: 14)
                     Text(card.displayName)
-                        .font(.system(size: card.isRiven ? 11.5 : 13, weight: .semibold))
+                        .font(.system(size: card.isRiven ? 11 : 12.5, weight: .semibold))
                         .foregroundColor(tier.textColor)
-                        .shadow(color: Color.black.opacity(0.95), radius: 2, y: 1)
+                        .shadow(color: Color.black.opacity(0.95), radius: 2.5, y: 1)
                         .lineLimit(card.isRiven ? 2 : 1)
                         .minimumScaleFactor(0.72)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, hInset + 8)
-                        .padding(.bottom, 5)
+                        .padding(.horizontal, hInset + 10)
+                        .padding(.bottom, tier == .legendary ? 7 : 5)
 
                     if card.effectiveMaxRank > 0 {
                         deRankBar(
                             current: card.effectiveRank,
                             maxRank: card.effectiveMaxRank,
-                            dotSize: card.effectiveMaxRank > 6 ? 7 : 8,
+                            dotSize: card.effectiveMaxRank > 6 ? 6.5 : 7.5,
                             spacing: card.effectiveMaxRank > 6 ? 1.5 : 2.5,
-                            lineWidth: innerW * 0.84
+                            lineWidth: innerW * 0.82
                         )
-                        .padding(.bottom, vInset + 2)
+                        .padding(.bottom, 3)
                     } else {
-                        Spacer().frame(height: vInset + 9)
+                        Spacer().frame(height: 10)
                     }
                 }
                 .frame(width: w, height: h)
+                .allowsHitTesting(false)
             }
+            .frame(width: w, height: h)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 82)
     }
 
     private var arcaneTile: some View {
         let tier = ModFrameTier(card: card)
-        return HStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [tier.accentColor.opacity(0.28), Color(hex: "080D14")],
-                            center: .center,
-                            startRadius: 2,
-                            endRadius: 26
-                        )
+        return GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            HStack(spacing: 8) {
+                ZStack {
+                    RadialGradient(
+                        colors: [tier.accentColor.opacity(0.28), Color.clear],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: h * 0.48
                     )
-                ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
-                    .padding(5)
-            }
-            .frame(width: 50, height: 50)
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(tier.accentColor.opacity(0.75), lineWidth: 1.4)
-            )
-            .shadow(color: tier.accentColor.opacity(0.22), radius: 5)
+                    ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
+                        .frame(width: min(74, w * 0.44), height: max(36, h - 14))
+                }
+                .frame(width: min(76, w * 0.45), height: max(38, h - 12))
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text(card.displayName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(tier.textColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(card.displayName)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundColor(tier.textColor)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
 
-                HStack(spacing: 6) {
-                    Text("赋能")
-                        .font(.system(size: 9.5, weight: .medium))
-                        .foregroundColor(tier.accentColor)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1.5)
-                        .background(tier.accentColor.opacity(0.14))
-                        .clipShape(Capsule())
+                    HStack(spacing: 5) {
+                        Text("赋能")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(tier.accentColor)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(tier.accentColor.opacity(0.16))
+                            .clipShape(Capsule())
 
-                    if card.effectiveMaxRank > 0 {
-                        deRankBar(
-                            current: card.effectiveRank,
-                            maxRank: card.effectiveMaxRank,
-                            dotSize: 8,
-                            spacing: 2,
-                            lineWidth: 56
-                        )
+                        if card.effectiveMaxRank > 0 {
+                            deRankBar(
+                                current: card.effectiveRank,
+                                maxRank: card.effectiveMaxRank,
+                                dotSize: 7.5,
+                                spacing: 1.5,
+                                lineWidth: 50
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .frame(height: 82)
-        .background(
-            LinearGradient(
-                colors: [tier.backdropColor.opacity(0.92), Color(hex: "090E15")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(width: w, height: h)
+            .background(
+                LinearGradient(
+                    colors: [tier.backdropColor.opacity(0.92), Color(hex: "090E15")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(tier.accentColor.opacity(0.42), lineWidth: 1)
-        )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(tier.accentColor.opacity(0.45), lineWidth: 1)
+            )
+        }
     }
+}
+
+@MainActor
+@ViewBuilder
+private func maskedWithModGlass<Content: View>(_ content: Content, width: CGFloat, height: CGFloat) -> some View {
+#if canImport(UIKit)
+    if let maskImg = ModAssetImageCache.frameImage(named: "ModGlassMaskTrimmed.png") {
+        content.mask(
+            Image(uiImage: maskImg)
+                .resizable()
+                .frame(width: width, height: height)
+        )
+    } else {
+        content.clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+    }
+#else
+    content.clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+#endif
 }
 
 /// Full in-game vertical Mod / Arcane sheet presented when tapping a horizontal card.
@@ -688,72 +764,88 @@ struct VerticalModCardModal: View {
 
     private func verticalModCard(tier: ModFrameTier) -> some View {
         let cardWidth: CGFloat = 280
-        let hInset: CGFloat = tier.hasHorizontalOverhang ? 12 : 4
+        let hInset: CGFloat = tier.hasHorizontalOverhang ? 10 : 4
         let innerW = cardWidth - hInset * 2
+        let frameW = tier.hasHorizontalOverhang ? cardWidth : innerW
         let drainTint = card.isPositiveCapacity ? Color(hex: "77E494") : tier.textColor
 
         return ZStack {
-            // 1. Background texture + upper crisp Mod art + dark lower text panel
-            VStack(spacing: 0) {
-                ZStack(alignment: .bottom) {
-                    ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
-                        .frame(width: innerW, height: 196)
-                    LinearGradient(
-                        colors: [.clear, tier.backdropColor.opacity(0.95)],
-                        startPoint: .center,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 56)
-                }
-                .clipped()
+            // 1. DE textured carbon-diamond background + upper Mod illustration fading into the weave
+            ZStack(alignment: .top) {
+                tier.backdropColor
+                deFrameImage(tier.backgroundImageName, contentMode: .fill)
+                    .frame(width: innerW, height: 404)
+                    .clipped()
 
-                ZStack {
-                    deFrameImage(tier.backgroundImageName, contentMode: .fill)
-                        .opacity(0.55)
-                    LinearGradient(
-                        colors: [tier.backdropColor.opacity(0.88), Color(hex: "090D14").opacity(0.96)],
-                        startPoint: .top,
-                        endPoint: .bottom
+                ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
+                    .frame(width: innerW, height: 224)
+                    .clipped()
+                    .overlay(
+                        tier.glassTintColor.opacity(card.isRiven ? 0.10 : 0.16)
+                            .blendMode(.screen)
                     )
-                }
-                .frame(width: innerW)
-                .frame(maxHeight: .infinity)
-                .clipped()
+                    .mask(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white, location: 0.0),
+                                .init(color: .white, location: 0.56),
+                                .init(color: .clear, location: 1.0),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
             }
             .frame(width: innerW, height: 404)
-            .background(tier.backdropColor)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
             // 2. Side lights + corner lights
             HStack {
                 deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                    .frame(width: 12, height: 360)
+                    .frame(width: 12, height: 356)
+                    .clipped()
                 Spacer()
                 deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                    .frame(width: 12, height: 360)
+                    .frame(width: 12, height: 356)
+                    .clipped()
                     .scaleEffect(x: -1, y: 1)
             }
             .frame(width: innerW)
             .allowsHitTesting(false)
 
-            // 3. Top & bottom DE metallic frame PNGs
-            VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                deFrameImage(tier.cornerLightsImageName, contentMode: .fit)
+                    .frame(width: 44, height: 44)
+                    .opacity(0.65)
+            }
+            .frame(width: innerW, height: 404)
+            .allowsHitTesting(false)
+
+            // 3. Full-width DE Top & Bottom vertical frames (anchored independently in ZStack)
+            ZStack(alignment: .top) {
+                Color.clear
                 deFrameImage(tier.topFrameImageName, contentMode: .fit)
-                    .frame(width: tier.hasHorizontalOverhang ? cardWidth : innerW)
-                Spacer()
+                    .frame(width: frameW)
+            }
+            .frame(width: cardWidth, height: 428)
+            .allowsHitTesting(false)
+
+            ZStack(alignment: .bottom) {
+                Color.clear
                 deFrameImage(tier.bottomFrameImageName, contentMode: .fit)
-                    .frame(width: tier.hasHorizontalOverhang ? cardWidth : innerW)
+                    .frame(width: frameW)
             }
             .frame(width: cardWidth, height: 428)
             .allowsHitTesting(false)
 
             // 4. Optional Set emblem
             if let modSet = card.metadata?.modSet, !modSet.isEmpty {
-                VStack {
+                ZStack(alignment: .top) {
+                    Color.clear
                     deFrameImage("\(modSet)Header.png", contentMode: .fit)
                         .frame(width: 112)
                         .offset(y: -2)
-                    Spacer()
                 }
                 .frame(width: cardWidth, height: 428)
                 .allowsHitTesting(false)
@@ -784,6 +876,7 @@ struct VerticalModCardModal: View {
                             .padding(.horizontal, 6)
                         }
                         .frame(width: 52, height: 29)
+                        .clipped()
                     }
                 }
                 .padding(.horizontal, hInset + 10)
@@ -794,12 +887,12 @@ struct VerticalModCardModal: View {
 
             // 6. Chinese title, rank-exact effect description, compat tab & rank dots
             VStack(spacing: 8) {
-                Spacer().frame(height: 186)
+                Spacer().frame(height: 192)
 
                 Text(card.displayName)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(tier.textColor)
-                    .shadow(color: Color.black.opacity(0.95), radius: 2, y: 1)
+                    .shadow(color: Color.black.opacity(0.95), radius: 2.5, y: 1)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 14)
 
@@ -807,7 +900,8 @@ struct VerticalModCardModal: View {
                     ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
                         Text(line)
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.94))
+                            .foregroundColor(.white.opacity(0.95))
+                            .shadow(color: Color.black.opacity(0.85), radius: 1.5, y: 1)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -844,44 +938,25 @@ struct VerticalModCardModal: View {
     }
 
     private func verticalArcaneCard(tier: ModFrameTier) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [tier.accentColor.opacity(0.35), Color(hex: "090E16")],
-                            center: .center,
-                            startRadius: 8,
-                            endRadius: 64
-                        )
-                    )
+                RadialGradient(
+                    colors: [tier.accentColor.opacity(0.32), Color.clear],
+                    center: .center,
+                    startRadius: 10,
+                    endRadius: 84
+                )
                 ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
-                    .padding(12)
+                    .frame(width: 175, height: 126)
             }
-            .frame(width: 118, height: 118)
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .strokeBorder(tier.accentColor.opacity(0.85), lineWidth: 2)
-            )
+            .frame(width: 196, height: 140)
             .shadow(color: tier.accentColor.opacity(0.28), radius: 12)
-            .padding(.top, 10)
+            .padding(.top, 8)
 
             Text(card.displayName)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(tier.textColor)
                 .multilineTextAlignment(.center)
-
-            VStack(spacing: 6) {
-                ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .foregroundColor(.white.opacity(0.94))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, 10)
 
             Text(card.compatLabel)
                 .font(.system(size: 11, weight: .semibold))
@@ -900,6 +975,18 @@ struct VerticalModCardModal: View {
                     lineWidth: 160
                 )
             }
+
+            VStack(spacing: 6) {
+                ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.system(size: 13.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.94))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 2)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 20)

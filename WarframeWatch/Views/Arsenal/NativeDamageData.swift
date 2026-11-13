@@ -11,6 +11,7 @@ struct ModCardMetadata: Codable, Hashable {
     let compat: String
     let isArcane: Bool
     let art: String?
+    let arcaneIcon: String?
     let frameTier: String?
     let modSet: String?
     let ranks: [String]
@@ -285,6 +286,13 @@ final class NativeDamageCatalog: ObservableObject {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
+    func localArcaneIcon(named image: String?) -> URL? {
+        guard let image, !image.isEmpty,
+              let root = dataRoot else { return nil }
+        let url = root.appendingPathComponent("arcane-icons").appendingPathComponent(image)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     func localModFrame(named fileName: String) -> URL? {
         guard !fileName.isEmpty,
               let root = dataRoot else { return nil }
@@ -300,13 +308,21 @@ final class NativeDamageCatalog: ObservableObject {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    /// 先查高清原画 `mod-art/`，再查 `mod-icons/` 与 `extra-icons/`，最后保留远端备用地址。
+    /// 赋能优先返回 `arcane-icons/` 合成图标；Mod 先查高清原画 `mod-art/`，再查 `mod-icons/` 与 `extra-icons/`。
     func modIconURLs(forName rawName: String) -> (local: URL?, remote: URL?) {
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return (nil, nil) }
         if dataRoot == nil { load() }
-        if let card = modCard(for: trimmed), let artURL = localModArt(named: card.art) {
-            return (artURL, nil)
+        if let card = modCard(for: trimmed) {
+            if card.isArcane {
+                let slug = trimmed.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(String.init).joined()
+                let url = localArcaneIcon(named: card.arcaneIcon)
+                    ?? localArcaneIcon(named: "\(slug).webp")
+                    ?? localModIcon(named: "\(slug).webp")
+                if let url { return (url, nil) }
+            } else if let artURL = localModArt(named: card.art) {
+                return (artURL, nil)
+            }
         }
         if let mod = ModLibrary.shared.mod(named: trimmed) {
             let localURL = localModIcon(for: mod)

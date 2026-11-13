@@ -462,24 +462,7 @@ struct ArsenalWeaponConfigurationView: View {
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.gold)
             } else {
-                HStack(spacing: 7) {
-                    ForEach(Array(configs.enumerated()), id: \.offset) { index, label in
-                        Button {
-                            selection.wrappedValue = index
-                        } label: {
-                            Text(label)
-                                .font(.wfBody)
-                                .foregroundColor(index == selection.wrappedValue
-                                                 ? Color(hex: "1A1408") : WFTheme.textSecondary)
-                                .frame(minWidth: 34)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(index == selection.wrappedValue
-                                                            ? WFTheme.gold : WFUI.raised))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                ConfigSelectorPillBar(labels: configs, selection: selection)
             }
         }
     }
@@ -643,22 +626,7 @@ struct ArsenalEquipmentConfigurationView: View {
                     .font(.wfBody)
                     .foregroundColor(WFTheme.gold)
             } else {
-                HStack(spacing: 7) {
-                    ForEach(Array(equipment.configs.enumerated()), id: \.offset) { index, config in
-                        Button {
-                            configIndex = index
-                        } label: {
-                            Text(config.label)
-                                .font(.wfBody)
-                                .foregroundColor(index == configIndex ? Color(hex: "1A1408") : WFTheme.textSecondary)
-                                .frame(minWidth: 34)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(index == configIndex ? WFTheme.gold : WFUI.raised))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                ConfigSelectorPillBar(labels: equipment.configs.map(\.label), selection: $configIndex)
                 if let config = selectedConfig {
                     if !config.isExactImport {
                         Label(config.issues.first ?? "部分槽位等级未能完全确认",
@@ -795,22 +763,7 @@ struct ArsenalWarframeConfigurationView: View {
                     .font(.wfBody)
                     .foregroundColor(WFTheme.gold)
             } else {
-                HStack(spacing: 7) {
-                    ForEach(Array(warframe.configs.enumerated()), id: \.offset) { index, config in
-                        Button {
-                            configIndex = index
-                        } label: {
-                            Text(config.label)
-                                .font(.wfBody)
-                                .foregroundColor(index == configIndex ? Color(hex: "1A1408") : WFTheme.textSecondary)
-                                .frame(minWidth: 34)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(index == configIndex ? WFTheme.gold : WFUI.raised))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                ConfigSelectorPillBar(labels: warframe.configs.map(\.label), selection: $configIndex)
                 if let config = selectedConfig {
                     if !config.isExactImport {
                         Label(config.issues.first ?? "部分槽位等级未能完全确认",
@@ -998,5 +951,37 @@ private struct UpgradeIconThumb: View {
         Image(systemName: fallbackSymbol)
             .font(.system(size: size * 0.42, weight: .medium))
             .foregroundColor(accent.opacity(0.75))
+    }
+}
+
+private struct ConfigSelectorPillBar: View {
+    let labels: [String]
+    @Binding var selection: Int
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 7) {
+                ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+                    let isSelected = index == selection
+                    Button {
+                        selection = index
+                    } label: {
+                        Text(label)
+                            .font(.wfBody)
+                            .lineLimit(1)
+                            .foregroundColor(isSelected ? Color(hex: "1A1408") : WFTheme.textSecondary)
+                            .frame(minWidth: 34)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(isSelected ? WFTheme.gold : WFUI.raised))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .contentShape(Rectangle())
+        .zIndex(10)
     }
 }

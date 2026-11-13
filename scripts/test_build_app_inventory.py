@@ -13,6 +13,8 @@ import unittest
 
 from build_app_inventory import (
     RIVEN_MAXIMUM,
+    build_equipment_configs,
+    build_owned_warframes,
     build_owned_weapons,
     damagekit_ranked_action_values,
     decode_riven,
@@ -512,6 +514,60 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
         self.assertEqual(len(by_cat["Melee"]["cfg"][0]["u"]), 1)
         self.assertEqual(by_cat["Melee"]["cfg"][0]["u"][0]["n"], "Melee Afflictions")
         self.assertIn("击倒或浮空", by_cat["Melee"]["cfg"][0]["u"][0]["why"])
+
+    def test_custom_config_names_preserved(self) -> None:
+        raw_inv = {
+            "LongGuns": [
+                {
+                    "ItemId": "w-custom",
+                    "ItemType": "/Lotus/Weapons/Tenno/Rifle/BratonPrime",
+                    "Configs": [
+                        {"Name": "高波剥甲", "Skins": []},
+                        {"Name": "  ", "Skins": []},
+                        {"Skins": []},
+                    ],
+                }
+            ],
+            "Suits": [
+                {
+                    "ItemId": "s-custom",
+                    "ItemType": "/Lotus/Powersuits/Gauss/GaussPrime",
+                    "Configs": [
+                        {"Name": "跑图爆发"},
+                        {},
+                    ],
+                }
+            ],
+            "Sentinels": [
+                {
+                    "ItemId": "c-custom",
+                    "ItemType": "/Lotus/Types/Sentinels/SentinelPowersuits/CarrierPrime",
+                    "Configs": [
+                        {"Name": "吸球工具人"},
+                        {},
+                    ],
+                }
+            ],
+            "Upgrades": [],
+            "RawUpgrades": [],
+        }
+        game_data = {
+            "weapons": {
+                "/Lotus/Weapons/Tenno/Rifle/BratonPrime": {"n": "Braton Prime", "z": "布莱顿 Prime", "om": 1.0},
+            },
+            "mods": {},
+            "rivenTags": {},
+        }
+        weapons = build_owned_weapons(raw_inv, game_data_override=game_data)
+        self.assertEqual([c["l"] for c in weapons[0]["cfg"]], ["高波剥甲", "B", "C"])
+
+        warframes = build_owned_warframes(raw_inv, {})
+        self.assertEqual([c["l"] for c in warframes[0]["cfg"]], ["跑图爆发", "B"])
+
+        equipment_cfg = build_equipment_configs(
+            raw_inv["Sentinels"][0], {}, {}, {}, {}, {}, {}
+        )
+        self.assertEqual([c["l"] for c in equipment_cfg], ["吸球工具人", "B"])
 
 
 if __name__ == "__main__":

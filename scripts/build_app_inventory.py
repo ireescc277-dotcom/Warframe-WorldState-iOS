@@ -1410,8 +1410,9 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                         metadata["c"] = conditional_step_scale
                     slot_metadata[slot] = metadata
 
+                custom_name = str(config.get("Name") or "").strip()
                 configs.append({
-                    "l": config_label(config_index),
+                    "l": custom_name or config_label(config_index),
                     "s": slots,
                     "sm": slot_metadata,
                     "u": unresolved_upgrades,
@@ -1794,8 +1795,9 @@ def build_equipment_configs(item: dict, upgrades: dict[str, dict],
             if rank_issue:
                 issues.append(f"{name}：{rank_issue}")
 
+        custom_name = str(config.get("Name") or "").strip()
         configs.append({
-            "l": config_label(config_index),
+            "l": custom_name or config_label(config_index),
             "u": entries,
             "exact": not issues,
             "issues": issues,
@@ -2008,8 +2010,9 @@ def build_owned_warframes(inv: dict, view: dict) -> list[dict]:
                     if isinstance(raw_ability, str) else "未识别的 Helminth 技能",
                 }
 
+            custom_name = str(config.get("Name") or "").strip()
             row: dict = {
-                "l": config_label(config_index),
+                "l": custom_name or config_label(config_index),
                 "u": entries,
                 "exact": not issues,
                 "issues": issues,
