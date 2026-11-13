@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from unittest.mock import patch
 
 from build_app_inventory import (
     RIVEN_MAXIMUM,
@@ -561,7 +562,8 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
         weapons = build_owned_weapons(raw_inv, game_data_override=game_data)
         self.assertEqual([c["l"] for c in weapons[0]["cfg"]], ["高波剥甲", "B", "C"])
 
-        warframes = build_owned_warframes(raw_inv, {})
+        with patch("build_app_inventory.frame_static_catalogues", return_value=({}, {}, {}, {})):
+            warframes = build_owned_warframes(raw_inv, {})
         self.assertEqual([c["l"] for c in warframes[0]["cfg"]], ["跑图爆发", "B"])
 
         equipment_cfg = build_equipment_configs(
