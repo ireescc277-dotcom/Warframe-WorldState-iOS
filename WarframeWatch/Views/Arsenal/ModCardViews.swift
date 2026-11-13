@@ -315,6 +315,7 @@ struct ModArtworkView: View {
 #endif
 }
 
+@MainActor
 @ViewBuilder
 private func deFrameImage(_ fileName: String, contentMode: ContentMode = .fit) -> some View {
 #if canImport(UIKit)
@@ -326,6 +327,7 @@ private func deFrameImage(_ fileName: String, contentMode: ContentMode = .fit) -
 #endif
 }
 
+@MainActor
 @ViewBuilder
 private func dePolarityView(_ polarity: String, tint: Color, size: CGFloat) -> some View {
 #if canImport(UIKit)
@@ -366,6 +368,7 @@ private func fallbackPolarityText(_ polarity: String, tint: Color, size: CGFloat
     }
 }
 
+@MainActor
 @ViewBuilder
 private func deRankBar(current: Int, maxRank: Int, dotSize: CGFloat, spacing: CGFloat, lineWidth: CGFloat) -> some View {
     let count = min(maxRank, 10)
