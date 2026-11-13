@@ -440,6 +440,73 @@ class CalculatorWeaponAliasTests(unittest.TestCase):
         self.assertEqual(by_cat["Melee"]["z"], "制胜者（近战）")
         self.assertEqual(by_cat["Archgun"]["n"], "Mausolon (Atmo-mode)")
 
+    def test_arcane_and_stance_aliases_resolve_cleanly(self):
+        result = build_owned_weapons({
+            "LongGuns": [{
+                "ItemId": "test-bulwark",
+                "ItemType": "/Lotus/Weapons/Tenno/Rifle/BratonPrime",
+                "Configs": [{
+                    "Upgrades": ["u-bulwark", "u-crux"],
+                }],
+            }],
+            "Melee": [{
+                "ItemId": "test-doughty",
+                "ItemType": "/Lotus/Weapons/Tenno/Melee/Staff/Bo",
+                "Configs": [{
+                    "Upgrades": ["u-stance", "u-doughty", "u-animosity"],
+                }],
+            }],
+            "Upgrades": [
+                {
+                    "ItemId": "u-bulwark",
+                    "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour",
+                    "UpgradeFingerprint": json.dumps({"lvl": 5}),
+                },
+                {
+                    "ItemId": "u-crux",
+                    "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusAndAmmoEfficiencyOnWeakpointHit",
+                    "UpgradeFingerprint": json.dumps({"lvl": 5}),
+                },
+                {
+                    "ItemId": "u-stance",
+                    "ItemType": "/Lotus/Weapons/Tenno/Melee/MeleeTrees/StaffCmbOneMeleeTree",
+                    "UpgradeFingerprint": json.dumps({"lvl": 3}),
+                },
+                {
+                    "ItemId": "u-doughty",
+                    "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus",
+                    "UpgradeFingerprint": json.dumps({"lvl": 5}),
+                },
+                {
+                    "ItemId": "u-animosity",
+                    "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee",
+                    "UpgradeFingerprint": json.dumps({"lvl": 5}),
+                },
+            ],
+            "RawUpgrades": [],
+        }, game_data_override={
+            "weapons": {
+                "/Lotus/Weapons/Tenno/Rifle/BratonPrime": {"n": "Braton Prime", "z": "布莱顿 Prime", "om": 1.0},
+                "/Lotus/Weapons/Tenno/Melee/Staff/Bo": {"n": "Bo", "z": "玻之杖", "om": 1.0},
+            },
+            "mods": {
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour": {"n": "DamageForBonusArmour", "mx": 5},
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusAndAmmoEfficiencyOnWeakpointHit": {"n": "StatusAndAmmoEfficiencyOnWeakpointHit", "mx": 5},
+                "/Lotus/Weapons/Tenno/Melee/MeleeTrees/StaffCmbOneMeleeTree": {"n": "StaffCmbOneMeleeTree", "mx": 3},
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus": {"n": "CritDamageForPunctureStatus", "mx": 5},
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee": {"n": "HeavyCritOnRegularMelee", "mx": 5},
+            },
+            "rivenTags": {},
+        })
+
+        by_cat = {row["c"]: row for row in result}
+        self.assertEqual([x for x in by_cat["Primary"]["cfg"][0]["s"] if x], ["Primary Bulwark", "Primary Crux"])
+        self.assertEqual(by_cat["Primary"]["cfg"][0]["u"], [])
+        self.assertEqual([x for x in by_cat["Melee"]["cfg"][0]["s"] if x], ["Clashing Forest", "Melee Doughty"])
+        self.assertEqual(len(by_cat["Melee"]["cfg"][0]["u"]), 1)
+        self.assertEqual(by_cat["Melee"]["cfg"][0]["u"][0]["n"], "Melee Animosity")
+        self.assertIn("暂未接入重击叠层模型", by_cat["Melee"]["cfg"][0]["u"][0]["why"])
+
 
 if __name__ == "__main__":
     unittest.main()

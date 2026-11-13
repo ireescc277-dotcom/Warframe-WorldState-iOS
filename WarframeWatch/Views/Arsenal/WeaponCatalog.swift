@@ -121,6 +121,7 @@ public final class WeaponCatalog: ObservableObject {
 
     @Published public private(set) var weapons: [WeaponEntry] = []
     @Published public private(set) var failed = false
+    private var extraIconIndex: [String: String] = [:]
 
     private init() {}
 
@@ -134,7 +135,29 @@ public final class WeaponCatalog: ObservableObject {
         bundleRoot?.appendingPathComponent("icons")
     }
 
+    /// 补充装备 / Mod / 赋能缩略图目录（webp）。
+    public static var extraIconsDir: URL? {
+        bundleRoot?.appendingPathComponent("extra-icons")
+    }
+
     public func load() {
+        if extraIconIndex.isEmpty, let dir = WeaponCatalog.extraIconsDir {
+            let indexURL = dir.appendingPathComponent("index.json")
+            if let data = try? Data(contentsOf: indexURL),
+               let raw = try? JSONDecoder().decode([String: String].self, from: data) {
+                var normalized: [String: String] = [:]
+                normalized.reserveCapacity(raw.count * 2)
+                for (key, filename) in raw {
+                    let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+                    normalized[trimmed.lowercased()] = filename
+                    let clean = Self.normalizeLookupKey(trimmed)
+                    if !clean.isEmpty {
+                        normalized[clean] = filename
+                    }
+                }
+                extraIconIndex = normalized
+            }
+        }
         guard weapons.isEmpty else { return }
         failed = false
         guard let root = WeaponCatalog.bundleRoot else {
@@ -149,5 +172,38 @@ public final class WeaponCatalog: ObservableObject {
         } catch {
             failed = true
         }
+    }
+
+    /// 在额外图标表里按英文名 / 中文名 / 去后缀名解析本地图标 URL。
+    public func extraIconURL(forName rawName: String?) -> URL? {
+        guard let rawName else { return nil }
+        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let dir = WeaponCatalog.extraIconsDir else { return nil }
+        if extraIconIndex.isEmpty {
+            load()
+        }
+        let filename = extraIconIndex[trimmed.lowercased()]
+            ?? extraIconIndex[Self.normalizeLookupKey(trimmed)]
+        guard let filename, !filename.isEmpty else { return nil }
+        let fileURL = dir.appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
+    }
+
+    private static func normalizeLookupKey(_ raw: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.uppercased().hasPrefix("<ARCHWING>") {
+            text = String(text.dropFirst("<ARCHWING>".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let parenRange = text.range(of: " ("), text.hasSuffix(")") {
+            text = String(text[..<parenRange.lowerBound])
+        } else if let parenRange = text.range(of: "（"), text.hasSuffix("）") {
+            text = String(text[..<parenRange.lowerBound])
+        }
+        return text
+            .lowercased()
+            .replacingOccurrences(of: "·", with: " ")
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 }

@@ -140,6 +140,13 @@ public struct ResolvedAttack: Sendable, Equatable {
     public var headshotMultiplier: Double
     /// 武器数据指定的额外强制状态；它们在常规状态抽样之外单独结算。
     public var forceProcs: [String]
+    public var overguardDamageMultiplier: Double
+    public var coldStatusBaseDamageBonus: Double
+    public var meleeDuplicateChance: Double
+    public var enervateCritStep: Double
+    public var statusProcFlatDamage: Double
+    public var extraRandomStatusChance: Double
+    public var spreadCombinedStatusComponents: Double
     public var notes: [String]
 
 }
@@ -416,9 +423,27 @@ public struct BuildResolver: Sendable {
             }
         }
 
+        // 灵化形态用的是 incMagazineSize，而且**不吃任何 mod**（包括灵化的 +9 弹匣）。
+        // 来源：<https://wiki.warframe.com/w/Torid>（"Incarnon Form's magazine is not affected by mods"）
+        let magazine: Double
+        if attack.isIncarnonForm {
+            magazine = max(1, weapon.incarnonMagazineSize ?? weapon.magazineSize ?? 1)
+        } else {
+            // `add_magazineSize` 加的是**基础**弹匣容量，所以先加固定值再吃 +弹匣% mod。
+            magazine = max(1, ((weapon.magazineSize ?? 1) + agg.flatMagazine)
+                * (1 + agg.magazine + options.customStat(.magazineSize)))
+        }
+        let platedRoundBonus: Double
+        if agg.magazineRootDamageScale > 0, weapon.magazineSize != nil, !attack.isIncarnonForm {
+            platedRoundBonus = ((0.33 * sqrt(magazine)) * 100).rounded() / 100.0
+                * agg.magazineRootDamageScale
+        } else {
+            platedRoundBonus = 0
+        }
         let damageBonus = agg.damageBonus + mesaBaseDamageBonus + options.warframe.damageBonus
             + options.customStat(.base)
             + (isHeavyMeleeAttack ? agg.heavyDamageBonus : 0)
+            + platedRoundBonus
         var damage: [DamageType: Double] = [:]
         for (t, v) in baseDamage.ordered { damage[t] = v * (1 + damageBonus) }
 
@@ -511,14 +536,6 @@ public struct BuildResolver: Sendable {
             + agg.critChanceAbsolute + options.customStat(.flatCritChance)
             + options.scenarioEffects.value(for: .flatCriticalChance))
             * (1 + options.customStat(.multiplicativeCritChance)))
-        let critMultiplier = (baseCritDamage
-            * (1 + agg.critDamageRelative
-               + (isHeavyMeleeAttack ? agg.heavyCritDamageRelative : 0)
-               + options.customStat(.critMultiplier))
-            + agg.critDamageAbsolute + options.warframe.critDamageBonus
-            + options.customStat(.flatCritMultiplier))
-            * (1 + options.customStat(.finalCritMultiplier))
-
         // The site applies the absolute status term after ordinary relative
         // status scaling, then applies the status-vulnerability multiplier to
         // the completed chance. `absolute_status_chance` uses raw percentage
@@ -529,6 +546,25 @@ public struct BuildResolver: Sendable {
                + options.customStat(.statusChance))
             + options.customStat(.absoluteStatusChance) / 100)
             * (1 + options.customStat(.statusChanceMultiplier))
+        let directVectorTotal = damage.totalDamage
+        let punctureCritDamageBonus: Double
+        if agg.punctureStatusCritDamageMultiplier > 0, directVectorTotal > 0 {
+            let punctureShare = (damage[.puncture] ?? 0) / directVectorTotal
+            punctureCritDamageBonus = min(
+                50,
+                punctureShare * max(0, statusChance) * 10 * agg.punctureStatusCritDamageMultiplier
+            )
+        } else {
+            punctureCritDamageBonus = 0
+        }
+        let critMultiplier = (baseCritDamage
+            * (1 + agg.critDamageRelative
+               + (isHeavyMeleeAttack ? agg.heavyCritDamageRelative : 0)
+               + options.customStat(.critMultiplier))
+            + agg.critDamageAbsolute + options.warframe.critDamageBonus
+            + options.customStat(.flatCritMultiplier)
+            + punctureCritDamageBonus)
+            * (1 + options.customStat(.finalCritMultiplier))
 
         let baseMultishot = attack.multishot ?? weapon.multishot ?? 1
         let multishot = agg.locksMultishot
@@ -543,16 +579,6 @@ public struct BuildResolver: Sendable {
             : attack.speed * (1 + agg.fireRate + options.warframe.fireRateBonus
                               + options.customStat(.speed))
 
-        // 灵化形态用的是 incMagazineSize，而且**不吃任何 mod**（包括灵化的 +9 弹匣）。
-        // 来源：<https://wiki.warframe.com/w/Torid>（"Incarnon Form's magazine is not affected by mods"）
-        let magazine: Double
-        if attack.isIncarnonForm {
-            magazine = max(1, weapon.incarnonMagazineSize ?? weapon.magazineSize ?? 1)
-        } else {
-            // `add_magazineSize` 加的是**基础**弹匣容量，所以先加固定值再吃 +弹匣% mod。
-            magazine = max(1, ((weapon.magazineSize ?? 1) + agg.flatMagazine)
-                * (1 + agg.magazine + options.customStat(.magazineSize)))
-        }
         let reloadTimeBonus = agg.reloadSpeed + options.customStat(.reloadTime)
         let reload: Double
         if let reloadDelay = weapon.reloadDelay,
@@ -717,6 +743,14 @@ public struct BuildResolver: Sendable {
             (1 + resolvedStatusDamageBonus) * statusDamageVulnerabilityMultiplier
                 + (agg.statusDamageByType[.toxin] ?? 0)
         )
+        let weakPointBonusMultiplier = (options.headshot || options.weakPoint) && !attack.noHeadshotMultiplier
+            ? max(0, 1 + agg.weakPointDamageBonus) : 1
+        let conditionalFinalMultiplier = max(0, 1 + agg.conditionalFinalDamageBonus)
+        let frozenFinalMultiplier = options.allModConditionsMet
+            ? max(0, 1 + agg.frozenDamageBonus) : 1
+        let isAoEAttack = attack.shotType?.caseInsensitiveCompare("AoE") == .orderedSame
+        let isSlamAttack = attack.name.lowercased().contains("slam")
+        let coldStatusBaseDamageBonus = (!isAoEAttack && !isSlamAttack) ? agg.coldStatusDamageBonus : 0
         return ResolvedAttack(
             name: attack.name,
             damage: damage,
@@ -740,10 +774,12 @@ public struct BuildResolver: Sendable {
             // Elementalist-style status damage.
             statusDamageVulnerabilityMultiplier: statusDamageVulnerabilityMultiplier,
             directDamageMultiplier: eclipseMultiplier * maduraiMultiplier * siteComboMultiplier
-                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier,
+                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier
+                * weakPointBonusMultiplier * conditionalFinalMultiplier * frozenFinalMultiplier,
             weaponVectorDamageMultiplier: cyteWeaponVectorMultiplier,
             statusDamageMultiplier: eclipseMultiplier * siteComboMultiplier
-                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier,
+                * simpleStrengthMultiplier * additionalWeaponMultiplier * magazineBonusMultiplier
+                * weakPointBonusMultiplier * conditionalFinalMultiplier * frozenFinalMultiplier,
             xataDamageRatio: max(0, options.scenarioEffects.value(for: .xata)),
             toxicLashDamageRatio: max(0, options.scenarioEffects.value(for: .toxicLash))
                 * (isMelee ? 2 : 1),
@@ -784,6 +820,13 @@ public struct BuildResolver: Sendable {
             corrosiveStackCapBonus: agg.corrosiveStackCapBonus,
             headshotMultiplier: headshot,
             forceProcs: attack.forceProcs ?? [],
+            overguardDamageMultiplier: agg.overguardDamageMultiplier,
+            coldStatusBaseDamageBonus: coldStatusBaseDamageBonus,
+            meleeDuplicateChance: agg.meleeDuplicateChance,
+            enervateCritStep: agg.enervateCritStep,
+            statusProcFlatDamage: agg.statusProcFlatDamage,
+            extraRandomStatusChance: agg.extraRandomStatusChance,
+            spreadCombinedStatusComponents: agg.spreadCombinedStatusComponents,
             notes: notes
         )
     }
@@ -991,6 +1034,18 @@ struct ModAggregate {
     var windUpSpeed: Double = 0
     var locksMultishot = false
     var locksFireRate = false
+    var overguardDamageMultiplier: Double = 1
+    var punctureStatusCritDamageMultiplier: Double = 0
+    var coldStatusDamageBonus: Double = 0
+    var magazineRootDamageScale: Double = 0
+    var weakPointDamageBonus: Double = 0
+    var conditionalFinalDamageBonus: Double = 0
+    var frozenDamageBonus: Double = 0
+    var meleeDuplicateChance: Double = 0
+    var enervateCritStep: Double = 0
+    var statusProcFlatDamage: Double = 0
+    var extraRandomStatusChance: Double = 0
+    var spreadCombinedStatusComponents: Double = 0
     var unsupported: Set<String> = []
     var unsupportedIncarnon: Set<String> = []
 
@@ -1540,7 +1595,36 @@ struct ModAggregate {
             // `Attack.decodeForceProcs` 已把 `attack.unique["force_procs"]` 放入 `ResolvedAttack.forceProcs`。
             case "force_procs":
                 break
-            case "FOR_WEAPON", "WITH_COND", "set", "unique", "mutator", "na",
+            // Single-target non-impact utility/AoE Arcanes and passive melee utility traits.
+            case "na", "mInfluence", "on10RadiationAOEDmg":
+                break
+            case "mult_overguard":
+                if let v, v > 0 {
+                    overguardDamageMultiplier = max(overguardDamageMultiplier, max(1, v))
+                }
+            case "incr_CM_by_punc_status":
+                if let v { punctureStatusCritDamageMultiplier += v }
+            case "base_per_cold":
+                if let v { coldStatusDamageBonus += v }
+            case "base_per_magasize":
+                if let v { magazineRootDamageScale += v }
+            case "multSharpshot":
+                if let v { weakPointDamageBonus += v }
+            case "multiple":
+                if let v { conditionalFinalDamageBonus += v }
+            case "dmgMultAgainstFrozen":
+                if let v { frozenDamageBonus += v }
+            case "mDuplicate":
+                if let v { meleeDuplicateChance += v }
+            case "incr_CC_by_hit_with_reset6tier2":
+                if let v { enervateCritStep += v }
+            case "dmgOnStatusEff":
+                if let v { statusProcFlatDamage += v }
+            case "random_status_after_status":
+                if let v { extraRandomStatusChance += v }
+            case "debilitate":
+                if let v { spreadCombinedStatusComponents += v }
+            case "FOR_WEAPON", "WITH_COND", "set", "unique", "mutator",
                  "comboDuration", "slam_mult",
                   "finisherDmg", "add_slash_on_impact", "electricityBonus",
                  "comboIn", "f_multiple",

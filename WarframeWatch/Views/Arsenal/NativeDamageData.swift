@@ -51,6 +51,7 @@ final class NativeDamageCatalog: ObservableObject {
 
     private(set) var store: DataStore?
     private var dataRoot: URL?
+    private var lowercasedTranslations: [String: String] = [:]
 
     private init() {
         load()
@@ -83,6 +84,12 @@ final class NativeDamageCatalog: ObservableObject {
             weapons = try decoder.decode([NativeDamageWeaponEntry].self, from: weaponData)
             enemies = try decoder.decode([Enemy].self, from: enemyData)
             translations = try decoder.decode([String: String].self, from: localizationData)
+            var lowercased: [String: String] = [:]
+            lowercased.reserveCapacity(translations.count)
+            for (key, value) in translations {
+                lowercased[key.lowercased()] = value
+            }
+            lowercasedTranslations = lowercased
             store = DataStore(root: root)
             dataRoot = root
             loadError = nil
@@ -92,12 +99,13 @@ final class NativeDamageCatalog: ObservableObject {
             weapons = []
             enemies = []
             translations = [:]
+            lowercasedTranslations = [:]
             loadError = "计算器数据无法读取。请重新安装完整版本后重试。"
         }
     }
 
     func local(_ english: String) -> String {
-        translations[english] ?? english
+        translations[english] ?? lowercasedTranslations[english.lowercased()] ?? english
     }
 
     /// The upstream site locale covers weapon and Mod names well, but several
@@ -236,6 +244,33 @@ final class NativeDamageCatalog: ObservableObject {
 
     func localModIcon(for mod: ModDefinition) -> URL? {
         localModIcon(named: mod.image)
+    }
+
+    /// 先查本地 `mod-icons/`，再查 `extra-icons/`，最后保留远端备用地址。
+    func modIconURLs(forName rawName: String) -> (local: URL?, remote: URL?) {
+        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return (nil, nil) }
+        if dataRoot == nil { load() }
+        if let mod = store?.mods.mod(named: trimmed) {
+            let localURL = localModIcon(for: mod)
+                ?? WeaponCatalog.shared.extraIconURL(forName: mod.name)
+                ?? WeaponCatalog.shared.extraIconURL(forName: trimmed)
+            return (localURL, iconURL(for: mod))
+        }
+        return (WeaponCatalog.shared.extraIconURL(forName: trimmed), nil)
+    }
+
+    func localizedUpgradeName(_ rawName: String) -> String {
+        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return rawName }
+        if dataRoot == nil { load() }
+        let direct = local(trimmed)
+        if direct != trimmed { return direct }
+        if let mod = store?.mods.mod(named: trimmed) {
+            let fromMod = local(mod.name)
+            if fromMod != mod.name { return fromMod }
+        }
+        return rawName
     }
 
     private func normalize(_ value: String) -> String {

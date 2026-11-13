@@ -805,8 +805,7 @@ final class NativeDamageCalculatorModel: ObservableObject {
             return "攻击段 \(index + 1)"
         }
         let attack = weapon.attacks[index]
-        let local = catalog.local(attack.name)
-        return local == attack.name ? attack.name : "\(local) · \(attack.name)"
+        return catalog.local(attack.name)
     }
 
     var selectedRules: [ConditionalEffectRule] {

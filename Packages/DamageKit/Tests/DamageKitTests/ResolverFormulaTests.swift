@@ -118,4 +118,89 @@ final class ResolverFormulaTests: XCTestCase {
         XCTAssertEqual(resolved.statusDamageBonus, 0, accuracy: 1e-12)
         XCTAssertTrue(resolved.notes.contains { $0.contains("vuln_status_damage") })
     }
+
+    func testArcaneMechanicsResolveWithoutUnsupportedNotes() throws {
+        let mods = ModLibrary.shared
+        let pistol = Attack(name: "Normal", speed: 2, critChance: 50, critMultiplier: 2,
+                            statusChance: 50, damage: [.puncture: 80, .impact: 20])
+        let weapon = Weapon(name: "Lex Prime", attacks: [pistol],
+                            magazineSize: 9, reloadTime: 1, category: "Secondary")
+
+        var condOn = Options()
+        condOn.allModConditionsMet = true
+
+        let fortifier = BuildResolver(weapon: weapon, build: Build(mods: ["Secondary Fortifier"]),
+                                      options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(fortifier.overguardDamageMultiplier, 8, accuracy: 1e-9)
+        XCTAssertFalse(fortifier.notes.contains { $0.contains("未实现") })
+
+        let shiver = BuildResolver(weapon: weapon, build: Build(mods: ["Secondary Shiver"]),
+                                   options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(shiver.coldStatusBaseDamageBonus, 4.5, accuracy: 1e-9)
+        XCTAssertFalse(shiver.notes.contains { $0.contains("未实现") })
+
+        let enervate = BuildResolver(weapon: weapon, build: Build(mods: ["Secondary Enervate"]),
+                                     options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(enervate.enervateCritStep, 0.1, accuracy: 1e-9)
+        XCTAssertFalse(enervate.notes.contains { $0.contains("未实现") })
+
+        let encumber = BuildResolver(weapon: weapon, build: Build(mods: ["Secondary Encumber"]),
+                                     options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(encumber.extraRandomStatusChance, 0.24, accuracy: 1e-9)
+        XCTAssertFalse(encumber.notes.contains { $0.contains("未实现") })
+
+        let empowered = BuildResolver(weapon: weapon, build: Build(mods: ["Cascadia Empowered"]),
+                                      options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(empowered.statusProcFlatDamage, 750, accuracy: 1e-9)
+        XCTAssertFalse(empowered.notes.contains { $0.contains("未实现") })
+
+        let meleeWeapon = Weapon(name: "Nikana", attacks: [pistol],
+                                 magazineSize: nil, reloadTime: nil, category: "Melee")
+        let doughty = BuildResolver(weapon: meleeWeapon, build: Build(mods: ["Melee Doughty"]),
+                                    options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        // Puncture share = 0.8, statusChance = 0.5 -> +4.0x CM on top of quantized 2.0x.
+        XCTAssertGreaterThan(doughty.critMultiplier, 5.9)
+        XCTAssertFalse(doughty.notes.contains { $0.contains("未实现") })
+
+        let duplicate = BuildResolver(weapon: meleeWeapon, build: Build(mods: ["Melee Duplicate"]),
+                                      options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertEqual(duplicate.meleeDuplicateChance, 1, accuracy: 1e-9)
+        XCTAssertFalse(duplicate.notes.contains { $0.contains("未实现") })
+
+        let influence = BuildResolver(weapon: meleeWeapon, build: Build(mods: ["Melee Influence"]),
+                                      options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        XCTAssertFalse(influence.notes.contains { $0.contains("未实现") })
+
+        let rifle = Weapon(name: "Soma", attacks: [pistol],
+                           magazineSize: 100, reloadTime: 1, category: "Primary")
+        let plated = BuildResolver(weapon: rifle, build: Build(mods: ["Primary Plated Round"]),
+                                   options: condOn, faction: neutral, library: mods)
+            .resolve(attack: pistol)
+        // 0.33 * sqrt(100) = 3.30 -> baseDamageMultiplier = 4.30
+        XCTAssertEqual(plated.baseDamageMultiplier, 4.3, accuracy: 1e-9)
+
+        let overguardEnemy = EnemyProfile(
+            enemy: Enemy(name: "Eximus", faction: "Grineer", baseLevel: 1,
+                         health: 1000, shield: 0, armor: 0, overguard: 8000),
+            level: 1,
+            options: condOn
+        )
+        var simOpts = condOn
+        simOpts.window = 2.0
+        let baseSim = WeaponSimulator(segments: [BuildResolver(weapon: weapon, build: Build(),
+                                                               options: condOn, faction: neutral,
+                                                               library: mods).resolve(attack: pistol)],
+                                      enemy: overguardEnemy, options: simOpts).run()
+        let fortSim = WeaponSimulator(segments: [fortifier], enemy: overguardEnemy, options: simOpts).run()
+        XCTAssertGreaterThan(fortSim[0].directDamage, 0)
+        XCTAssertGreaterThan(fortSim[0].layers.first?.damage ?? 0, (baseSim[0].layers.first?.damage ?? 0) * 5)
+    }
 }

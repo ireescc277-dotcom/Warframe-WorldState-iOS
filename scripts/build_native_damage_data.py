@@ -30,6 +30,8 @@ SITE = ROOT / "server" / "site"
 DEST = ROOT / "ios" / "DamageData"
 ICON_SOURCE = ROOT / "assets" / "weapon-icons"
 MOD_ICON_SOURCE = ROOT / "assets" / "mod-icons"
+EXTRA_ICON_SOURCE = ROOT / "assets" / "extra-icons"
+EXTRA_ZH_SOURCE = ROOT / "assets" / "extra-zh.json"
 NODE = shutil.which("node") or "node"
 
 CAT_ORDER = {
@@ -64,7 +66,15 @@ def read_locale() -> dict[str, str]:
         detail = completed.stderr.decode("utf-8", "replace")[:600]
         raise RuntimeError(f"cannot parse {source.name}: {detail}")
     raw = json.loads(completed.stdout.decode("utf-8"))
-    return {str(key): str(value) for key, value in raw.items()}
+    locale = {str(key): str(value) for key, value in raw.items()}
+    if EXTRA_ZH_SOURCE.exists():
+        extra = json.loads(EXTRA_ZH_SOURCE.read_text(encoding="utf-8"))
+        for key, value in extra.items():
+            k = str(key)
+            v = str(value)
+            if k not in locale or locale[k] == k:
+                locale[k] = v
+    return locale
 
 
 def make_weapon_index(manifest: dict[str, str], locale: dict[str, str]) -> list[dict[str, object]]:
@@ -179,11 +189,16 @@ def main() -> int:
         shutil.copytree(MOD_ICON_SOURCE, DEST / "mod-icons")
         mod_icon_count = sum(1 for _ in (DEST / "mod-icons").glob("*.webp"))
 
+    extra_icon_count = 0
+    if EXTRA_ICON_SOURCE.exists():
+        shutil.copytree(EXTRA_ICON_SOURCE, DEST / "extra-icons")
+        extra_icon_count = sum(1 for _ in (DEST / "extra-icons").glob("*.webp"))
+
     all_size = sum(path.stat().st_size for path in DEST.rglob("*") if path.is_file())
     print(
         f"[ok] {DEST.relative_to(ROOT)}  weapons={len(index)} "
         f"locale={len(locale)} weapon_icons={icon_count} mod_icons={mod_icon_count} "
-        f"size={all_size / 1048576:.2f}MB"
+        f"extra_icons={extra_icon_count} size={all_size / 1048576:.2f}MB"
     )
     return 0
 

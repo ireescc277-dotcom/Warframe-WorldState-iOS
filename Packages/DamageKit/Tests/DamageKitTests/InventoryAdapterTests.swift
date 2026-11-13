@@ -293,4 +293,47 @@ final class InventoryAdapterTests: XCTestCase {
                                            using: store)
         XCTAssertEqual(mausolon.weapon.name, "Mausolon (Atmo-mode)")
     }
+
+    func testArcaneAndStanceAliasesResolveToModLibrary() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DamageKitArcaneAlias-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let snapshotURL = dir.appendingPathComponent("snapshot.json")
+        let gameDataURL = dir.appendingPathComponent("gamedata.json")
+        let snapshot: [String: Any] = [
+            "LongGuns": [[
+                "ItemId": ["$oid": "test-bulwark"],
+                "ItemType": "/Lotus/Weapons/Tenno/Rifle/BratonPrime",
+                "Configs": [[
+                    "Upgrades": ["bulwark-r5"]
+                ]]
+            ]],
+            "Upgrades": [[
+                "ItemId": ["$oid": "bulwark-r5"],
+                "ItemType": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour",
+                "UpgradeFingerprint": "{\"lvl\":5}"
+            ]]
+        ]
+        let gameData: [String: Any] = [
+            "weapons": ["/Lotus/Weapons/Tenno/Rifle/BratonPrime": ["n": "Braton Prime", "om": 1.0]],
+            "mods": [
+                "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour": [
+                    "n": "DamageForBonusArmour",
+                    "e": [["locTag": "", "v": 1.0]],
+                    "mx": 5
+                ]
+            ],
+            "rivenTags": [:]
+        ]
+        try JSONSerialization.data(withJSONObject: snapshot).write(to: snapshotURL)
+        try JSONSerialization.data(withJSONObject: gameData).write(to: gameDataURL)
+
+        let adapter = InventoryAdapter(snapshotURL: snapshotURL, gameDataURL: gameDataURL)
+        let store = DataStore(root: Self.dataRoot)
+        let resolved = try adapter.resolve(OwnedWeaponReference(snapshot: "unit", weaponId: "test-bulwark"),
+                                           using: store)
+        XCTAssertEqual(resolved.build.slottedMods.map(\.name), ["Primary Bulwark"])
+    }
 }

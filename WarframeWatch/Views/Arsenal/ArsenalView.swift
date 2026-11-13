@@ -883,20 +883,53 @@ public struct ArsenalView: View {
 
     private func catalogEntry(for weapon: InventoryData.OwnedWeapon) -> WeaponEntry? {
         if let name = weapon.calcName,
-           let exact = catalog.weapons.first(where: { $0.n == name }) {
+           let exact = catalog.weapons.first(where: { $0.n.caseInsensitiveCompare(name) == .orderedSame }) {
             return exact
         }
-        return catalogEntry(named: weapon.z)
+        return catalogEntry(named: weapon.z) ?? catalogEntry(named: weapon.n)
     }
 
     private func catalogEntry(named rawName: String?) -> WeaponEntry? {
         guard let rawName, !rawName.isEmpty else { return nil }
         let clean = ArsenalItemThumb.stripAnnotation(rawName)
         guard !clean.isEmpty else { return nil }
-        return catalog.weapons.first {
+        if let exact = catalog.weapons.first(where: {
             $0.n.caseInsensitiveCompare(clean) == .orderedSame
                 || $0.z.caseInsensitiveCompare(clean) == .orderedSame
+        }) {
+            return exact
         }
+        let targetKey = Self.normalizedCatalogName(clean)
+        guard !targetKey.isEmpty else { return nil }
+        let candidates = catalog.weapons.filter { entry in
+            Self.normalizedCatalogName(entry.n) == targetKey
+                || Self.normalizedCatalogName(entry.z) == targetKey
+        }
+        guard !candidates.isEmpty else { return nil }
+        let preferredSuffixes = ["(大气)", "(atmo-mode)", "(突击步枪)", "(rifle)", "(archwing)"]
+        if let preferred = candidates.first(where: { entry in
+            let zn = entry.z.lowercased()
+            let nn = entry.n.lowercased()
+            return preferredSuffixes.contains { zn.contains($0) || nn.contains($0) }
+        }) {
+            return preferred
+        }
+        return candidates.first
+    }
+
+    private static func normalizedCatalogName(_ raw: String) -> String {
+        var text = ArsenalItemThumb.stripAnnotation(raw)
+        if text.uppercased().hasPrefix("<ARCHWING>") {
+            text = String(text.dropFirst("<ARCHWING>".count))
+        }
+        for open in [" (", "（"] {
+            if let range = text.range(of: open) {
+                text = String(text[..<range.lowerBound])
+            }
+        }
+        return text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 
     private func canCalculate(_ weapon: InventoryData.OwnedWeapon) -> Bool {
@@ -977,9 +1010,12 @@ final class WeaponIconStore {
 
     /// 本地包里没有这张图时返回 nil，调用方自己决定要不要走网络。
     func load(_ name: String, maxPixel: CGFloat) async -> UIImage? {
-        if let hit = cached(name) { return hit }
         guard let dir = WeaponCatalog.iconsDir else { return nil }
-        let url = dir.appendingPathComponent(name)
+        return await load(url: dir.appendingPathComponent(name), cacheKey: name, maxPixel: maxPixel)
+    }
+
+    func load(url: URL, cacheKey: String, maxPixel: CGFloat) async -> UIImage? {
+        if let hit = cached(cacheKey) { return hit }
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
 
         return await withCheckedContinuation { cont in
@@ -987,7 +1023,7 @@ final class WeaponIconStore {
                 let image = WeaponIconStore.downsample(url: url, maxPixel: maxPixel)
                 if let image = image {
                     let cost = Int(maxPixel * maxPixel * 4)
-                    self.cache.setObject(image, forKey: name as NSString, cost: cost)
+                    self.cache.setObject(image, forKey: cacheKey as NSString, cost: cost)
                 }
                 cont.resume(returning: image)
             }
@@ -1014,11 +1050,17 @@ final class WeaponIconStore {
 /// 优先读本地，读不到再回站点 CDN。两边都没有就画占位块，保证行高不跳。
 struct WeaponThumb: View {
     let name: String?
+    var localURL: URL? = nil
     let remote: URL?
     let size: CGFloat
 
     @State private var local: UIImage?
     @State private var tried = false
+    @State private var loadedKey = ""
+
+    private var taskKey: String {
+        "\(name ?? "")|\(localURL?.path ?? "")|\(remote?.absoluteString ?? "")"
+    }
 
     var body: some View {
         Group {
@@ -1026,12 +1068,13 @@ struct WeaponThumb: View {
                 Image(uiImage: local)
                     .resizable()
                     .scaledToFit()
+                    .padding(2)
             } else if tried, let remote = remote {
                 // 本地没有这张图才走网络，避免每行都去撞一次 CDN
                 AsyncImage(url: remote) { phase in
                     switch phase {
                     case let .success(image):
-                        image.resizable().scaledToFit()
+                        image.resizable().scaledToFit().padding(2)
                     default:
                         placeholder
                     }
@@ -1045,14 +1088,26 @@ struct WeaponThumb: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(WFTheme.panel)
         )
-        .task(id: name) {
-            guard local == nil, !tried else { return }
-            guard let name = name, !name.isEmpty else {
-                tried = true
-                return
+        .task(id: taskKey) {
+            if loadedKey != taskKey {
+                local = nil
+                tried = false
+                loadedKey = taskKey
             }
+            guard local == nil, !tried else { return }
             let px = size * UIScreen.main.scale
-            let image = await WeaponIconStore.shared.load(name, maxPixel: px)
+            let image: UIImage?
+            if let localURL {
+                image = await WeaponIconStore.shared.load(
+                    url: localURL,
+                    cacheKey: localURL.path,
+                    maxPixel: px
+                )
+            } else if let name = name, !name.isEmpty {
+                image = await WeaponIconStore.shared.load(name, maxPixel: px)
+            } else {
+                image = nil
+            }
             if Task.isCancelled { return }
             local = image
             tried = true
@@ -1081,6 +1136,8 @@ struct ArsenalItemThumb: View {
     var body: some View {
         if let entry = resolvedWeaponEntry {
             WeaponThumb(name: entry.img, remote: entry.iconURL, size: size)
+        } else if let extraURL = resolvedExtraIconURL {
+            WeaponThumb(name: nil, localURL: extraURL, remote: nil, size: size)
         } else if let asset = resolvedSetIcon {
             ItemIcon(asset.local, remote: asset.remote, size: size - 6)
                 .frame(width: size, height: size)
@@ -1098,15 +1155,48 @@ struct ArsenalItemThumb: View {
         }
     }
 
+    private var resolvedExtraIconURL: URL? {
+        catalog.extraIconURL(forName: displayName)
+            ?? catalog.extraIconURL(forName: Self.stripAnnotation(displayName ?? ""))
+    }
+
     private var resolvedWeaponEntry: WeaponEntry? {
         if let weaponEntry { return weaponEntry }
         guard let displayName else { return nil }
         let clean = Self.stripAnnotation(displayName)
         guard !clean.isEmpty else { return nil }
-        return catalog.weapons.first {
+        if let exact = catalog.weapons.first(where: {
             $0.n.caseInsensitiveCompare(clean) == .orderedSame
                 || $0.z.caseInsensitiveCompare(clean) == .orderedSame
+        }) {
+            return exact
         }
+        let targetKey = Self.normalizedLookupKey(clean)
+        guard !targetKey.isEmpty else { return nil }
+        let candidates = catalog.weapons.filter { entry in
+            Self.normalizedLookupKey(entry.n) == targetKey
+                || Self.normalizedLookupKey(entry.z) == targetKey
+        }
+        guard !candidates.isEmpty else { return nil }
+        let preferredSuffixes = ["(大气)", "(atmo-mode)", "(突击步枪)", "(rifle)", "(archwing)"]
+        return candidates.first(where: { entry in
+            let zn = entry.z.lowercased()
+            let nn = entry.n.lowercased()
+            return preferredSuffixes.contains { zn.contains($0) || nn.contains($0) }
+        }) ?? candidates.first
+    }
+
+    private static func normalizedLookupKey(_ raw: String) -> String {
+        var text = stripAnnotation(raw)
+        if text.uppercased().hasPrefix("<ARCHWING>") {
+            text = String(text.dropFirst("<ARCHWING>".count))
+        }
+        for open in [" (", "（"] {
+            if let range = text.range(of: open) {
+                text = String(text[..<range.lowerBound])
+            }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private var resolvedSetIcon: (local: String?, remote: String?)? {

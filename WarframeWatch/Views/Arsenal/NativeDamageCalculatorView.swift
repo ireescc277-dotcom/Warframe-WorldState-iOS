@@ -333,11 +333,9 @@ struct NativeDamageCalculatorView: View {
             HStack {
                 Text("等级").font(.wfBody).foregroundColor(WFTheme.textSecondary)
                 Spacer()
-                Stepper(value: $model.level, in: 1...9999) {
-                    Text("\(model.level)").font(.wfNumSmall).foregroundColor(WFTheme.textPrimary)
+                EnemyLevelEditor(level: $model.level) {
+                    model.calculate()
                 }
-                .frame(width: 142)
-                .onChange(of: model.level) { _ in model.calculate() }
             }
             Toggle("钢铁之路", isOn: $model.steelPath)
                 .tint(WFTheme.gold)
@@ -424,8 +422,9 @@ struct NativeDamageCalculatorView: View {
         let selected = isRiven ? nil : model.weaponSlots[slot]
         return HStack(spacing: 8) {
             if let selected, let mod = ModLibrary.shared.mod(named: selected) {
-                NativeThumb(local: model.catalog.localModIcon(for: mod),
-                            remote: model.catalog.iconURL(for: mod), size: 30)
+                let urls = model.catalog.modIconURLs(forName: mod.name)
+                NativeThumb(local: urls.local,
+                            remote: urls.remote, size: 30)
             } else if isRiven {
                 NativeThumb(local: model.catalog.localModIcon(named: "riven.webp"),
                             remote: URL(string: "https://warframe-damage.com/data/mods/riven.webp"), size: 30)
@@ -1189,8 +1188,9 @@ struct NativeDamageCalculatorView: View {
         return VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .top, spacing: WFUI.s2) {
                 if let mod = ModLibrary.shared.mod(named: candidate.modName) {
-                    NativeThumb(local: model.catalog.localModIcon(for: mod),
-                                remote: model.catalog.iconURL(for: mod), size: 30)
+                    let urls = model.catalog.modIconURLs(forName: mod.name)
+                    NativeThumb(local: urls.local,
+                                remote: urls.remote, size: 30)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.catalog.local(candidate.modName))
@@ -2099,8 +2099,9 @@ private struct NativeModPicker: View {
                         dismiss()
                     } label: {
                         HStack(spacing: 10) {
-                            NativeThumb(local: model.catalog.localModIcon(for: mod),
-                                        remote: model.catalog.iconURL(for: mod), size: 36)
+                            let urls = model.catalog.modIconURLs(forName: mod.name)
+                            NativeThumb(local: urls.local,
+                                        remote: urls.remote, size: 36)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(model.catalog.local(mod.name)).foregroundColor(WFTheme.textPrimary)
                                 Text(mod.name).font(.wfLabel).foregroundColor(WFTheme.textSecondary)
@@ -2146,5 +2147,114 @@ private struct NativeModPicker: View {
 private extension Double {
     var cleanNumber: String {
         rounded() == self ? String(format: "%.0f", self) : String(format: "%.2f", self)
+    }
+}
+
+private struct EnemyLevelEditor: View {
+    @Binding var level: Int
+    var onCommit: () -> Void
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button {
+                adjust(by: -10)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .background(WFTheme.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            TextField("1-9999", text: $text)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.wfNumSmall)
+                .foregroundColor(WFTheme.textPrimary)
+                .focused($isFocused)
+                .frame(width: 66, height: 30)
+                .background(WFTheme.surfaceElevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isFocused ? WFTheme.cyan : WFTheme.cardBorder, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            Button {
+                adjust(by: 10)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .background(WFTheme.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+        }
+        .onAppear {
+            text = "\(level)"
+        }
+        .onChange(of: level) { newValue in
+            let clamped = min(max(newValue, 1), 9999)
+            if !isFocused && text != "\(clamped)" {
+                text = "\(clamped)"
+            }
+        }
+        .onChange(of: text) { raw in
+            let digits = raw.filter(\.isNumber)
+            if digits != raw {
+                text = digits
+            }
+            if let value = Int(digits) {
+                let clamped = min(max(value, 1), 9999)
+                if digits.count > 4 || value > 9999 {
+                    text = "\(clamped)"
+                }
+                if level != clamped {
+                    level = clamped
+                    onCommit()
+                }
+            }
+        }
+        .onChange(of: isFocused) { focused in
+            if !focused {
+                commitField()
+            }
+        }
+        .onSubmit {
+            commitField()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if isFocused {
+                    Spacer()
+                    Button("完成") {
+                        isFocused = false
+                        commitField()
+                    }
+                    .foregroundColor(WFTheme.cyan)
+                }
+            }
+        }
+    }
+
+    private func adjust(by delta: Int) {
+        let clamped = min(max(level + delta, 1), 9999)
+        level = clamped
+        text = "\(clamped)"
+        isFocused = false
+        onCommit()
+    }
+
+    private func commitField() {
+        let parsed = Int(text) ?? level
+        let clamped = min(max(parsed, 1), 9999)
+        level = clamped
+        text = "\(clamped)"
+        onCommit()
     }
 }

@@ -280,7 +280,107 @@ public struct InventoryAdapter: Sendable {
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee":
             ("Secondary Deadhead", 5),
         "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CorrosiveMeleePerAbilityCast":
-            ("Melee Exposure", 5)
+            ("Melee Exposure", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour":
+            ("Primary Bulwark", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeProcsSpread":
+            ("Melee Influence", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/OverguardSteal":
+            ("Secondary Fortifier", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusAndAmmoEfficiencyOnWeakpointHit":
+            ("Primary Crux", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritChancePerBuff":
+            ("Secondary Kinship", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritOnHit":
+            ("Secondary Enervate", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus":
+            ("Melee Doughty", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageForActiveShields":
+            ("Melee Retaliation", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ReplayLightCritHits":
+            ("Melee Duplicate", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PullEnemiesOnMeleeKill":
+            ("Melee Vortex", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PermaComboOnFinisher":
+            ("Melee Crescendo", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MultishotForCombo":
+            ("Secondary Outburst", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MultishotForMaxEnergy":
+            ("Primary Overcharge", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamagePerAmmoOnReload":
+            ("Primary Plated Round", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryHeadshotCritMultOnHeadshot":
+            ("Primary Blight", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SplitStatusProcsOnStackedStatusHit":
+            ("Primary Debilitate", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ShotgunMultishotAndReloadSpeedOnCloseKill":
+            ("Shotgun Vendetta", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongbowDamageOnHeadshot":
+            ("Longbow Sharpshot", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryReloadSpeedAndMultishotOnElectricProc":
+            ("Conjunction Voltage", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/BonusDamageNextShotForCurEnergy":
+            ("Secondary Surge", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/RadialDamageOnMaxRadiationStackHit":
+            ("Secondary Irradiate", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryExtraDamagePerFreezeStack":
+            ("Secondary Shiver", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnMeleeKill":
+            ("Primary Dexterity", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnMeleeKill":
+            ("Secondary Dexterity", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnSliding":
+            ("Akimbo Slip Shot", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnPistolHeadshot":
+            ("Arcane Pistoleer", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityHeatProcsGiveCritChance":
+            ("Arcane Hot Shot", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneMeleeDamageOnCrit":
+            ("Arcane Fury", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolDamageOnHeadshot":
+            ("Arcane Precision", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolSpeedOnCrit":
+            ("Arcane Velocity", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneShotgunSpeedOnCrit":
+            ("Arcane Tempo", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneSniperSpeedOnCrit":
+            ("Arcane Momentum", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunDamageOnHeadshot":
+            ("Arcane Rage", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunSpeedOnCrit":
+            ("Arcane Acceleration", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeSpeedOnHit":
+            ("Arcane Strike", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDmgOnRifleKill":
+            ("Arcane Blade Charger", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDmgOnMeleeKill":
+            ("Arcane Primary Charger", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Defensive/CritChanceOnDamage":
+            ("Arcane Avenger", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStrengthAndCritDamageWhenInvisible":
+            ("Arcane Crepuscular", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/ExtraProcOnProc":
+            ("Secondary Encumber", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/FreezeEnemiesOnRoll":
+            ("Melee Careen", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/GolemArcaneBonusDamageOnWallLatch":
+            ("Arcane Arachne", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/LongGunDamageOnReload":
+            ("Arcane Rise", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Utility/PistolDamageOnReload":
+            ("Arcane Awakening", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Zariman/PrimaryOnAbilityReloadSpeed":
+            ("Fractalized Reset", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnOvershieldCritChance":
+            ("Cascadia Overcharge", 5),
+        "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnStatusProcBonusDamage":
+            ("Cascadia Empowered", 5),
+        "/Lotus/Upgrades/Mods/Melee/Expert/WeaponHeavyAttackEfficiencySPSubMod":
+            ("Galvanized Reflex", 10),
+        "/Lotus/Upgrades/Mods/Melee/Expert/WeaponMeleeStatusChanceSPSubMod":
+            ("Galvanized Elementalist", 10),
+        "/Lotus/Weapons/Tenno/Melee/MeleeTrees/StaffCmbOneMeleeTree":
+            ("Clashing Forest", 3),
     ]
 
     private func findWeaponEntry(_ id: String, in snapshot: [String: Any]) -> (category: String, weapon: [String: Any])? {

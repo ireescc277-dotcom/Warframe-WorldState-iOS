@@ -116,8 +116,55 @@ struct ArsenalWeaponConfigurationView: View {
     }
 
     private var weaponCatalogEntry: WeaponEntry? {
-        guard let calcName = ownedWeapon.calcName else { return nil }
-        return catalog.weapons.first { $0.n == calcName }
+        if let calcName = ownedWeapon.calcName,
+           let exact = catalog.weapons.first(where: { $0.n.caseInsensitiveCompare(calcName) == .orderedSame }) {
+            return exact
+        }
+        return Self.matchCatalogEntry(in: catalog.weapons, names: [ownedWeapon.z, ownedWeapon.n])
+    }
+
+    private static func matchCatalogEntry(in weapons: [WeaponEntry], names: [String]) -> WeaponEntry? {
+        for raw in names {
+            let clean = ArsenalItemThumb.stripAnnotation(raw)
+            guard !clean.isEmpty else { continue }
+            if let exact = weapons.first(where: {
+                $0.n.caseInsensitiveCompare(clean) == .orderedSame
+                    || $0.z.caseInsensitiveCompare(clean) == .orderedSame
+            }) {
+                return exact
+            }
+            let targetKey = normalizedWeaponLookupKey(clean)
+            guard !targetKey.isEmpty else { continue }
+            let candidates = weapons.filter { entry in
+                normalizedWeaponLookupKey(entry.n) == targetKey
+                    || normalizedWeaponLookupKey(entry.z) == targetKey
+            }
+            if !candidates.isEmpty {
+                let preferredSuffixes = ["(大气)", "(atmo-mode)", "(突击步枪)", "(rifle)", "(archwing)"]
+                if let preferred = candidates.first(where: { entry in
+                    let zn = entry.z.lowercased()
+                    let nn = entry.n.lowercased()
+                    return preferredSuffixes.contains { zn.contains($0) || nn.contains($0) }
+                }) {
+                    return preferred
+                }
+                return candidates.first
+            }
+        }
+        return nil
+    }
+
+    private static func normalizedWeaponLookupKey(_ raw: String) -> String {
+        var text = ArsenalItemThumb.stripAnnotation(raw)
+        if text.uppercased().hasPrefix("<ARCHWING>") {
+            text = String(text.dropFirst("<ARCHWING>".count))
+        }
+        for open in [" (", "（"] {
+            if let range = text.range(of: open) {
+                text = String(text[..<range.lowerBound])
+            }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private var weaponMetaLine: String {
@@ -181,7 +228,7 @@ struct ArsenalWeaponConfigurationView: View {
                     .font(.wfLabel)
                     .foregroundColor(WFTheme.textMuted)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
                     ForEach(Array(mods.enumerated()), id: \.offset) { _, pair in
                         let specialSlot = pair.0 >= 8 ? slotLabel(pair.0) : nil
                         let rankText = config.metadata(at: pair.0).flatMap(compactRank)
@@ -223,7 +270,8 @@ struct ArsenalWeaponConfigurationView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(config.unresolvedUpgrades) { upgrade in
                             let rank = upgrade.rankLabel.map { "（\($0)）" } ?? ""
-                            Text("未计算：\(upgrade.name)\(rank) · \(upgrade.reason)")
+                            let name = NativeDamageCatalog.shared.localizedUpgradeName(upgrade.name)
+                            Text("未计算：\(name)\(rank) · \(upgrade.reason)")
                                 .font(.wfLabel)
                                 .foregroundColor(WFTheme.gold)
                         }
@@ -233,7 +281,8 @@ struct ArsenalWeaponConfigurationView: View {
                                 .foregroundColor(WFTheme.gold)
                         }
                         ForEach(config.nonDamageUpgrades) { upgrade in
-                            Text("非伤害卡：\(upgrade.name)")
+                            let name = NativeDamageCatalog.shared.localizedUpgradeName(upgrade.name)
+                            Text("非伤害卡：\(name)")
                                 .font(.wfLabel)
                                 .foregroundColor(WFTheme.textMuted)
                         }
@@ -314,9 +363,12 @@ struct ArsenalWeaponConfigurationView: View {
         let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
         return VStack(alignment: .leading, spacing: WFUI.s2) {
             if !upgrades.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
                     ForEach(upgrades) { upgrade in
-                        buildPill(upgrade.name, detail: "\(upgrade.kind) · \(compactUpgradeRank(upgrade))")
+                        buildPill(
+                            upgrade.name,
+                            detail: "\(localizedKindLabel(upgrade.kind)) · \(compactUpgradeRank(upgrade))"
+                        )
                     }
                 }
             }
@@ -391,23 +443,18 @@ struct ArsenalWeaponConfigurationView: View {
     }
 
     private func buildPill(_ name: String, detail: String? = nil, accent: Color = WFTheme.textSecondary) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(name)
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textPrimary)
-                .lineLimit(2)
-            if let detail {
-                Text(detail)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(accent)
-                    .lineLimit(1)
-            }
+        ArsenalUpgradePill(rawName: name, detail: detail, accent: accent)
+    }
+
+    private func localizedKindLabel(_ kind: String) -> String {
+        switch kind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "arcane", "weapon_mist": return "赋能"
+        case "aura": return "光环"
+        case "exilus": return "特殊功能"
+        case "stance": return "架势"
+        case "mod": return "振幅晶体"
+        default: return kind
         }
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(WFUI.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func compactRank(_ metadata: InventoryData.OwnedWeapon.Config.SlotMetadata) -> String? {
@@ -542,7 +589,7 @@ struct ArsenalEquipmentConfigurationView: View {
                             .font(.wfLabel)
                             .foregroundColor(WFTheme.textMuted)
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
                             ForEach(upgrades) { upgrade in
                                 upgradePill(upgrade)
                             }
@@ -562,20 +609,22 @@ struct ArsenalEquipmentConfigurationView: View {
             default: return "未确认"
             }
         }()
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(upgrade.name)
-                .font(.wfLabel)
-                .foregroundColor(WFTheme.textPrimary)
-                .lineLimit(2)
-            Text("\(upgrade.kind) · \(rankText)")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(WFTheme.gold)
+        return ArsenalUpgradePill(
+            rawName: upgrade.name,
+            detail: "\(localizedKindLabel(upgrade.kind)) · \(rankText)",
+            accent: WFTheme.gold
+        )
+    }
+
+    private func localizedKindLabel(_ kind: String) -> String {
+        switch kind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "arcane", "weapon_mist": return "赋能"
+        case "aura": return "光环"
+        case "exilus": return "特殊功能"
+        case "stance": return "架势"
+        case "mod": return "振幅晶体"
+        default: return kind
         }
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(WFUI.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -670,22 +719,13 @@ struct ArsenalWarframeConfigurationView: View {
                     }
                     let upgrades = config.upgrades.sorted { $0.slot < $1.slot }
                     if !upgrades.isEmpty {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 138), spacing: 7)], spacing: 7) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 7)], spacing: 7) {
                             ForEach(upgrades) { upgrade in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(upgrade.name)
-                                        .font(.wfLabel)
-                                        .foregroundColor(WFTheme.textPrimary)
-                                        .lineLimit(2)
-                                    Text("\(upgrade.kind) · \(upgrade.rankLabel)")
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor(WFTheme.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 6)
-                                .background(WFUI.raised)
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                ArsenalUpgradePill(
+                                    rawName: upgrade.name,
+                                    detail: "\(localizedKindLabel(upgrade.kind)) · \(upgrade.rankLabel)",
+                                    accent: WFTheme.textSecondary
+                                )
                             }
                         }
                     }
@@ -724,5 +764,129 @@ struct ArsenalWarframeConfigurationView: View {
             }
         }
         .wfCardStyle()
+    }
+
+    private func localizedKindLabel(_ kind: String) -> String {
+        switch kind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "arcane", "weapon_mist": return "赋能"
+        case "aura": return "光环"
+        case "exilus": return "特殊功能"
+        case "stance": return "架势"
+        case "mod": return "振幅晶体"
+        default: return kind
+        }
+    }
+}
+
+/// 统一展示配卡 Mod / 赋能 / 紫卡的缩略图与中文名称。
+private struct ArsenalUpgradePill: View {
+    let rawName: String
+    let detail: String?
+    let accent: Color
+
+    @ObservedObject private var damageCatalog = NativeDamageCatalog.shared
+
+    private var localizedName: String {
+        damageCatalog.localizedUpgradeName(rawName)
+    }
+
+    private var isRiven: Bool {
+        detail?.contains("紫卡") == true
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            UpgradeIconThumb(
+                rawName: isRiven ? "Riven" : rawName,
+                fallbackSymbol: isRiven ? "sparkles" : "square.stack.3d.up.fill",
+                accent: accent,
+                size: 30
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localizedName)
+                    .font(.wfLabel)
+                    .foregroundColor(WFTheme.textPrimary)
+                    .lineLimit(2)
+                if let detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(accent)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(WFUI.raised)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct UpgradeIconThumb: View {
+    let rawName: String
+    let fallbackSymbol: String
+    let accent: Color
+    let size: CGFloat
+
+    @ObservedObject private var damageCatalog = NativeDamageCatalog.shared
+    @State private var image: UIImage?
+    @State private var remoteURL: URL?
+    @State private var loadedKey = ""
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(1)
+            } else if let remoteURL {
+                AsyncImage(url: remoteURL) { phase in
+                    switch phase {
+                    case let .success(loaded):
+                        loaded.resizable().scaledToFit().padding(1)
+                    default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .background(WFTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .task(id: rawName) {
+            if loadedKey != rawName {
+                image = nil
+                remoteURL = nil
+                loadedKey = rawName
+            }
+            let urls: (local: URL?, remote: URL?)
+            if rawName == "Riven" {
+                urls = (damageCatalog.localModIcon(named: "riven.webp"), nil)
+            } else {
+                urls = damageCatalog.modIconURLs(forName: rawName)
+            }
+            remoteURL = urls.remote
+            if let local = urls.local {
+                let px = size * UIScreen.main.scale
+                let loaded = await WeaponIconStore.shared.load(
+                    url: local,
+                    cacheKey: local.path,
+                    maxPixel: px
+                )
+                if !Task.isCancelled {
+                    image = loaded
+                }
+            }
+        }
+    }
+
+    private var placeholder: some View {
+        Image(systemName: fallbackSymbol)
+            .font(.system(size: size * 0.42, weight: .medium))
+            .foregroundColor(accent.opacity(0.75))
     }
 }

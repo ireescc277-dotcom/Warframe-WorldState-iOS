@@ -69,7 +69,14 @@ public struct WeaponSimulator: Sendable {
                     * attack.damageVulnerabilityMultiplier
                     * attack.statusDamageVulnerabilityMultiplier
                     * attack.statusDamageMultiplier,
-                statusDuration: attack.statusDuration
+                statusDuration: attack.statusDuration,
+                overguardDamageMultiplier: attack.overguardDamageMultiplier,
+                coldStatusBaseDamageBonus: attack.coldStatusBaseDamageBonus,
+                meleeDuplicateChance: attack.meleeDuplicateChance,
+                enervateCritStep: attack.enervateCritStep,
+                statusProcFlatDamage: attack.statusProcFlatDamage,
+                extraRandomStatusChance: attack.extraRandomStatusChance,
+                spreadCombinedStatusComponents: attack.spreadCombinedStatusComponents
             )
         }
     }
@@ -512,27 +519,38 @@ public struct WeaponSimulator: Sendable {
         let dotStatusBonuses: [DamageType: Double]
         let statusDamage: Double
         let statusDuration: Double
+        let overguardDamageMultiplier: Double
+        let coldStatusBaseDamageBonus: Double
+        let meleeDuplicateChance: Double
+        let enervateCritStep: Double
+        let statusProcFlatDamage: Double
+        let extraRandomStatusChance: Double
+        let spreadCombinedStatusComponents: Double
 
         func multishot(lastInMagazine: Bool) -> Double {
             lastInMagazine ? multishot + lastShotMultishot : multishot
         }
 
         func critValues(coldStacks: Double, punctureStacks: Double,
-                        comboMultiplier: Double = 1) -> (chance: Double, multiplier: Double) {
+                        comboMultiplier: Double = 1,
+                        extraCritChance: Double = 0) -> (chance: Double, multiplier: Double) {
             // `crit_chance_per_combo` is a relative base-critical term.  Its
             // input is the actual contact's x-combo minus one, not a value the
             // UI has turned into direct damage.
             let comboSteps = max(0, comboMultiplier - 1)
             let comboBonus = baseCritChanceForCombo * critChancePerCombo * comboSteps
-            let cc = critChance + comboBonus + 0.05 * min(max(punctureStacks, 0), 5)
+            let cc = critChance + comboBonus + extraCritChance
+                + 0.05 * min(max(punctureStacks, 0), 5)
             let cdm = critMultiplier + WeaponSimulator.coldCriticalDamageBonus(stacks: coldStacks)
             return (max(0, cc), max(1, cdm))
         }
 
         func hitMultiplier(coldStacks: Double, punctureStacks: Double,
-                           comboMultiplier: Double = 1) -> Double {
+                           comboMultiplier: Double = 1,
+                           extraCritChance: Double = 0) -> Double {
             let crit = critValues(coldStacks: coldStacks, punctureStacks: punctureStacks,
-                                  comboMultiplier: comboMultiplier)
+                                  comboMultiplier: comboMultiplier,
+                                  extraCritChance: extraCritChance)
             let cc = crit.chance
             let cdm = crit.multiplier
             // 非暴击概率在 CC 达到 100% 后为 0；不能用 `1 - cc`，否则橙暴/红暴会
@@ -576,9 +594,11 @@ public struct WeaponSimulator: Sendable {
         /// 期望伤害倍率拿来当 DOT seed。这里返回“已知这次命中为暴击”时的
         /// 平均倍率，并包含 Vigilante 可能再升一档的期望。
         func criticalProcSeedMultiplier(coldStacks: Double, punctureStacks: Double,
-                                        comboMultiplier: Double = 1) -> Double {
+                                        comboMultiplier: Double = 1,
+                                        extraCritChance: Double = 0) -> Double {
             let crit = critValues(coldStacks: coldStacks, punctureStacks: punctureStacks,
-                                  comboMultiplier: comboMultiplier)
+                                  comboMultiplier: comboMultiplier,
+                                  extraCritChance: extraCritChance)
             let base = Rules.expectedCritMultiplier(critChance: max(1, crit.chance),
                                                     critDamage: crit.multiplier)
             let vigilante = min(max(doubleCritChance, 0), 1) * (crit.multiplier - 1)
@@ -627,6 +647,7 @@ public struct WeaponSimulator: Sendable {
         var teslaDots: [TeslaDotState] = []
         var gasDots: [GasDotState] = []
         var magneticStacks: [MagneticStackEntry] = []
+        var enervateDistributions: [[Int: Double]]
         /// 输出时间线在目标已死后仍继续生成武器输出；防护层统计使用另一条
         /// `continuesAfterDeath == false` 的时间线，不会受此影响。
         let continuesAfterDeath: Bool
@@ -646,6 +667,7 @@ public struct WeaponSimulator: Sendable {
             targetDirect = Array(repeating: Array(repeating: 0, count: typeCount), count: segmentCount)
             targetDot = Array(repeating: Array(repeating: 0, count: typeCount), count: segmentCount)
             procCounts = Array(repeating: [:], count: segmentCount)
+            enervateDistributions = Array(repeating: [0: 1.0], count: segmentCount)
             self.continuesAfterDeath = continuesAfterDeath
         }
 
@@ -781,14 +803,62 @@ public struct WeaponSimulator: Sendable {
         var pending: [PendingProc] = []
 
         for projectileWeight in projectileWeights(multishot) where state.isAlive {
+            let coldStacks = stackCount(.freeze, at: t, state: conditionState)
+            let punctureStacks = stackCount(.weakened, at: t, state: conditionState)
+            let enervateBonus: Double
+            if attack.enervateCritStep > 0 {
+                let baseCC = attack.critValues(
+                    coldStacks: coldStacks,
+                    punctureStacks: punctureStacks,
+                    comboMultiplier: shot.comboMultiplier
+                ).chance
+                let (expectedBonus, nextDistribution) = Self.nextEnervateState(
+                    distribution: state.enervateDistributions[segment],
+                    baseCritChance: baseCC,
+                    step: attack.enervateCritStep
+                )
+                let blend = min(1, max(0, projectileWeight))
+                if blend >= 1 - 1e-12 {
+                    state.enervateDistributions[segment] = nextDistribution
+                } else {
+                    var blended: [Int: Double] = [:]
+                    for (k, v) in state.enervateDistributions[segment] {
+                        blended[k, default: 0] += v * (1 - blend)
+                    }
+                    for (k, v) in nextDistribution {
+                        blended[k, default: 0] += v * blend
+                    }
+                    state.enervateDistributions[segment] = blended
+                }
+                enervateBonus = expectedBonus
+            } else {
+                enervateBonus = 0
+            }
+            let effectiveProjectileWeight: Double
+            if attack.meleeDuplicateChance > 0 {
+                let cc = attack.critValues(
+                    coldStacks: coldStacks,
+                    punctureStacks: punctureStacks,
+                    comboMultiplier: shot.comboMultiplier,
+                    extraCritChance: enervateBonus
+                ).chance
+                let tier1Probability = max(0, min(cc, 1) - max(0, cc - 1))
+                effectiveProjectileWeight = projectileWeight
+                    * (1 + min(1, max(0, attack.meleeDuplicateChance)) * tier1Probability)
+            } else {
+                effectiveProjectileWeight = projectileWeight
+            }
+
             let normalTargetDirectBefore = state.targetDirect[segment].reduce(0, +)
             let hitMultiplier = attack.hitMultiplier(
-                coldStacks: stackCount(.freeze, at: t, state: conditionState),
-                punctureStacks: stackCount(.weakened, at: t, state: conditionState),
-                comboMultiplier: shot.comboMultiplier
+                coldStacks: coldStacks,
+                punctureStacks: punctureStacks,
+                comboMultiplier: shot.comboMultiplier,
+                extraCritChance: enervateBonus
             )
             let conditionalBonus = attack.directDamagePerStatusType
                 * activeStatusTypeCount(at: t, state: conditionState)
+                + attack.coldStatusBaseDamageBonus
             // Galvanized Shot / Gun CO is normally additive with base-damage
             // mods. `attack.damage` already contains `baseDamageMultiplier`,
             // so normalize the augmented additive pool instead of multiplying
@@ -804,7 +874,7 @@ public struct WeaponSimulator: Sendable {
             let scale = hitMultiplier * attack.factionMultiplier * attack.damageVulnerability
                 * attack.directDamageMultiplier
                 * attack.weaponVectorDamageMultiplier
-                * projectileWeight * conditionMultiplier * shot.damageMultiplier
+                * effectiveProjectileWeight * conditionMultiplier * shot.damageMultiplier
 
             for entry in attack.damage {
                 let weaponSide = entry.value * scale
@@ -832,7 +902,7 @@ public struct WeaponSimulator: Sendable {
                     * attack.factionMultiplier * attack.factionMultiplier
                     * attack.damageVulnerability
                     * attack.directDamageMultiplier
-                    * projectileWeight * shot.damageMultiplier
+                    * effectiveProjectileWeight * shot.damageMultiplier
                 let xataRaw = attack.totalDamage * attack.xataDamageRatio * xataScale
                 if xataRaw > 0 {
                     state.rawDirect[segment][DamageType.void.index] += xataRaw
@@ -873,18 +943,27 @@ public struct WeaponSimulator: Sendable {
                     // bypass), but must not receive a second ordinary Toxin
                     // faction/element/armor modifier from `tickDots`.
                     appendDots(&state, kind: .poison, type: .toxin, modifierType: .true,
-                               count: projectileWeight, perTick: toxicLashTick, at: t,
+                               count: effectiveProjectileWeight, perTick: toxicLashTick, at: t,
                                ticks: 7, segment: segment, firstTickDelay: 1,
                                preMitigatedToxin: true)
                 }
             }
 
             let pelletEvents = projectileProcEvents(segment: segment, attack: attack,
-                                                     projectileWeight: projectileWeight,
+                                                     projectileWeight: effectiveProjectileWeight,
                                                      hitMultiplier: hitMultiplier * shot.damageMultiplier,
                                                      extraForceProcs: shot.forcedStatuses,
                                                      comboMultiplier: shot.comboMultiplier,
+                                                     extraCritChance: enervateBonus,
                                                      at: t, state: conditionState)
+            if attack.statusProcFlatDamage > 0 {
+                for item in pelletEvents where item.count > 1e-12 {
+                    let flatDamage = item.count * attack.statusProcFlatDamage
+                        * attack.factionMultiplier * attack.damageVulnerability
+                    route(&state, segment: segment, type: item.type,
+                          incoming: flatDamage, at: t, event: .status)
+                }
+            }
             // Feed this pellet's statuses into the shadow state before the next
             // projectile. The same events are replayed on the real state only
             // after all simultaneous attack segments have dealt direct damage.
@@ -914,6 +993,7 @@ public struct WeaponSimulator: Sendable {
                                       projectileWeight: Double, hitMultiplier: Double,
                                       extraForceProcs: [String] = [],
                                       comboMultiplier: Double = 1,
+                                      extraCritChance: Double = 0,
                                       at t: Double, state: State) -> [PendingProc] {
         guard projectileWeight > 1e-12 else { return [] }
         var forcedTypes: [DamageType] = []
@@ -978,7 +1058,8 @@ public struct WeaponSimulator: Sendable {
             let cold = stackCount(.freeze, at: t, state: state)
             let puncture = stackCount(.weakened, at: t, state: state)
             let crit = attack.critValues(coldStacks: cold, punctureStacks: puncture,
-                                         comboMultiplier: comboMultiplier)
+                                         comboMultiplier: comboMultiplier,
+                                         extraCritChance: extraCritChance)
             let criticalProbability = min(max(crit.chance, 0), 1)
             let procProbability = projectileWeight * criticalProbability
                 * min(max(attack.slashOnCriticalChance, 0), 1)
@@ -988,10 +1069,90 @@ public struct WeaponSimulator: Sendable {
                                            presenceProbability: procProbability,
                                            seed: attack.dotBase * attack.criticalProcSeedMultiplier(
                                                coldStacks: cold, punctureStacks: puncture,
-                                               comboMultiplier: comboMultiplier)))
+                                               comboMultiplier: comboMultiplier,
+                                               extraCritChance: extraCritChance)))
+            }
+        }
+        if attack.spreadCombinedStatusComponents > 0 {
+            let share = 0.5 * min(1, attack.spreadCombinedStatusComponents)
+            let existing = events
+            for item in existing where item.count > 1e-12 {
+                let components: [DamageType]
+                switch item.type {
+                case .blast: components = [.heat, .cold]
+                case .corrosive: components = [.toxin, .electricity]
+                case .gas: components = [.heat, .toxin]
+                case .magnetic: components = [.cold, .electricity]
+                case .radiation: components = [.heat, .electricity]
+                case .viral: components = [.cold, .toxin]
+                default: components = []
+                }
+                for comp in components where !isImmune(comp, state: state) {
+                    if let kind = ProcKind(damageType: comp) {
+                        events.append(PendingProc(
+                            segment: segment,
+                            kind: kind,
+                            type: comp,
+                            count: item.count * share,
+                            presenceProbability: min(1, item.count * share),
+                            seed: item.seed
+                        ))
+                    }
+                }
+            }
+        }
+        if attack.extraRandomStatusChance > 0 {
+            let procTotal = events.reduce(0) { $0 + $1.count }
+            let randomPool = DamageType.allCases.filter { $0 != .true && !isImmune($0, state: state) }
+            if procTotal > 1e-12, !randomPool.isEmpty {
+                let perType = procTotal * min(1, attack.extraRandomStatusChance) / Double(randomPool.count)
+                let cold = stackCount(.freeze, at: t, state: state)
+                let puncture = stackCount(.weakened, at: t, state: state)
+                let seedMult = attack.dotBase * attack.hitMultiplier(
+                    coldStacks: cold,
+                    punctureStacks: puncture,
+                    comboMultiplier: comboMultiplier,
+                    extraCritChance: extraCritChance
+                )
+                for type in randomPool {
+                    if let kind = ProcKind(damageType: type) {
+                        events.append(PendingProc(
+                            segment: segment,
+                            kind: kind,
+                            type: type,
+                            count: perType,
+                            presenceProbability: min(1, perType),
+                            seed: seedMult
+                        ))
+                    }
+                }
             }
         }
         return events
+    }
+
+    private static func nextEnervateState(distribution: [Int: Double],
+                                          baseCritChance: Double,
+                                          step: Double) -> (expectedBonus: Double, next: [Int: Double]) {
+        guard step > 0 else { return (0, distribution) }
+        var expected = 0.0
+        var next: [Int: Double] = [:]
+        for (key, prob) in distribution where prob > 1e-15 {
+            let steps = key / 6
+            let big = key % 6
+            let bonus = Double(steps) * step
+            expected += prob * bonus
+            let pBig = min(1, max(0, (baseCritChance + bonus) - 1))
+            if pBig > 1e-12 {
+                let nextKey = (big + 1 >= 6) ? 0 : (min(steps + 1, 60) * 6 + big + 1)
+                next[nextKey, default: 0] += prob * pBig
+            }
+            if 1 - pBig > 1e-12 {
+                let nextKey = min(steps + 1, 60) * 6 + big
+                next[nextKey, default: 0] += prob * (1 - pBig)
+            }
+        }
+        return (expected, next.isEmpty ? [0: 1.0] : next)
     }
 
     /// Galvanized Shot counts distinct active status types, not their layer count.
@@ -1067,7 +1228,8 @@ public struct WeaponSimulator: Sendable {
 
         if state.pools[State.overguardIndex] > 1e-9 {
             remaining = applyToLayer(&state, layerIndex: State.overguardIndex, segment: segment,
-                                     type: type, incoming: remaining, at: t, extraMultiplier: 1,
+                                     type: type, incoming: remaining, at: t,
+                                     extraMultiplier: runtimes[segment].overguardDamageMultiplier,
                                      event: event)
             guard remaining > 1e-12 else { return }
         }

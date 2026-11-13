@@ -122,6 +122,121 @@ UPGRADE_ALIASES = {
         ("Secondary Deadhead", 5),
     "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CorrosiveMeleePerAbilityCast":
         ("Melee Exposure", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DamageForBonusArmour":
+        ("Primary Bulwark", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeProcsSpread":
+        ("Melee Influence", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/OverguardSteal":
+        ("Secondary Fortifier", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusAndAmmoEfficiencyOnWeakpointHit":
+        ("Primary Crux", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritChancePerBuff":
+        ("Secondary Kinship", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritOnHit":
+        ("Secondary Enervate", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus":
+        ("Melee Doughty", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageForActiveShields":
+        ("Melee Retaliation", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ReplayLightCritHits":
+        ("Melee Duplicate", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PullEnemiesOnMeleeKill":
+        ("Melee Vortex", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PermaComboOnFinisher":
+        ("Melee Crescendo", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MultishotForCombo":
+        ("Secondary Outburst", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MultishotForMaxEnergy":
+        ("Primary Overcharge", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamagePerAmmoOnReload":
+        ("Primary Plated Round", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryHeadshotCritMultOnHeadshot":
+        ("Primary Blight", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SplitStatusProcsOnStackedStatusHit":
+        ("Primary Debilitate", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ShotgunMultishotAndReloadSpeedOnCloseKill":
+        ("Shotgun Vendetta", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongbowDamageOnHeadshot":
+        ("Longbow Sharpshot", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryReloadSpeedAndMultishotOnElectricProc":
+        ("Conjunction Voltage", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/BonusDamageNextShotForCurEnergy":
+        ("Secondary Surge", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/RadialDamageOnMaxRadiationStackHit":
+        ("Secondary Irradiate", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryExtraDamagePerFreezeStack":
+        ("Secondary Shiver", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnMeleeKill":
+        ("Primary Dexterity", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnMeleeKill":
+        ("Secondary Dexterity", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnSliding":
+        ("Akimbo Slip Shot", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnPistolHeadshot":
+        ("Arcane Pistoleer", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityHeatProcsGiveCritChance":
+        ("Arcane Hot Shot", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneMeleeDamageOnCrit":
+        ("Arcane Fury", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolDamageOnHeadshot":
+        ("Arcane Precision", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolSpeedOnCrit":
+        ("Arcane Velocity", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneShotgunSpeedOnCrit":
+        ("Arcane Tempo", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneSniperSpeedOnCrit":
+        ("Arcane Momentum", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunDamageOnHeadshot":
+        ("Arcane Rage", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunSpeedOnCrit":
+        ("Arcane Acceleration", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeSpeedOnHit":
+        ("Arcane Strike", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDmgOnRifleKill":
+        ("Arcane Blade Charger", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDmgOnMeleeKill":
+        ("Arcane Primary Charger", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Defensive/CritChanceOnDamage":
+        ("Arcane Avenger", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStrengthAndCritDamageWhenInvisible":
+        ("Arcane Crepuscular", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/ExtraProcOnProc":
+        ("Secondary Encumber", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/FreezeEnemiesOnRoll":
+        ("Melee Careen", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/GolemArcaneBonusDamageOnWallLatch":
+        ("Arcane Arachne", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/LongGunDamageOnReload":
+        ("Arcane Rise", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Utility/PistolDamageOnReload":
+        ("Arcane Awakening", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Zariman/PrimaryOnAbilityReloadSpeed":
+        ("Fractalized Reset", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnOvershieldCritChance":
+        ("Cascadia Overcharge", 5),
+    "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnStatusProcBonusDamage":
+        ("Cascadia Empowered", 5),
+    "/Lotus/Upgrades/Mods/Melee/Expert/WeaponHeavyAttackEfficiencySPSubMod":
+        ("Galvanized Reflex", 10),
+    "/Lotus/Upgrades/Mods/Melee/Expert/WeaponMeleeStatusChanceSPSubMod":
+        ("Galvanized Elementalist", 10),
+    "/Lotus/Weapons/Tenno/Melee/MeleeTrees/StaffCmbOneMeleeTree":
+        ("Clashing Forest", 3),
+}
+
+UNSUPPORTED_UPGRADE_DISPLAY_NAMES = {
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee": (
+        "Melee Animosity",
+        "每次近战轻击叠加重击暴击率；暂未接入重击叠层模型",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DuplicateStatusOnKnock": (
+        "Melee Afflictions",
+        "击倒或浮空敌人时额外施加异常层数；暂未接入单次攻击模型",
+    ),
+    "/Lotus/Upgrades/CosmeticEnhancers/Zariman/OperatorOnOperatorAbilityIncreaseDamage": (
+        "Eternal Eradicate",
+        "指挥官技能增伤（增幅器赋能）；当前武器计算器不计入增幅器",
+    ),
 }
 
 RIVEN_MAXIMUM = 1_073_741_823.0
@@ -1068,16 +1183,35 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                         name, maximum = alias
                         game_mod_data: dict = {}
                     else:
+                        if upgrade_type in UNSUPPORTED_UPGRADE_DISPLAY_NAMES:
+                            if not direct_type_reference:
+                                fp = fingerprint(upgrade.get("UpgradeFingerprint"))
+                                raw_rank = as_number((fp or {}).get("lvl"))
+                                rank = int(raw_rank) if raw_rank is not None else None
+                            known_name, known_why = UNSUPPORTED_UPGRADE_DISPLAY_NAMES[upgrade_type]
+                            unresolved = {
+                                "s": slot,
+                                "n": known_name,
+                                "why": known_why,
+                            }
+                            if rank is not None:
+                                unresolved["r"] = rank
+                            unresolved_upgrades.append(unresolved)
+                            continue
                         mod_data = game_mods.get(upgrade_type)
                         if not isinstance(mod_data, dict) or not isinstance(mod_data.get("n"), str):
                             if not direct_type_reference:
                                 fp = fingerprint(upgrade.get("UpgradeFingerprint"))
                                 raw_rank = as_number((fp or {}).get("lvl"))
                                 rank = int(raw_rank) if raw_rank is not None else None
+                            known_name, known_why = UNSUPPORTED_UPGRADE_DISPLAY_NAMES.get(
+                                upgrade_type,
+                                (short_type_name(upgrade_type), "DamageKit 尚无该升级的伤害公式"),
+                            )
                             unresolved = {
                                 "s": slot,
-                                "n": short_type_name(upgrade_type),
-                                "why": "DamageKit 尚无该升级的伤害公式",
+                                "n": known_name,
+                                "why": known_why,
                             }
                             if rank is not None:
                                 unresolved["r"] = rank
@@ -1093,6 +1227,20 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
                         raw_rank = as_number((fp or {}).get("lvl"))
                         rank = int(raw_rank) if raw_rank is not None else None
                     non_damage_reason = source_proven_non_damage_reason(name, game_mod_data)
+                    if non_damage_reason is None and name not in ranked_action_values:
+                        known_name, known_why = UNSUPPORTED_UPGRADE_DISPLAY_NAMES.get(
+                            upgrade_type,
+                            (name, "DamageKit 尚无该升级的伤害公式"),
+                        )
+                        unresolved = {
+                            "s": slot,
+                            "n": known_name,
+                            "why": known_why,
+                        }
+                        if rank is not None:
+                            unresolved["r"] = rank
+                        unresolved_upgrades.append(unresolved)
+                        continue
                     if non_damage_reason is not None:
                         non_damage = {
                             "s": slot,
