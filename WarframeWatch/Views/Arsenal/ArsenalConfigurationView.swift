@@ -120,7 +120,10 @@ struct ArsenalWeaponConfigurationView: View {
            let exact = catalog.weapons.first(where: { $0.n.caseInsensitiveCompare(calcName) == .orderedSame }) {
             return exact
         }
-        return Self.matchCatalogEntry(in: catalog.weapons, names: [ownedWeapon.z, ownedWeapon.n])
+        return Self.matchCatalogEntry(
+            in: catalog.weapons,
+            names: [ownedWeapon.z] + (ownedWeapon.calcName.map { [$0] } ?? [])
+        )
     }
 
     private static func matchCatalogEntry(in weapons: [WeaponEntry], names: [String]) -> WeaponEntry? {

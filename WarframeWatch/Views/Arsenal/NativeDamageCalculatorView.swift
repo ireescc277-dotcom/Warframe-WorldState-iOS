@@ -2165,7 +2165,7 @@ private struct EnemyLevelEditor: View {
                 Image(systemName: "minus")
                     .font(.system(size: 12, weight: .bold))
                     .frame(width: 28, height: 28)
-                    .background(WFTheme.surfaceElevated)
+                    .background(WFTheme.panelElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)
@@ -2177,10 +2177,10 @@ private struct EnemyLevelEditor: View {
                 .foregroundColor(WFTheme.textPrimary)
                 .focused($isFocused)
                 .frame(width: 66, height: 30)
-                .background(WFTheme.surfaceElevated)
+                .background(WFTheme.panelElevated)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isFocused ? WFTheme.cyan : WFTheme.cardBorder, lineWidth: 1)
+                        .stroke(isFocused ? WFTheme.cyan : WFTheme.border, lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
@@ -2190,7 +2190,7 @@ private struct EnemyLevelEditor: View {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .bold))
                     .frame(width: 28, height: 28)
-                    .background(WFTheme.surfaceElevated)
+                    .background(WFTheme.panelElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)

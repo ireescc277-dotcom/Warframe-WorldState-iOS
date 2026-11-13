@@ -886,7 +886,7 @@ public struct ArsenalView: View {
            let exact = catalog.weapons.first(where: { $0.n.caseInsensitiveCompare(name) == .orderedSame }) {
             return exact
         }
-        return catalogEntry(named: weapon.z) ?? catalogEntry(named: weapon.n)
+        return catalogEntry(named: weapon.z) ?? catalogEntry(named: weapon.calcName)
     }
 
     private func catalogEntry(named rawName: String?) -> WeaponEntry? {
