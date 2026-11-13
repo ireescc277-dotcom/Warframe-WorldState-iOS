@@ -132,6 +132,30 @@ final class FormulaOracleTests: XCTestCase {
         XCTAssertEqual(schedule[19].time, 19.4, accuracy: 1e-12)
     }
 
+    func testNegativeAmmoEfficiencyRivenDoesNotAddASecondBowReload() {
+        let attack = Attack(name: "Radial Attack", speed: 0.667, critChance: 35,
+                            critMultiplier: 2.1, statusChance: 21,
+                            damage: [.blast: 839], chargeTime: 0.4)
+        var weapon = Weapon(name: "Kuva Bramma", attacks: [attack], magazineSize: 1,
+                            reloadTime: 0.6)
+        weapon.categories = ["primary-bow"]
+        let options = Options(window: 20)
+        let resolved = BuildResolver(weapon: weapon,
+                                     build: Build(riven: Riven(ammoEfficiency: -0.4101)),
+                                     options: options, faction: .neutral)
+            .resolve(attack: attack)
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 100),
+                                   level: 1, options: options)
+        let schedule = WeaponSimulator(segments: [resolved], enemy: profile, options: options)
+            .shotSchedule(for: resolved)
+
+        XCTAssertEqual(resolved.ammoEfficiency, -0.4101, accuracy: 1e-12)
+        XCTAssertEqual(schedule.count, 20)
+        XCTAssertEqual(schedule[0].time, 0.4, accuracy: 1e-12)
+        XCTAssertEqual(schedule[1].time, 1.4, accuracy: 1e-12)
+        XCTAssertEqual(schedule[19].time, 19.4, accuracy: 1e-12)
+    }
+
     func testOrdinaryChargeScheduleIncludesChargeAndShotDelay() {
         let attack = Attack(name: "Charged Shot", speed: 2, critChance: 0, critMultiplier: 1,
                             statusChance: 0, damage: [.impact: 1], chargeTime: 0.5)

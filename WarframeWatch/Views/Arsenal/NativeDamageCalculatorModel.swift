@@ -138,7 +138,7 @@ enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
         switch self {
         case .core: return "基础词条"
         case .status: return "暴击与状态"
-        case .timing: return "弹匣与连击"
+        case .timing: return "弹匣、弹药与连击"
         case .element: return "元素伤害"
         case .physical: return "物理伤害"
         case .faction: return "阵营伤害"
@@ -149,7 +149,7 @@ enum NativeRivenStatGroup: String, CaseIterable, Identifiable {
 enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
     case damage, multishot, critChance, critDamage, fireRate, reloadSpeed
     case statusChance, statusDuration
-    case magazineSize, meleeComboEfficiency
+    case magazineSize, ammoEfficiency, meleeComboEfficiency
     case heat, cold, electricity, toxin
     case blast, corrosive, gas, magnetic, radiation, viral
     case impact, puncture, slash
@@ -168,6 +168,7 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
         case .statusChance: return "触发几率"
         case .statusDuration: return "状态持续时间"
         case .magazineSize: return "弹匣容量"
+        case .ammoEfficiency: return "弹药效率"
         case .meleeComboEfficiency: return "重击连击效率"
         case .heat: return "火焰伤害"
         case .cold: return "冰冻伤害"
@@ -195,7 +196,7 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
             return .core
         case .critChance, .critDamage, .statusChance, .statusDuration:
             return .status
-        case .magazineSize, .meleeComboEfficiency:
+        case .magazineSize, .ammoEfficiency, .meleeComboEfficiency:
             return .timing
         case .heat, .cold, .electricity, .toxin,
                 .blast, .corrosive, .gas, .magnetic, .radiation, .viral:
@@ -235,6 +236,7 @@ struct NativeRivenDraft: Hashable {
     var fireRatePercent = 0.0
     var reloadSpeedPercent = 0.0
     var magazineSizePercent = 0.0
+    var ammoEfficiencyPercent = 0.0
     var meleeComboEfficiencyPercent = 0.0
     var factionPercent = 0.0
     var heatPercent = 0.0
@@ -266,6 +268,7 @@ struct NativeRivenDraft: Hashable {
         case .fireRate: return fireRatePercent
         case .reloadSpeed: return reloadSpeedPercent
         case .magazineSize: return magazineSizePercent
+        case .ammoEfficiency: return ammoEfficiencyPercent
         case .meleeComboEfficiency: return meleeComboEfficiencyPercent
         case .heat: return heatPercent
         case .cold: return coldPercent
@@ -299,6 +302,7 @@ struct NativeRivenDraft: Hashable {
         case .fireRate: fireRatePercent = value
         case .reloadSpeed: reloadSpeedPercent = value
         case .magazineSize: magazineSizePercent = value
+        case .ammoEfficiency: ammoEfficiencyPercent = value
         case .meleeComboEfficiency: meleeComboEfficiencyPercent = value
         case .heat: heatPercent = value
         case .cold: coldPercent = value
@@ -383,6 +387,7 @@ struct NativeRivenDraft: Hashable {
                      fireRate: decimal(fireRatePercent),
                      reloadSpeed: decimal(reloadSpeedPercent),
                      magazineSize: decimal(magazineSizePercent),
+                     ammoEfficiency: decimal(ammoEfficiencyPercent),
                      meleeComboEfficiency: decimal(meleeComboEfficiencyPercent),
                      faction: decimal(factionPercent),
                      factionBonuses: factionBonuses,
@@ -408,6 +413,7 @@ extension NativeRivenDraft {
         fireRatePercent = (value.fireRate ?? 0) * 100
         reloadSpeedPercent = (value.reloadSpeed ?? 0) * 100
         magazineSizePercent = (value.magazineSize ?? 0) * 100
+        ammoEfficiencyPercent = (value.ammoEfficiency ?? 0) * 100
         meleeComboEfficiencyPercent = (value.meleeComboEfficiency ?? 0) * 100
         factionPercent = (value.faction ?? 0) * 100
         heatPercent = (value.elements?["heat"] ?? 0) * 100

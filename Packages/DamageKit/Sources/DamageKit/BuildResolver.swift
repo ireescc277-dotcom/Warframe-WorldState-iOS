@@ -122,6 +122,12 @@ public struct ResolvedAttack: Sendable, Equatable {
     public var baseCritChanceForCombo: Double
     public var baseStatusChanceForCombo: Double
     public var magazine: Double
+    /// 此攻击段每次开火的基础弹药成本；数值和 `all` 都保留自武器源数据。
+    public var ammoCost: AmmoCost
+    /// 汇总后的弹药效率。常规正值受游戏 75% 上限限制，负值保留原值。
+    public var ammoEfficiency: Double
+    /// 明确写为无限弹药的来源，不等同于普通 +100% 弹药效率。
+    public var hasInfiniteAmmo: Bool
     public var reload: Double
     public var burstCount: Int
     public var burstDelay: Double
@@ -549,6 +555,22 @@ public struct BuildResolver: Sendable {
         }
         let reload = max(0, (weapon.reloadTime ?? 0)
             / (1 + agg.reloadSpeed + options.customStat(.reloadTime)))
+        // Website weapon data can omit `ammoCost`.  Its contract is 0.5 for
+        // beam-class attacks and 1 otherwise; explicit attack costs (including
+        // the string `all`) always take precedence.
+        let isBeamAttack = attack.isBeam || (weapon.compTags ?? []).contains {
+            $0.caseInsensitiveCompare("BEAM") == .orderedSame
+        }
+        let ammoCost = attack.ammoCost ?? (isBeamAttack ? .amount(0.5) : .amount(1))
+        // Ammo Efficiency is disabled for Incarnon-form attacks in the source
+        // calculator.  The live rule caps ordinary positive efficiency at
+        // 75%; a negative Riven curse is deliberately not rounded away.
+        let ammoEfficiency = attack.isIncarnonForm ? 0 : min(agg.ammoEfficiency, 0.75)
+        let hasInfiniteAmmo = !attack.isIncarnonForm && agg.hasInfiniteAmmo
+        if case .all = ammoCost,
+           abs(ammoEfficiency) > .ulpOfOne || hasInfiniteAmmo {
+            notes.append("整弹匣消耗攻击的弹药效率不能按普通弹匣节奏换算")
+        }
 
         let factionBonus = (agg.faction[faction.canonical] ?? 0) + agg.anyFactionBonus
             + options.warframe.factionBonus + options.scenarioEffects.value(for: .roar)
@@ -729,6 +751,9 @@ public struct BuildResolver: Sendable {
             baseCritChanceForCombo: max(0, attack.critChance / 100),
             baseStatusChanceForCombo: max(0, attack.statusChance / 100),
             magazine: magazine,
+            ammoCost: ammoCost,
+            ammoEfficiency: ammoEfficiency,
+            hasInfiniteAmmo: hasInfiniteAmmo,
             reload: reload,
             burstCount: max(1, attack.burstCount ?? 1),
             burstDelay: attack.burstDelay ?? 0,
@@ -908,6 +933,8 @@ struct ModAggregate {
     var reloadSpeed: Double = 0
     var magazine: Double = 0
     var flatMagazine: Double = 0
+    var ammoEfficiency: Double = 0
+    var hasInfiniteAmmo = false
     /// 灵化 `flat_change_dmg`：直接加在基础伤害上的固定值。
     var flatDamage: Double = 0
     /// Source actions explicitly marked `flat_change_dmg_by_strength`. The
@@ -1048,6 +1075,7 @@ struct ModAggregate {
         if let v = riven.fireRate { fireRate += v }
         if let v = riven.reloadSpeed { reloadSpeed += v }
         if let v = riven.magazineSize { magazine += v }
+        if let v = riven.ammoEfficiency { ammoEfficiency += v }
         if let v = riven.meleeComboEfficiency { meleeComboEfficiency += v }
         if let v = riven.faction { anyFactionBonus += v }
         for (rawFaction, value) in riven.factionBonuses ?? [:] {
@@ -1404,6 +1432,12 @@ struct ModAggregate {
                 reloadSpeed += v ?? 0
             case "magazineSize":
                 magazine += v ?? 0
+            case "ammoEff":
+                ammoEfficiency += v ?? 0
+            case "ammoEffFull":
+                // This source key is the explicit Infinite Ammo marker, not
+                // an ordinary 100% efficiency bonus (which is capped at 75%).
+                hasInfiniteAmmo = hasInfiniteAmmo || (v ?? 0) >= 1
             // 灵化："Increase Base Magazine Capacity by +9"，加在基础弹匣上的固定值。
             case "add_magazineSize":
                 flatMagazine += v ?? 0
@@ -1471,7 +1505,7 @@ struct ModAggregate {
             // 不把它们伪装成“未实现的伤害机制”。
             case "recoil", "zoom", "accuracy", "spread", "range", "blast_radius", "d_sound",
                  "beam_length", "shot_speed", "lifesteal", "punch_through", "ammoCapacity",
-                 "set_ammoCapacity", "ammoEff", "ammoEffFull":
+                 "set_ammoCapacity":
                 break
             case "FOR_WEAPON", "WITH_COND", "set", "unique", "force_procs", "mutator", "na",
                  "comboDuration", "slam_mult",

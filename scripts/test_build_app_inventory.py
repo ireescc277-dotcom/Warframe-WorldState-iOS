@@ -260,6 +260,12 @@ class OfficialRivenTagTests(unittest.TestCase):
                     "upgradeValues": [{"value": 0.01}],
                 },
                 {
+                    "tag": "WeaponAmmoEfficiency",
+                    "prefixTag": "thrifty",
+                    "suffixTag": "rounds",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
                     "tag": "WeaponMeleeComboEfficiencyMod",
                     "prefixTag": "combo",
                     "suffixTag": "save",
@@ -281,7 +287,8 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertEqual(set(by_tag), {
             "WeaponBlastDamageMod", "WeaponCorrosiveDamageMod", "WeaponGasDamageMod",
             "WeaponMagneticDamageMod", "WeaponRadiationDamageMod", "WeaponViralDamageMod",
-            "WeaponClipMaxMod", "WeaponMeleeComboEfficiencyMod", "WeaponZoomFovMod",
+            "WeaponClipMaxMod", "WeaponAmmoEfficiency", "WeaponMeleeComboEfficiencyMod",
+            "WeaponZoomFovMod",
         })
         self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["value"], 0.01)
         self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["prefix"], "cori")
@@ -305,13 +312,14 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertEqual(riven.get("unresolved"), None)
         self.assertAlmostEqual(riven["elements"]["corrosive"], 1.782)
 
-    def test_riven_magazine_and_heavy_efficiency_enter_damagekit_inputs(self):
+    def test_riven_magazine_ammo_and_heavy_efficiency_enter_damagekit_inputs(self):
         upgrade = {
             "ItemType": "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare",
             "UpgradeFingerprint": json.dumps({
                 "lvl": 8,
                 "buffs": [
                     {"Tag": "WeaponClipMaxMod", "Value": RIVEN_MAXIMUM},
+                    {"Tag": "WeaponAmmoEfficiency", "Value": RIVEN_MAXIMUM},
                     {"Tag": "WeaponMeleeComboEfficiencyMod", "Value": RIVEN_MAXIMUM},
                 ],
                 "curses": [],
@@ -324,6 +332,7 @@ class OfficialRivenTagTests(unittest.TestCase):
         self.assertEqual(riven.get("unresolved"), None)
         self.assertNotIn("displayOnly", riven)
         self.assertGreater(riven["magazineSize"], 0)
+        self.assertGreater(riven["ammoEfficiency"], 0)
         self.assertGreater(riven["meleeComboEfficiency"], 0)
 
     def test_zoom_riven_stays_auditable_without_tainting_damage_import(self):

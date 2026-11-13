@@ -2,6 +2,46 @@ import Foundation
 
 // MARK: - 武器
 
+/// 单次攻击从弹匣消耗的基础弹药量。
+///
+/// 网站源数据的 `ammoCost` 既有数值（例如 4、10），也有 `"all"`；后者表示
+/// 一次攻击会按当时整个弹匣处理，不能被悄悄解读成一发普通子弹。
+public enum AmmoCost: Codable, Sendable, Equatable {
+    case amount(Double)
+    case all
+
+    public var amount: Double? {
+        guard case let .amount(value) = self else { return nil }
+        return value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(Double.self) {
+            self = .amount(value)
+            return
+        }
+        if let value = try? container.decode(String.self),
+           value.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare("all") == .orderedSame {
+            self = .all
+            return
+        }
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "ammoCost 必须是数值或字符串 all"
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case let .amount(value): try container.encode(value)
+        case .all: try container.encode("all")
+        }
+    }
+}
+
 /// 一段攻击。一把武器可能有多段（直击 / 爆炸 / 毒云 / 灵化形态……），
 /// 每段独立成账，见 README「计算口径」第 2 条。
 public struct Attack: Codable, Sendable, Equatable {
@@ -24,6 +64,8 @@ public struct Attack: Codable, Sendable, Equatable {
     public var burstCount: Int?
     public var burstDelay: Double?
     public var chargeTime: Double?
+    /// 该攻击段的基础弹药消耗。未给出时由武器攻击类别决定默认值。
+    public var ammoCost: AmmoCost?
     public var falloff: Falloff?
     public var isIncarnonForm: Bool
     public var isBeam: Bool
@@ -67,6 +109,7 @@ public struct Attack: Codable, Sendable, Equatable {
         burstCount: Int? = nil,
         burstDelay: Double? = nil,
         chargeTime: Double? = nil,
+        ammoCost: AmmoCost? = nil,
         falloff: Falloff? = nil,
         isIncarnonForm: Bool = false,
         isBeam: Bool = false,
@@ -90,6 +133,7 @@ public struct Attack: Codable, Sendable, Equatable {
         self.burstCount = burstCount
         self.burstDelay = burstDelay
         self.chargeTime = chargeTime
+        self.ammoCost = ammoCost
         self.falloff = falloff
         self.isIncarnonForm = isIncarnonForm
         self.isBeam = isBeam
@@ -112,6 +156,7 @@ public struct Attack: Codable, Sendable, Equatable {
         case burstCount = "burst_count"
         case burstDelay = "burst_delay"
         case chargeTime = "charge_time"
+        case ammoCost
         case isIncarnonForm = "isInc"
         case isBeam = "isBeam"
         case isHeavy
@@ -134,6 +179,7 @@ public struct Attack: Codable, Sendable, Equatable {
         burstCount = try c.decodeIfPresent(Int.self, forKey: .burstCount)
         burstDelay = try c.decodeIfPresent(Double.self, forKey: .burstDelay)
         chargeTime = try c.decodeIfPresent(Double.self, forKey: .chargeTime)
+        ammoCost = try c.decodeIfPresent(AmmoCost.self, forKey: .ammoCost)
         falloff = try c.decodeIfPresent(Falloff.self, forKey: .falloff)
         isIncarnonForm = (try c.decodeIfPresent(Int.self, forKey: .isIncarnonForm) ?? 0) != 0
         isBeam = try c.decodeIfPresent(Bool.self, forKey: .isBeam) ?? false
@@ -524,6 +570,8 @@ public struct Riven: Codable, Sendable, Equatable {
     public var reloadSpeed: Double?
     /// 弹匣容量相对加成；正值与普通 `magazineSize` Mod 进入同一乘区。
     public var magazineSize: Double?
+    /// 弹药效率相对加成；正值降低单次弹药消耗，负值提高消耗。
+    public var ammoEfficiency: Double?
     /// 重击消耗的连击保留比例；由规则限制在 0...90%。
     public var meleeComboEfficiency: Double?
     /// 对目标派系的伤害加成（Bane 类）。
@@ -537,7 +585,8 @@ public struct Riven: Codable, Sendable, Equatable {
     public init(name: String = "Riven", damage: Double? = nil, multishot: Double? = nil,
                 critChance: Double? = nil, critDamage: Double? = nil, statusChance: Double? = nil,
                 statusDuration: Double? = nil, fireRate: Double? = nil, reloadSpeed: Double? = nil,
-                magazineSize: Double? = nil, meleeComboEfficiency: Double? = nil,
+                magazineSize: Double? = nil, ammoEfficiency: Double? = nil,
+                meleeComboEfficiency: Double? = nil,
                 faction: Double? = nil,
                 factionBonuses: [String: Double]? = nil,
                 elements: [String: Double]? = nil, physical: [String: Double]? = nil) {
@@ -551,6 +600,7 @@ public struct Riven: Codable, Sendable, Equatable {
         self.fireRate = fireRate
         self.reloadSpeed = reloadSpeed
         self.magazineSize = magazineSize
+        self.ammoEfficiency = ammoEfficiency
         self.meleeComboEfficiency = meleeComboEfficiency
         self.faction = faction
         self.factionBonuses = factionBonuses
@@ -560,7 +610,7 @@ public struct Riven: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case name, damage, multishot, critChance, critDamage, statusChance
-        case statusDuration, fireRate, reloadSpeed, magazineSize, meleeComboEfficiency
+        case statusDuration, fireRate, reloadSpeed, magazineSize, ammoEfficiency, meleeComboEfficiency
         case faction, factionBonuses, elements, physical
     }
 
@@ -576,6 +626,7 @@ public struct Riven: Codable, Sendable, Equatable {
         fireRate = try c.decodeIfPresent(Double.self, forKey: .fireRate)
         reloadSpeed = try c.decodeIfPresent(Double.self, forKey: .reloadSpeed)
         magazineSize = try c.decodeIfPresent(Double.self, forKey: .magazineSize)
+        ammoEfficiency = try c.decodeIfPresent(Double.self, forKey: .ammoEfficiency)
         meleeComboEfficiency = try c.decodeIfPresent(Double.self, forKey: .meleeComboEfficiency)
         faction = try c.decodeIfPresent(Double.self, forKey: .faction)
         factionBonuses = try c.decodeIfPresent([String: Double].self, forKey: .factionBonuses)

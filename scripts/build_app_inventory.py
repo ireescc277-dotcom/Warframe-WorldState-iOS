@@ -344,7 +344,6 @@ def riven_name(buffs: list[dict], tags: dict[str, dict]) -> str:
 
 
 RIVEN_UNRESOLVED_LABELS = {
-    "WeaponAmmoEfficiency": "弹药效率",
     "WeaponAmmoMaxMod": "最大弹药",
     "WeaponClipMaxMod": "弹匣容量",
     "WeaponCorrosiveDamageMod": "腐蚀伤害",
@@ -365,8 +364,8 @@ RIVEN_UNRESOLVED_LABELS = {
 
 # These entries are real, resolved Riven rolls.  No current calculation rule
 # consumes them; retain them for the player to audit instead of presenting
-# them as an unknown damage formula. Keep this list narrow: Ammo Efficiency,
-# for example, stays unresolved because it can alter sustained DPS.
+# them as an unknown damage formula. Keep this list narrow: terms that alter
+# sustained fire, such as Ammo Efficiency, have their own DamageKit inputs.
 RIVEN_DISPLAY_ONLY_LABELS = {
     "WeaponZoomFovMod": "变焦",
     "WeaponProjectileSpeedMod": "投射物速度",
@@ -421,6 +420,7 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         "WeaponFireRateMod": "fireRate",
         "WeaponReloadSpeedMod": "reloadSpeed",
         "WeaponClipMaxMod": "magazineSize",
+        "WeaponAmmoEfficiency": "ammoEfficiency",
         "WeaponMeleeComboEfficiencyMod": "meleeComboEfficiency",
     }
     element_tags = {

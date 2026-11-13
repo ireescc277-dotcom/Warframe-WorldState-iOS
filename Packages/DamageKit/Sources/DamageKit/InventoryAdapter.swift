@@ -280,6 +280,7 @@ public struct InventoryAdapter: Sendable {
         var fireRate: Double?
         var reloadSpeed: Double?
         var magazineSize: Double?
+        var ammoEfficiency: Double?
         var meleeComboEfficiency: Double?
         var elements: [String: Double] = [:]
         var physical: [String: Double] = [:]
@@ -297,6 +298,7 @@ public struct InventoryAdapter: Sendable {
             case "WeaponFireRateMod": fireRate = (fireRate ?? 0) + parsed
             case "WeaponReloadSpeedMod": reloadSpeed = (reloadSpeed ?? 0) + parsed
             case "WeaponClipMaxMod": magazineSize = (magazineSize ?? 0) + parsed
+            case "WeaponAmmoEfficiency": ammoEfficiency = (ammoEfficiency ?? 0) + parsed
             case "WeaponMeleeComboEfficiencyMod": meleeComboEfficiency = (meleeComboEfficiency ?? 0) + parsed
             case "WeaponFireDamageMod", "WeaponHeatDamageMod": elements["heat", default: 0] += parsed
             case "WeaponFreezeDamageMod", "WeaponColdDamageMod": elements["cold", default: 0] += parsed
@@ -327,7 +329,8 @@ public struct InventoryAdapter: Sendable {
                      multishot: multishot, critChance: critChance, critDamage: critDamage,
                      statusChance: statusChance, statusDuration: statusDuration,
                      fireRate: fireRate, reloadSpeed: reloadSpeed,
-                     magazineSize: magazineSize, meleeComboEfficiency: meleeComboEfficiency,
+                     magazineSize: magazineSize, ammoEfficiency: ammoEfficiency,
+                     meleeComboEfficiency: meleeComboEfficiency,
                      factionBonuses: factions.isEmpty ? nil : factions,
                      elements: elements.isEmpty ? nil : elements,
                      physical: physical.isEmpty ? nil : physical)

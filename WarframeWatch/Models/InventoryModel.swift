@@ -342,6 +342,7 @@ public struct InventoryData: Decodable {
             public let fireRate: Double?
             public let reloadSpeed: Double?
             public let magazineSize: Double?
+            public let ammoEfficiency: Double?
             public let meleeComboEfficiency: Double?
             public let faction: Double?
             public let factionBonuses: [String: Double]?

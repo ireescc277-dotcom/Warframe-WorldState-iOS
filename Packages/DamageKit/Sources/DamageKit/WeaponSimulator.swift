@@ -188,7 +188,7 @@ public struct WeaponSimulator: Sendable {
         // 对非弓蓄力攻击，完整蓄力与普通 shot delay 都是相邻两发的组成。
         // 第一次命中也必须先等完整蓄力，不能在 t=0 凭空射出满蓄力伤害。
         let interval = shotDelay + (attack.chargeTiming == .standard ? attack.chargeTime : 0)
-        let magazine = max(1, Int(ceil(attack.magazine)))
+        let magazine = effectiveMagazineShots(for: attack)
         let reload = max(0, attack.reload)
         let burst = max(1, attack.burstCount)
         let burstDelay = max(0, attack.burstDelay)
@@ -199,7 +199,7 @@ public struct WeaponSimulator: Sendable {
         var guardCount = 0
 
         while t < options.window - 1e-9 && guardCount < 200_000 {
-            let available = max(0, magazine - roundsInMagazine)
+            let available = magazine.map { max(0, $0 - roundsInMagazine) } ?? Int.max
             guard available > 0 else { break }
             let count = min(burst, available)
             var lastShotTime = t
@@ -209,13 +209,14 @@ public struct WeaponSimulator: Sendable {
                 lastShotTime = shotTime
                 if shotTime < options.window - 1e-9 {
                     let round = roundsInMagazine + b + 1
-                    shots.append(Shot(time: shotTime, isLastInMagazine: round == magazine))
+                    shots.append(Shot(time: shotTime,
+                                      isLastInMagazine: magazine.map { round == $0 } ?? false))
                 }
             }
 
             roundsInMagazine += count
             let nominalNextBurst = t + interval * Double(burst)
-            if roundsInMagazine >= magazine {
+            if let magazine, roundsInMagazine >= magazine {
                 roundsInMagazine = 0
                 // 自动空仓换弹不是在最后一颗弹丸命中时立刻开始：游戏先等待一个
                 // `1 / fireRate` 的 reload delay，随后才进入 reload。对单发榴弹
@@ -230,6 +231,31 @@ public struct WeaponSimulator: Sendable {
         }
 
         return shots.sorted { $0.time < $1.time }
+    }
+
+    /// Converts a modded magazine into the number of times this attack can
+    /// fire before an automatic reload.  The website source uses the same
+    /// `floor(magazine / (1 - ammoEfficiency) / ammoCost)` rule for ordinary
+    /// attacks.  The explicit Infinite Ammo state is intentionally separate:
+    /// it removes the automatic reload rather than pretending to be a 100%
+    /// efficiency stat, which the live game caps at 75%.
+    ///
+    /// `all` means a magazine-emptying alternate fire.  One press is its
+    /// conservative baseline; interactions between a fractional leftover and
+    /// a repeated alternate-fire input are called out by BuildResolver rather
+    /// than fabricated as an ordinary multi-shot magazine.
+    private func effectiveMagazineShots(for attack: ResolvedAttack) -> Int? {
+        if case .all = attack.ammoCost {
+            return 1
+        }
+        if attack.hasInfiniteAmmo {
+            return nil
+        }
+        guard let baseCost = attack.ammoCost.amount else { return 1 }
+        let cost = max(baseCost, 1e-9)
+        let consumptionMultiplier = max(1 - attack.ammoEfficiency, 1e-9)
+        let effectiveMagazine = max(0, attack.magazine) / consumptionMultiplier
+        return max(1, Int(floor(effectiveMagazine / cost)))
     }
 
     /// The website's default melee fallback reports a combo as its individual

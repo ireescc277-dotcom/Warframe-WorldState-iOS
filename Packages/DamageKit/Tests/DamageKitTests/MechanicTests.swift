@@ -382,6 +382,68 @@ final class MechanicTests: XCTestCase {
         XCTAssertEqual(enlarged.attacks[0].shots, 3, accuracy: 1e-9)
     }
 
+    func testRivenAmmoEfficiencyExtendsAnOrdinaryMagazineBeforeReload() throws {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 2, reloadTime: 1)
+        let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
+        let options = Options(window: 7)
+
+        let baseline = BuildResolver(weapon: weapon, build: Build(), options: options,
+                                     faction: .neutral).resolve(attack: attack)
+        let efficient = BuildResolver(weapon: weapon,
+                                      build: Build(riven: Riven(ammoEfficiency: 0.5)),
+                                      options: options, faction: .neutral).resolve(attack: attack)
+        let profile = EnemyProfile(enemy: enemy, level: 1, options: options)
+        let baselineSchedule = WeaponSimulator(segments: [baseline], enemy: profile, options: options)
+            .shotSchedule(for: baseline)
+        let efficientSchedule = WeaponSimulator(segments: [efficient], enemy: profile, options: options)
+            .shotSchedule(for: efficient)
+
+        XCTAssertEqual(efficient.ammoEfficiency, 0.5, accuracy: 1e-12)
+        // 2 rounds become 4 effective shots: the reload moves from after
+        // t=1 to after t=3, with the existing reload-delay rule preserved.
+        XCTAssertEqual(baselineSchedule.map(\.time), [0, 1, 3, 4, 6])
+        XCTAssertEqual(efficientSchedule.map(\.time), [0, 1, 2, 3, 5, 6])
+    }
+
+    func testRivenAmmoEfficiencyCapsAtSeventyFivePercent() {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 1)
+        let resolved = BuildResolver(weapon: weapon,
+                                     build: Build(riven: Riven(ammoEfficiency: 1)),
+                                     options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+
+        XCTAssertEqual(resolved.ammoEfficiency, 0.75, accuracy: 1e-12)
+    }
+
+    func testConditionalAmmoEfficiencyAndInfiniteAmmoRemainDistinct() {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        var primary = Weapon(name: "Primary", attacks: [attack], magazineSize: 2, reloadTime: 1)
+        primary.categories = ["primary", "primary-rifle"]
+        let ordinary = BuildResolver(weapon: primary, build: Build(mods: ["Primary Crux"]),
+                                     options: Options(), faction: .neutral).resolve(attack: attack)
+
+        var viper = Weapon(name: "Viper", attacks: [attack], magazineSize: 1, reloadTime: 1)
+        viper.categories = ["secondary"]
+        let infinite = BuildResolver(weapon: viper, build: Build(mods: ["Skull Shots"]),
+                                     options: Options(), faction: .neutral).resolve(attack: attack)
+
+        XCTAssertEqual(ordinary.ammoEfficiency, 0.6, accuracy: 1e-12)
+        XCTAssertFalse(ordinary.hasInfiniteAmmo)
+        XCTAssertEqual(infinite.ammoEfficiency, 0, accuracy: 1e-12)
+        XCTAssertTrue(infinite.hasInfiniteAmmo)
+        let options = Options(window: 3)
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 1e9),
+                                   level: 1, options: options)
+        let schedule = WeaponSimulator(segments: [infinite], enemy: profile, options: options)
+            .shotSchedule(for: infinite)
+        XCTAssertEqual(schedule.map(\.time), [0, 1, 2])
+    }
+
     func testRivenHeavyComboEfficiencyReachesTheHeavySchedule() throws {
         let attack = Attack(name: "Normal Attack", speed: 1, critChance: 0,
                             critMultiplier: 1, statusChance: 0, damage: [.slash: 10])

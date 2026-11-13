@@ -94,6 +94,18 @@ final class DataPipelineTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(Attack.self, from: nested).forceProcs, ["heat", "slash"])
     }
 
+    func testWeaponAttackAmmoCostsRetainNumericAndMagazineEmptyingForms() throws {
+        let store = DataStore(root: Self.dataRoot)
+
+        let aeolak = try store.weapon(named: "Aeolak")
+        let aeolakAlt = try XCTUnwrap(aeolak.attacks.first { $0.name == "Alt-Fire" })
+        XCTAssertEqual(aeolakAlt.ammoCost, .amount(10))
+
+        let tetra = try store.weapon(named: "Tenet Tetra")
+        let grenade = try XCTUnwrap(tetra.attacks.first { $0.name == "Grenade Impact" })
+        XCTAssertEqual(grenade.ammoCost, .all)
+    }
+
     func testDataStoreFindsPunctuationNormalizedWeaponNamesAndDecodesThalys() throws {
         let store = DataStore(root: Self.dataRoot)
         XCTAssertEqual(try store.weapon(named: "Ack & Brunt").name, "Ack & Brunt")
