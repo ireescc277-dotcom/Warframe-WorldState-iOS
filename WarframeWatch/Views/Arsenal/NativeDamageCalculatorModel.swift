@@ -148,6 +148,7 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
     case damage, multishot, critChance, critDamage, fireRate, reloadSpeed
     case statusChance, statusDuration
     case heat, cold, electricity, toxin
+    case blast, corrosive, gas, magnetic, radiation, viral
     case impact, puncture, slash
     case grineerFaction, corpusFaction, infestedFaction, orokinFaction
 
@@ -167,6 +168,12 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
         case .cold: return "冰冻伤害"
         case .electricity: return "电击伤害"
         case .toxin: return "毒素伤害"
+        case .blast: return "爆炸伤害"
+        case .corrosive: return "腐蚀伤害"
+        case .gas: return "毒气伤害"
+        case .magnetic: return "磁力伤害"
+        case .radiation: return "辐射伤害"
+        case .viral: return "病毒伤害"
         case .impact: return "冲击伤害"
         case .puncture: return "穿刺伤害"
         case .slash: return "切割伤害"
@@ -183,7 +190,8 @@ enum NativeRivenStat: String, CaseIterable, Identifiable, Hashable {
             return .core
         case .critChance, .critDamage, .statusChance, .statusDuration:
             return .status
-        case .heat, .cold, .electricity, .toxin:
+        case .heat, .cold, .electricity, .toxin,
+                .blast, .corrosive, .gas, .magnetic, .radiation, .viral:
             return .element
         case .impact, .puncture, .slash:
             return .physical
@@ -249,6 +257,12 @@ struct NativeRivenDraft: Hashable {
         case .cold: return coldPercent
         case .electricity: return electricityPercent
         case .toxin: return toxinPercent
+        case .blast: return blastPercent
+        case .corrosive: return corrosivePercent
+        case .gas: return gasPercent
+        case .magnetic: return magneticPercent
+        case .radiation: return radiationPercent
+        case .viral: return viralPercent
         case .impact: return impactPercent
         case .puncture: return puncturePercent
         case .slash: return slashPercent
@@ -274,6 +288,12 @@ struct NativeRivenDraft: Hashable {
         case .cold: coldPercent = value
         case .electricity: electricityPercent = value
         case .toxin: toxinPercent = value
+        case .blast: blastPercent = value
+        case .corrosive: corrosivePercent = value
+        case .gas: gasPercent = value
+        case .magnetic: magneticPercent = value
+        case .radiation: radiationPercent = value
+        case .viral: viralPercent = value
         case .impact: impactPercent = value
         case .puncture: puncturePercent = value
         case .slash: slashPercent = value
@@ -374,6 +394,12 @@ extension NativeRivenDraft {
         coldPercent = (value.elements?["cold"] ?? 0) * 100
         electricityPercent = (value.elements?["electricity"] ?? 0) * 100
         toxinPercent = (value.elements?["toxin"] ?? 0) * 100
+        blastPercent = (value.elements?["blast"] ?? 0) * 100
+        corrosivePercent = (value.elements?["corrosive"] ?? 0) * 100
+        gasPercent = (value.elements?["gas"] ?? 0) * 100
+        magneticPercent = (value.elements?["magnetic"] ?? 0) * 100
+        radiationPercent = (value.elements?["radiation"] ?? 0) * 100
+        viralPercent = (value.elements?["viral"] ?? 0) * 100
         impactPercent = (value.physical?["impact"] ?? 0) * 100
         puncturePercent = (value.physical?["puncture"] ?? 0) * 100
         slashPercent = (value.physical?["slash"] ?? 0) * 100

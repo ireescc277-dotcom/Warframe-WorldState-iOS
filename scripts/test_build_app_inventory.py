@@ -12,14 +12,17 @@ import json
 import unittest
 
 from build_app_inventory import (
+    RIVEN_MAXIMUM,
     build_owned_weapons,
     damagekit_ranked_action_values,
+    decode_riven,
     resolve_config_upgrade,
     source_stat_coefficients,
     source_proven_non_damage_reason,
     source_proven_whole_action_scale,
     upgrade_indexes,
 )
+from wf_gamedata import build_riven_tags
 
 
 TYPE = "/Lotus/Upgrades/Mods/Rifle/WeaponDamageAmountMod"
@@ -207,6 +210,115 @@ class SourceProvenNonDamageTests(unittest.TestCase):
         self.assertEqual(config["nd"][0]["n"], "Hush")
         self.assertNotIn("r", config["nd"][0])
         self.assertIn("听到枪声", config["nd"][0]["why"])
+
+
+class OfficialRivenTagTests(unittest.TestCase):
+    def official_riven_tags(self) -> dict:
+        return build_riven_tags([{
+            "uniqueName": "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare",
+            "upgradeEntries": [
+                {
+                    "tag": "WeaponCorrosiveDamageMod",
+                    "prefixTag": "cori",
+                    "suffixTag": "or",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponGasDamageMod",
+                    "prefixTag": "cali",
+                    "suffixTag": "fel",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponViralDamageMod",
+                    "prefixTag": "cari",
+                    "suffixTag": "sco",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponRadiationDamageMod",
+                    "prefixTag": "radi",
+                    "suffixTag": "lo",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponMagneticDamageMod",
+                    "prefixTag": "magni",
+                    "suffixTag": "bra",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+                {
+                    "tag": "WeaponBlastDamageMod",
+                    "prefixTag": "fraga",
+                    "suffixTag": "tus",
+                    "upgradeValues": [{"value": 0.01}],
+                },
+            ],
+        }])
+
+    def test_official_upgrade_entries_keep_completed_element_tags(self):
+        tags = self.official_riven_tags()
+        entries = tags["LotusPistolRandomModRare"]
+        by_tag = {entry["tag"]: entry for entry in entries}
+        self.assertEqual(set(by_tag), {
+            "WeaponBlastDamageMod", "WeaponCorrosiveDamageMod", "WeaponGasDamageMod",
+            "WeaponMagneticDamageMod", "WeaponRadiationDamageMod", "WeaponViralDamageMod",
+        })
+        self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["value"], 0.01)
+        self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["prefix"], "cori")
+        self.assertEqual(by_tag["WeaponCorrosiveDamageMod"]["suffix"], "or")
+
+    def test_completed_corrosive_riven_is_a_damage_component_not_unresolved(self):
+        upgrade = {
+            "ItemType": "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare",
+            "UpgradeFingerprint": json.dumps({
+                "lvl": 8,
+                "buffs": [{
+                    "Tag": "WeaponCorrosiveDamageMod",
+                    "Value": RIVEN_MAXIMUM,
+                }],
+                "curses": [],
+            }),
+        }
+        riven, error = decode_riven(upgrade, {"om": 1.2}, self.official_riven_tags())
+
+        self.assertIsNone(error)
+        self.assertEqual(riven.get("unresolved"), None)
+        self.assertAlmostEqual(riven["elements"]["corrosive"], 1.782)
+
+    def test_owned_weapon_import_prefers_current_official_riven_tag_table(self):
+        """A generated game-data cache, not the retired sidecar, drives import."""
+        weapon_type = "/Lotus/Weapons/Test/Laetum"
+        riven_type = "/Lotus/Upgrades/Mods/Randomized/LotusPistolRandomModRare"
+        result = build_owned_weapons({
+            "Pistols": [{
+                "ItemId": "test-laetum",
+                "ItemType": weapon_type,
+                "Configs": [{"Upgrades": ["test-riven"]}],
+            }],
+            "Upgrades": [{
+                "ItemId": "test-riven",
+                "ItemType": riven_type,
+                "UpgradeFingerprint": json.dumps({
+                    "lvl": 8,
+                    "buffs": [{
+                        "Tag": "WeaponCorrosiveDamageMod",
+                        "Value": RIVEN_MAXIMUM,
+                    }],
+                    "curses": [],
+                }),
+            }],
+            "RawUpgrades": [],
+        }, game_data_override={
+            "weapons": {weapon_type: {"n": "Laetum", "z": "奏凯", "om": 1.2}},
+            "mods": {},
+            "rivenTags": self.official_riven_tags(),
+        })
+
+        config = result[0]["cfg"][0]
+        self.assertTrue(config["exact"])
+        self.assertEqual(config["u"], [])
+        self.assertAlmostEqual(config["r"]["elements"]["corrosive"], 1.782)
 
 
 if __name__ == "__main__":

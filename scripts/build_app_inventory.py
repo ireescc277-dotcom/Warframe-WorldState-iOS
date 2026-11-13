@@ -31,6 +31,8 @@ VIEW = os.path.join(ROOT, "data", "inventory", "view.json")
 SNAPSHOT = os.path.join(ROOT, "data", "inventory", "latest.json.gz")
 SNAPSHOT_META = os.path.join(ROOT, "data", "inventory", "latest.meta.json")
 GAMEDATA = os.path.join(ROOT, "data", "gamedata", "gamedata.json")
+# Legacy fallback for an old already-generated game-data cache.  Current
+# imports prefer the official `rivenTags` field produced by wf_gamedata.py.
 RIVEN_TAGS = os.path.join(ROOT, "data", "gamedata", "ref", "riven", "riven_tags.json")
 DAMAGEKIT_MODS = os.path.join(
     ROOT, "Packages", "DamageKit", "Sources", "DamageKit", "Resources", "mods.json"
@@ -410,6 +412,15 @@ def decode_riven(upgrade: dict, weapon_data: dict, riven_tags: dict) -> tuple[di
         "WeaponFreezeDamageMod": "cold", "WeaponColdDamageMod": "cold",
         "WeaponElectricityDamageMod": "electricity",
         "WeaponToxinDamageMod": "toxin", "WeaponPoisonDamageMod": "toxin",
+        # Modern Riven tables also contain completed combination types. They
+        # stay a completed component rather than being split into adjacent
+        # slot elements and re-combined in an invented order.
+        "WeaponBlastDamageMod": "blast",
+        "WeaponCorrosiveDamageMod": "corrosive",
+        "WeaponGasDamageMod": "gas",
+        "WeaponMagneticDamageMod": "magnetic",
+        "WeaponRadiationDamageMod": "radiation",
+        "WeaponViralDamageMod": "viral",
     }
     physical_tags = {
         "WeaponImpactDamageMod": "impact", "WeaponSlashDamageMod": "slash",
@@ -882,7 +893,12 @@ def build_owned_weapons(inv: dict, game_data_override: dict | None = None) -> li
     game_mods = game_data.get("mods") if isinstance(game_data, dict) else {}
     game_weapons = game_weapons if isinstance(game_weapons, dict) else {}
     game_mods = game_mods if isinstance(game_mods, dict) else {}
-    riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
+    # `rivenTags` comes directly from DE's ExportUpgrades `upgradeEntries`.
+    # Keep the standalone legacy file only for old local game-data caches;
+    # it must not override the current official source when that is present.
+    riven_tags = game_data.get("rivenTags") if isinstance(game_data, dict) else None
+    if not isinstance(riven_tags, dict) or not riven_tags:
+        riven_tags = load_json(RIVEN_TAGS) if os.path.exists(RIVEN_TAGS) else {}
     simple_action_percents = simple_damagekit_action_percentages()
     ranked_action_values = damagekit_ranked_action_values()
     conditional_rules = conditional_effect_rules_by_mod()

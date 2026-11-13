@@ -329,8 +329,8 @@ public struct InventoryData: Decodable {
         }
 
         /// Resolved numerical purple-card effects.  Values use DamageKit's
-        /// decimal units (0.9 = +90%); no private Riven instance data leaves
-        /// the local Aleca snapshot.
+        /// decimal units (0.9 = +90%); raw Riven instance identifiers and
+        /// fingerprints never leave the account-snapshot import boundary.
         public struct ImportedRiven: Decodable, Hashable {
             public let name: String
             public let damage: Double?

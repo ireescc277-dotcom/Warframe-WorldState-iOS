@@ -226,11 +226,60 @@ def build_mods() -> dict:
     return out
 
 
+def build_riven_tags(rows: list[dict] | None = None) -> dict[str, list[dict]]:
+    """Extract Riven tag coefficients from DE's public upgrade export.
+
+    Riven stats are not ordinary rank tables.  Their ``upgradeEntries`` hold
+    the base coefficient plus the generated name fragments that the account
+    fingerprint later combines with disposition, rank and roll attenuation.
+    Keeping them beside the normal game data means account import does not
+    need AlecaFrame's cached copy or an independently maintained tag table.
+    """
+    if rows is None:
+        rows = load_raw("ExportUpgrades_en.json").get("ExportUpgrades") or []
+    result: dict[str, list[dict]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        unique_name = row.get("uniqueName")
+        if not isinstance(unique_name, str) or "/Randomized/" not in unique_name:
+            continue
+        riven_type = unique_name.rsplit("/", 1)[-1]
+        entries: list[dict] = []
+        seen_tags: set[str] = set()
+        for entry in row.get("upgradeEntries") or []:
+            if not isinstance(entry, dict):
+                continue
+            tag = entry.get("tag")
+            if not isinstance(tag, str) or not tag or tag in seen_tags:
+                continue
+            values = entry.get("upgradeValues")
+            values = values if isinstance(values, list) else []
+            first = values[0] if values and isinstance(values[0], dict) else {}
+            try:
+                value = float(first.get("value"))
+            except (TypeError, ValueError):
+                continue
+            if value == 0:
+                continue
+            entries.append({
+                "tag": tag,
+                "value": value,
+                "prefix": entry.get("prefixTag") if isinstance(entry.get("prefixTag"), str) else "",
+                "suffix": entry.get("suffixTag") if isinstance(entry.get("suffixTag"), str) else "",
+            })
+            seen_tags.add(tag)
+        if entries:
+            result[riven_type] = entries
+    return result
+
+
 def build(out_dir: str = DATA, publish: str | None = None) -> dict:
     weapons = build_weapons()
     mods = build_mods()
+    riven_tags = build_riven_tags()
     state = load_state()
-    doc = {"weapons": weapons, "mods": mods}
+    doc = {"weapons": weapons, "mods": mods, "rivenTags": riven_tags}
     path = os.path.join(out_dir, "gamedata.json")
     save_json(path, doc)
     payload = gzip.compress(json.dumps(doc, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), 6)
@@ -243,6 +292,7 @@ def build(out_dir: str = DATA, publish: str | None = None) -> dict:
         "builtAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "weapons": len(weapons),
         "mods": len(mods),
+        "rivenTags": sum(len(entries) for entries in riven_tags.values()),
         "bytes": len(payload),
     }
     save_json(os.path.join(out_dir, "gamedata.meta.json"), meta)
@@ -252,7 +302,7 @@ def build(out_dir: str = DATA, publish: str | None = None) -> dict:
             fh.write(payload)
         save_json(os.path.join(publish, "gamedata.meta.json"), meta)
         log(f"发布 {publish}/gamedata.json.gz")
-    log(f"√ 武器 {len(weapons)} · mod {len(mods)} · gz {len(payload) / 1e3:.0f} KB · build {meta['build']}")
+    log(f"√ 武器 {len(weapons)} · mod {len(mods)} · 紫卡词条 {meta['rivenTags']} · gz {len(payload) / 1e3:.0f} KB · build {meta['build']}")
     return meta
 
 

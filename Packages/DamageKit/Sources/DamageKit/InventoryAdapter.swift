@@ -119,9 +119,18 @@ public struct InventoryAdapter: Sendable {
         guard let mods = Self.objectMap(gameData["mods"]) else {
             throw InventoryAdapterError.gameDataNotFound("mods")
         }
-        let rivenTagsURL = gameDataURL.deletingLastPathComponent()
-            .appendingPathComponent("ref/riven/riven_tags.json")
-        let rivenTags = try Self.object(from: Self.readJSON(at: rivenTagsURL))
+        // Current game-data builds carry Riven coefficient entries directly
+        // from DE's ExportUpgrades `upgradeEntries`, which includes newer
+        // completed-element terms such as Corrosive. Keep the old sidecar as
+        // a compatibility fallback for an already-generated legacy cache.
+        let rivenTags: [String: Any]
+        if let exportedTags = Self.objectMap(gameData["rivenTags"]), !exportedTags.isEmpty {
+            rivenTags = exportedTags
+        } else {
+            let rivenTagsURL = gameDataURL.deletingLastPathComponent()
+                .appendingPathComponent("ref/riven/riven_tags.json")
+            rivenTags = try Self.object(from: Self.readJSON(at: rivenTagsURL))
+        }
         let disposition = Self.number(weaponData["om"]) ?? 1.2
 
         var names: [String] = []
@@ -289,6 +298,15 @@ public struct InventoryAdapter: Sendable {
             case "WeaponFreezeDamageMod", "WeaponColdDamageMod": elements["cold", default: 0] += parsed
             case "WeaponElectricityDamageMod": elements["electricity", default: 0] += parsed
             case "WeaponToxinDamageMod", "WeaponPoisonDamageMod": elements["toxin", default: 0] += parsed
+            // These Riven entries are completed element types in the public
+            // export. They must not be expanded into primary elements and
+            // re-combined according to a fabricated Mod-slot order.
+            case "WeaponBlastDamageMod": elements["blast", default: 0] += parsed
+            case "WeaponCorrosiveDamageMod": elements["corrosive", default: 0] += parsed
+            case "WeaponGasDamageMod": elements["gas", default: 0] += parsed
+            case "WeaponMagneticDamageMod": elements["magnetic", default: 0] += parsed
+            case "WeaponRadiationDamageMod": elements["radiation", default: 0] += parsed
+            case "WeaponViralDamageMod": elements["viral", default: 0] += parsed
             case "WeaponImpactDamageMod": physical["impact", default: 0] += parsed
             case "WeaponSlashDamageMod": physical["slash", default: 0] += parsed
             case "WeaponArmorPiercingDamageMod", "WeaponPunctureDamageMod": physical["puncture", default: 0] += parsed

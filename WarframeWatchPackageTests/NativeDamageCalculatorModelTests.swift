@@ -157,4 +157,26 @@ final class NativeDamageCalculatorModelTests: XCTestCase {
         XCTAssertNil(config.nonDamageUpgrades[0].rank)
         XCTAssertEqual(config.nonDamageUpgrades[0].maxRank, 3)
     }
+
+    func testImportedCompletedElementRivenStaysInTheElementGroup() throws {
+        let json = """
+        {
+          "name": "Corican",
+          "elements": {"corrosive": 1.0969}
+        }
+        """.data(using: .utf8)!
+        let imported = try JSONDecoder().decode(
+            InventoryData.OwnedWeapon.ImportedRiven.self,
+            from: json
+        )
+
+        var draft = NativeRivenDraft(imported: imported)
+        XCTAssertTrue(draft.selectedStats.contains(.corrosive))
+        XCTAssertEqual(draft.value(for: .corrosive), 109.69, accuracy: 0.000_001)
+        XCTAssertEqual(draft.resolved?.elements?["corrosive"] ?? 0, 1.0969, accuracy: 0.000_001)
+
+        draft.setValue(87.5, for: .gas)
+        XCTAssertTrue(draft.selectedStats.contains(.gas))
+        XCTAssertEqual(draft.resolved?.elements?["gas"] ?? 0, 0.875, accuracy: 0.000_001)
+    }
 }

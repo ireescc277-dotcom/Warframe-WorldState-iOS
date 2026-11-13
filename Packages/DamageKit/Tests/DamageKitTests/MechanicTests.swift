@@ -366,6 +366,25 @@ final class MechanicTests: XCTestCase {
         XCTAssertEqual(result.attacks[0].shots, 2, accuracy: 1e-9)
     }
 
+    func testRivenCompletedCorrosiveStaysOneCompletedDamageComponent() {
+        let attack = Attack(name: "Riven Corrosive", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 100])
+        var weapon = Weapon(name: "Rifle", attacks: [attack], magazineSize: 1, reloadTime: 0)
+        weapon.categories = ["primary-rifle"]
+
+        let resolved = BuildResolver(weapon: weapon,
+                                     build: Build(riven: Riven(elements: ["corrosive": 1])),
+                                     options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+
+        XCTAssertEqual(resolved.damage[.impact] ?? 0, 100, accuracy: 1e-9)
+        XCTAssertEqual(resolved.damage[.corrosive] ?? 0, 100, accuracy: 1e-9)
+        // This Riven term is not two primary elements placed in an arbitrary
+        // slot order, so it cannot be turned into another combination.
+        XCTAssertNil(resolved.damage[.electricity])
+        XCTAssertNil(resolved.damage[.toxin])
+    }
+
     // MARK: 灵化
 
     func testIncarnonFormUsesIncarnonMagazine() throws {
