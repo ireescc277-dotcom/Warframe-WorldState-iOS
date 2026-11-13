@@ -251,7 +251,7 @@ final class NativeDamageCatalog: ObservableObject {
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return (nil, nil) }
         if dataRoot == nil { load() }
-        if let mod = store?.mods.mod(named: trimmed) {
+        if let mod = ModLibrary.shared.mod(named: trimmed) {
             let localURL = localModIcon(for: mod)
                 ?? WeaponCatalog.shared.extraIconURL(forName: mod.name)
                 ?? WeaponCatalog.shared.extraIconURL(forName: trimmed)
@@ -266,7 +266,7 @@ final class NativeDamageCatalog: ObservableObject {
         if dataRoot == nil { load() }
         let direct = local(trimmed)
         if direct != trimmed { return direct }
-        if let mod = store?.mods.mod(named: trimmed) {
+        if let mod = ModLibrary.shared.mod(named: trimmed) {
             let fromMod = local(mod.name)
             if fromMod != mod.name { return fromMod }
         }
