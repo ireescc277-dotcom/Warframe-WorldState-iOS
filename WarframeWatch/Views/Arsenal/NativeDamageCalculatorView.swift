@@ -67,6 +67,7 @@ private extension ScenarioEffectID {
 struct NativeDamageCalculatorView: View {
     let title: String
     @StateObject private var model: NativeDamageCalculatorModel
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @State private var sheet: NativeCalcSheet?
     @State private var inspectedCalcCard: InspectableCalcCard?
     @State private var showWarframeMods = false
@@ -118,6 +119,7 @@ struct NativeDamageCalculatorView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: WFUI.s4) {
                         heading
+                        let _ = remoteAssets.revision
                         if let error = model.catalog.loadError {
                             problemCard(error)
                         } else {
@@ -489,6 +491,13 @@ struct NativeDamageCalculatorView: View {
                 inspectedCalcCard = InspectableCalcCard(card: card, replaceSlot: slot, isRiven: false)
             } label: {
                 HorizontalModCardView(card: card)
+            }
+            .buttonStyle(.plain)
+        } else if slot == 10 {
+            Button {
+                sheet = .mod(slot: slot)
+            } label: {
+                EmptyArcaneSlotView(title: slotLabel(slot), subtitle: "选择赋能")
             }
             .buttonStyle(.plain)
         } else {
@@ -2140,6 +2149,7 @@ private struct NativeThumb: View {
 private struct NativeWeaponPicker: View {
     @ObservedObject var model: NativeDamageCalculatorModel
     let select: (String) -> Void
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
 
@@ -2152,6 +2162,7 @@ private struct NativeWeaponPicker: View {
     }
 
     var body: some View {
+        let _ = remoteAssets.revision
         NavigationStack {
             List(rows) { weapon in
                 Button {
@@ -2220,6 +2231,7 @@ private struct NativeModPicker: View {
     @ObservedObject var model: NativeDamageCalculatorModel
     let slot: Int
     let select: (String?) -> Void
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
 
@@ -2234,6 +2246,7 @@ private struct NativeModPicker: View {
     }
 
     var body: some View {
+        let _ = remoteAssets.revision
         NavigationStack {
             List {
                 Button(role: .destructive) {

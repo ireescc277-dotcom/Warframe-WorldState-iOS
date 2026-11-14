@@ -1008,10 +1008,10 @@ final class WeaponIconStore {
         cache.object(forKey: name as NSString)
     }
 
-    /// 本地包里没有这张图时返回 nil，调用方自己决定要不要走网络。
+    /// 本地（已缓存或随包）没有这张图时返回 nil，并触发服务器后台缓存。
     func load(_ name: String, maxPixel: CGFloat) async -> UIImage? {
-        guard let dir = WeaponCatalog.iconsDir else { return nil }
-        return await load(url: dir.appendingPathComponent(name), cacheKey: name, maxPixel: maxPixel)
+        guard let url = WeaponCatalog.shared.weaponIconURL(named: name) else { return nil }
+        return await load(url: url, cacheKey: url.path, maxPixel: maxPixel)
     }
 
     func load(url: URL, cacheKey: String, maxPixel: CGFloat) async -> UIImage? {
@@ -1046,20 +1046,20 @@ final class WeaponIconStore {
     }
 }
 
-/// 武器图。包里带了一份（`ios/DamageData/icons`，构建时从 assets 复制），
-/// 优先读本地，读不到再回站点 CDN。两边都没有就画占位块，保证行高不跳。
+/// 武器图。优先读取本机缓存（或随包）文件，未命中时走服务器下载并在落盘后自动刷新。
 struct WeaponThumb: View {
     let name: String?
     var localURL: URL? = nil
     let remote: URL?
     let size: CGFloat
 
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @State private var local: UIImage?
     @State private var tried = false
     @State private var loadedKey = ""
 
     private var taskKey: String {
-        "\(name ?? "")|\(localURL?.path ?? "")|\(remote?.absoluteString ?? "")"
+        "\(name ?? "")|\(localURL?.path ?? "")|\(remote?.absoluteString ?? "")|\(remoteAssets.revision)"
     }
 
     var body: some View {
@@ -1070,7 +1070,7 @@ struct WeaponThumb: View {
                     .scaledToFit()
                     .padding(2)
             } else if tried, let remote = remote {
-                // 本地没有这张图才走网络，避免每行都去撞一次 CDN
+                // 本地尚未落盘时直接展示远端图，避免首屏闪烁占位符
                 AsyncImage(url: remote) { phase in
                     switch phase {
                     case let .success(image):
@@ -1089,12 +1089,13 @@ struct WeaponThumb: View {
                 .fill(WFTheme.panel)
         )
         .task(id: taskKey) {
-            if loadedKey != taskKey {
+            let itemIdentity = "\(name ?? "")|\(localURL?.path ?? "")|\(remote?.absoluteString ?? "")"
+            if loadedKey != itemIdentity {
                 local = nil
                 tried = false
-                loadedKey = taskKey
+                loadedKey = itemIdentity
             }
-            guard local == nil, !tried else { return }
+            guard local == nil else { return }
             let px = size * UIScreen.main.scale
             let image: UIImage?
             if let localURL {
@@ -1132,12 +1133,14 @@ struct ArsenalItemThumb: View {
 
     @ObservedObject private var catalog = WeaponCatalog.shared
     @ObservedObject private var inventory = InventoryFeed.shared
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
 
     var body: some View {
+        let _ = remoteAssets.revision
         if let entry = resolvedWeaponEntry {
             WeaponThumb(name: entry.img, remote: entry.iconURL, size: size)
-        } else if let extraURL = resolvedExtraIconURL {
-            WeaponThumb(name: nil, localURL: extraURL, remote: nil, size: size)
+        } else if let extra = resolvedExtraIconURLs {
+            WeaponThumb(name: nil, localURL: extra.local, remote: extra.remote, size: size)
         } else if let asset = resolvedSetIcon {
             ItemIcon(asset.local, remote: asset.remote, size: size - 6)
                 .frame(width: size, height: size)
@@ -1155,9 +1158,12 @@ struct ArsenalItemThumb: View {
         }
     }
 
-    private var resolvedExtraIconURL: URL? {
-        catalog.extraIconURL(forName: displayName)
-            ?? catalog.extraIconURL(forName: Self.stripAnnotation(displayName ?? ""))
+    private var resolvedExtraIconURLs: (local: URL?, remote: URL?)? {
+        let primary = catalog.extraIconURLs(forName: displayName)
+        if primary.local != nil || primary.remote != nil { return primary }
+        let stripped = catalog.extraIconURLs(forName: Self.stripAnnotation(displayName ?? ""))
+        if stripped.local != nil || stripped.remote != nil { return stripped }
+        return nil
     }
 
     private var resolvedWeaponEntry: WeaponEntry? {

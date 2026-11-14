@@ -152,7 +152,19 @@ def verify_generated_bundle(locale: dict[str, str], index: list[dict[str, object
         raise RuntimeError("DamageData weapon index differs from generated source index")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Generate ios/DamageData JSON bundle (and optionally bundled images)."
+    )
+    parser.add_argument(
+        "--include-images",
+        action="store_true",
+        help="Also bundle assets/* PNG/WebP images into ios/DamageData (for offline CI screenshots).",
+    )
+    args = parser.parse_args(argv)
+
     required = [
         SITE / "weapons.json",
         SITE / "weapons",
@@ -185,39 +197,48 @@ def main() -> int:
     verify_generated_bundle(locale, index)
 
     icon_count = 0
-    if ICON_SOURCE.exists():
-        shutil.copytree(ICON_SOURCE, DEST / "icons")
-        icon_count = sum(1 for _ in (DEST / "icons").glob("*.webp"))
-
     mod_icon_count = 0
-    if MOD_ICON_SOURCE.exists():
-        shutil.copytree(MOD_ICON_SOURCE, DEST / "mod-icons")
-        mod_icon_count = sum(1 for _ in (DEST / "mod-icons").glob("*.webp"))
-
     mod_art_count = 0
-    if MOD_ART_SOURCE.exists():
-        shutil.copytree(MOD_ART_SOURCE, DEST / "mod-art")
-        mod_art_count = sum(1 for _ in (DEST / "mod-art").glob("*.webp"))
-
     mod_frame_count = 0
-    if MOD_FRAMES_SOURCE.exists():
-        shutil.copytree(MOD_FRAMES_SOURCE, DEST / "mod-frames")
-        mod_frame_count = sum(1 for _ in (DEST / "mod-frames").glob("*.png"))
-
     polarity_count = 0
-    if POLARITIES_SOURCE.exists():
-        shutil.copytree(POLARITIES_SOURCE, DEST / "polarities")
-        polarity_count = sum(1 for _ in (DEST / "polarities").glob("*.png"))
-
     extra_icon_count = 0
-    if EXTRA_ICON_SOURCE.exists():
-        shutil.copytree(EXTRA_ICON_SOURCE, DEST / "extra-icons")
-        extra_icon_count = sum(1 for _ in (DEST / "extra-icons").glob("*.webp"))
-
     arcane_icon_count = 0
-    if ARCANE_ICON_SOURCE.exists():
-        shutil.copytree(ARCANE_ICON_SOURCE, DEST / "arcane-icons")
-        arcane_icon_count = sum(1 for _ in (DEST / "arcane-icons").glob("*.webp"))
+
+    # Keep the 16 KB extra-icons name->filename map in the slim bundle so the
+    # app knows exact server filenames offline without bundling the WebP blobs.
+    extra_index = EXTRA_ICON_SOURCE / "index.json"
+    if extra_index.exists():
+        (DEST / "extra-icons").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(extra_index, DEST / "extra-icons" / "index.json")
+
+    if args.include_images:
+        if ICON_SOURCE.exists():
+            shutil.copytree(ICON_SOURCE, DEST / "icons")
+            icon_count = sum(1 for _ in (DEST / "icons").glob("*.webp"))
+
+        if MOD_ICON_SOURCE.exists():
+            shutil.copytree(MOD_ICON_SOURCE, DEST / "mod-icons")
+            mod_icon_count = sum(1 for _ in (DEST / "mod-icons").glob("*.webp"))
+
+        if MOD_ART_SOURCE.exists():
+            shutil.copytree(MOD_ART_SOURCE, DEST / "mod-art")
+            mod_art_count = sum(1 for _ in (DEST / "mod-art").glob("*.webp"))
+
+        if MOD_FRAMES_SOURCE.exists():
+            shutil.copytree(MOD_FRAMES_SOURCE, DEST / "mod-frames")
+            mod_frame_count = sum(1 for _ in (DEST / "mod-frames").glob("*.png"))
+
+        if POLARITIES_SOURCE.exists():
+            shutil.copytree(POLARITIES_SOURCE, DEST / "polarities")
+            polarity_count = sum(1 for _ in (DEST / "polarities").glob("*.png"))
+
+        if EXTRA_ICON_SOURCE.exists():
+            shutil.copytree(EXTRA_ICON_SOURCE, DEST / "extra-icons", dirs_exist_ok=True)
+            extra_icon_count = sum(1 for _ in (DEST / "extra-icons").glob("*.webp"))
+
+        if ARCANE_ICON_SOURCE.exists():
+            shutil.copytree(ARCANE_ICON_SOURCE, DEST / "arcane-icons")
+            arcane_icon_count = sum(1 for _ in (DEST / "arcane-icons").glob("*.webp"))
 
     if MOD_CARDS_ZH_SOURCE.exists():
         shutil.copy2(MOD_CARDS_ZH_SOURCE, DEST / "mod-cards-zh.json")

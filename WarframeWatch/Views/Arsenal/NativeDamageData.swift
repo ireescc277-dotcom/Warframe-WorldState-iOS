@@ -252,27 +252,21 @@ final class NativeDamageCatalog: ObservableObject {
         return tags.contains { keys.contains(normalize($0)) }
     }
 
-    /// The site resolves Mod record image names through `/getImg.php`, which
-    /// currently returns `/data/mods/<name>` (not `/data/img`).  The app first
-    /// uses its bundled copy below; this URL is only a network fallback for a
-    /// deliberately missing upstream image.
+    /// 远端资源地址：优先走自建资源服务器，再由各调用方按需持久化缓存到磁盘。
     func iconURL(for mod: ModDefinition) -> URL? {
         guard let image = mod.image, !image.isEmpty else { return nil }
-        return URL(string: "https://warframe-damage.com/data/mods/\(image)")
+        return RemoteAssetStore.shared.remoteURL(forRelativePath: "mod-icons/\(image)")
+            ?? URL(string: "https://warframe-damage.com/data/mods/\(image)")
     }
 
     func localWeaponIcon(named image: String) -> URL? {
-        guard !image.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("icons").appendingPathComponent(image)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard !image.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(relativePath: "icons/\(image)")
     }
 
     func localModIcon(named image: String?) -> URL? {
-        guard let image, !image.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("mod-icons").appendingPathComponent(image)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard let image, !image.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(relativePath: "mod-icons/\(image)")
     }
 
     func localModIcon(for mod: ModDefinition) -> URL? {
@@ -280,32 +274,30 @@ final class NativeDamageCatalog: ObservableObject {
     }
 
     func localModArt(named image: String?) -> URL? {
-        guard let image, !image.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("mod-art").appendingPathComponent(image)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard let image, !image.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(relativePath: "mod-art/\(image)")
     }
 
     func localArcaneIcon(named image: String?) -> URL? {
-        guard let image, !image.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("arcane-icons").appendingPathComponent(image)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard let image, !image.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(relativePath: "arcane-icons/\(image)")
     }
 
     func localModFrame(named fileName: String) -> URL? {
-        guard !fileName.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("mod-frames").appendingPathComponent(fileName)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard !fileName.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(
+            relativePath: "mod-frames/\(fileName)",
+            highPriority: true
+        )
     }
 
     func localPolarityIcon(named polarity: String) -> URL? {
         let lower = polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !lower.isEmpty,
-              let root = dataRoot else { return nil }
-        let url = root.appendingPathComponent("polarities").appendingPathComponent("\(lower).png")
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        guard !lower.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(
+            relativePath: "polarities/\(lower).png",
+            highPriority: true
+        )
     }
 
     /// 赋能优先返回 `arcane-icons/` 合成图标；Mod 先查高清原画 `mod-art/`，再查 `mod-icons/` 与 `extra-icons/`。
@@ -316,21 +308,29 @@ final class NativeDamageCatalog: ObservableObject {
         if let card = modCard(for: trimmed) {
             if card.isArcane {
                 let slug = trimmed.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(String.init).joined()
-                let url = localArcaneIcon(named: card.arcaneIcon)
-                    ?? localArcaneIcon(named: "\(slug).webp")
+                let targetFile = (card.arcaneIcon?.isEmpty == false) ? card.arcaneIcon! : "\(slug).webp"
+                let url = localArcaneIcon(named: targetFile)
                     ?? localModIcon(named: "\(slug).webp")
-                if let url { return (url, nil) }
-            } else if let artURL = localModArt(named: card.art) {
-                return (artURL, nil)
+                let remote = RemoteAssetStore.shared.remoteURL(forRelativePath: "arcane-icons/\(targetFile)")
+                return (url, remote)
+            } else if let art = card.art, !art.isEmpty {
+                let artURL = localModArt(named: art)
+                let remote = RemoteAssetStore.shared.remoteURL(forRelativePath: "mod-art/\(art)")
+                return (artURL, remote)
             }
         }
         if let mod = ModLibrary.shared.mod(named: trimmed) {
-            let localURL = localModIcon(for: mod)
-                ?? WeaponCatalog.shared.extraIconURL(forName: mod.name)
-                ?? WeaponCatalog.shared.extraIconURL(forName: trimmed)
-            return (localURL, iconURL(for: mod))
+            if let localMod = localModIcon(for: mod) {
+                return (localMod, iconURL(for: mod))
+            }
+            let extra = WeaponCatalog.shared.extraIconURLs(forName: mod.name)
+            if extra.local != nil || extra.remote != nil {
+                return (extra.local, extra.remote ?? iconURL(for: mod))
+            }
+            let trimmedExtra = WeaponCatalog.shared.extraIconURLs(forName: trimmed)
+            return (trimmedExtra.local, trimmedExtra.remote ?? iconURL(for: mod))
         }
-        return (WeaponCatalog.shared.extraIconURL(forName: trimmed), nil)
+        return WeaponCatalog.shared.extraIconURLs(forName: trimmed)
     }
 
     func modCard(for rawName: String) -> ModCardMetadata? {

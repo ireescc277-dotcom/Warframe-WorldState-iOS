@@ -893,6 +893,7 @@ private struct UpgradeIconThumb: View {
     let size: CGFloat
 
     @ObservedObject private var damageCatalog = NativeDamageCatalog.shared
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @State private var image: UIImage?
     @State private var remoteURL: URL?
     @State private var loadedKey = ""
@@ -920,15 +921,19 @@ private struct UpgradeIconThumb: View {
         .frame(width: size, height: size)
         .background(WFTheme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .task(id: rawName) {
+        .task(id: "\(rawName)|\(remoteAssets.revision)") {
             if loadedKey != rawName {
                 image = nil
                 remoteURL = nil
                 loadedKey = rawName
             }
+            guard image == nil else { return }
             let urls: (local: URL?, remote: URL?)
             if rawName == "Riven" {
-                urls = (damageCatalog.localModIcon(named: "riven.webp"), nil)
+                urls = (
+                    damageCatalog.localModIcon(named: "riven.webp"),
+                    RemoteAssetStore.shared.remoteURL(forRelativePath: "mod-icons/riven.webp")
+                )
             } else {
                 urls = damageCatalog.modIconURLs(forName: rawName)
             }

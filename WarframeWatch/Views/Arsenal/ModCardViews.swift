@@ -102,6 +102,7 @@ private enum ModFrameTier: String {
     case galvanized = "Galvanized"
     case amalgam = "Amalgam"
     case omega = "Omega"
+    case peculiar = "Peculiar"
     case arcane = "Arcane"
 
     init(card: ModCardPresentation) {
@@ -111,6 +112,13 @@ private enum ModFrameTier: String {
         }
         if card.isArcane {
             self = .arcane
+            return
+        }
+        let trimmed = card.rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.lowercased().hasPrefix("peculiar")
+            || card.metadata?.frameTier.caseInsensitiveCompare("Peculiar") == .orderedSame
+            || card.metadata?.rarity.uppercased() == "PECULIAR" {
+            self = .peculiar
             return
         }
         if let explicit = card.metadata?.frameTier, let matched = ModFrameTier(rawValue: explicit) {
@@ -126,7 +134,7 @@ private enum ModFrameTier: String {
     }
 
     var hasHorizontalOverhang: Bool {
-        self == .galvanized || self == .amalgam || self == .omega
+        self == .galvanized || self == .amalgam || self == .omega || self == .peculiar
     }
 
     var topFrameImageName: String {
@@ -143,6 +151,7 @@ private enum ModFrameTier: String {
         switch self {
         case .galvanized, .amalgam: return 288
         case .omega: return 281
+        case .peculiar: return 512
         default: return 256
         }
     }
@@ -151,17 +160,23 @@ private enum ModFrameTier: String {
         switch self {
         case .galvanized, .amalgam: return 288
         case .omega: return 292
+        case .peculiar: return 512
         default: return 256
         }
     }
 
     var sideLightNativeWidth: CGFloat {
-        self == .galvanized ? 32 : 16
+        switch self {
+        case .galvanized: return 32
+        case .peculiar: return 64
+        default: return 16
+        }
     }
 
     var backgroundImageName: String {
         switch self {
         case .omega, .arcane: return "LegendaryBackgroundTrimmed.png"
+        case .peculiar: return "SilverBackgroundTrimmed.png"
         default: return "\(rawValue)BackgroundTrimmed.png"
         }
     }
@@ -175,17 +190,22 @@ private enum ModFrameTier: String {
         case .galvanized: return Color(hex: "4E82DC")
         case .amalgam: return Color(hex: "689AD8")
         case .omega: return Color(hex: "985AE2")
+        case .peculiar: return Color(hex: "B8C2CC")
         case .arcane: return Color(hex: "8CC8D6")
         }
     }
 
     var sideLightImageName: String {
-        self == .arcane ? "LegendarySideLight.png" : "\(rawValue)SideLight.png"
+        switch self {
+        case .arcane: return "LegendarySideLight.png"
+        case .peculiar: return "PeculiarSideSmoke.png"
+        default: return "\(rawValue)SideLight.png"
+        }
     }
 
     var cornerLightsImageName: String {
         switch self {
-        case .galvanized, .amalgam: return "SilverCornerLights.png"
+        case .galvanized: return "SilverCornerLights.png"
         case .arcane: return "LegendaryCornerLights.png"
         default: return "\(rawValue)CornerLights.png"
         }
@@ -194,7 +214,7 @@ private enum ModFrameTier: String {
     var topRightBackerImageName: String {
         switch self {
         case .omega: return "RivenTopRightBacker.png"
-        case .galvanized, .amalgam: return "SilverTopRightBacker.png"
+        case .galvanized, .amalgam, .peculiar: return "SilverTopRightBacker.png"
         case .arcane: return "LegendaryTopRightBacker.png"
         default: return "\(rawValue)TopRightBacker.png"
         }
@@ -203,7 +223,7 @@ private enum ModFrameTier: String {
     var lowerTabImageName: String {
         switch self {
         case .omega: return "RivenLowerTab.png"
-        case .galvanized, .amalgam: return "SilverLowerTab.png"
+        case .galvanized, .amalgam, .peculiar: return "SilverLowerTab.png"
         case .arcane: return "LegendaryLowerTab.png"
         default: return "\(rawValue)LowerTab.png"
         }
@@ -212,7 +232,7 @@ private enum ModFrameTier: String {
     var textColor: Color {
         switch self {
         case .bronze: return Color(hex: "F3E2D8")
-        case .silver, .legendary, .galvanized, .amalgam, .arcane: return .white
+        case .silver, .legendary, .galvanized, .amalgam, .peculiar, .arcane: return .white
         case .gold: return Color(hex: "FAE7BE")
         case .omega: return Color(hex: "D4BAFF")
         }
@@ -227,6 +247,7 @@ private enum ModFrameTier: String {
         case .galvanized: return Color(hex: "9FD3F5")
         case .amalgam: return Color(hex: "BBD4EB")
         case .omega: return Color(hex: "C89EFF")
+        case .peculiar: return Color(hex: "D5DCE4")
         case .arcane: return Color(hex: "B8E8E9")
         }
     }
@@ -240,6 +261,7 @@ private enum ModFrameTier: String {
         case .galvanized: return Color(hex: "131F2C")
         case .amalgam: return Color(hex: "16222E")
         case .omega: return Color(hex: "120F1A")
+        case .peculiar: return Color(hex: "15191F")
         case .arcane: return Color(hex: "0D171C")
         }
     }
@@ -249,6 +271,7 @@ private enum ModFrameTier: String {
         case .galvanized: return -19.0
         case .amalgam: return -10.0
         case .omega: return -12.0
+        case .peculiar: return -68.0
         default: return -11.0
         }
     }
@@ -258,7 +281,20 @@ private enum ModFrameTier: String {
         case .galvanized: return 16.0
         case .amalgam: return 40.0
         case .omega: return 14.0
+        case .peculiar: return -66.0
         default: return 21.0
+        }
+    }
+
+    var horizontalCornerLightY: CGFloat {
+        self == .galvanized ? 0.0 : -8.0
+    }
+
+    var horizontalSideLightX: CGFloat {
+        switch self {
+        case .galvanized: return -8.0
+        case .peculiar: return -22.0
+        default: return 0.0
         }
     }
 
@@ -282,7 +318,27 @@ private enum ModFrameTier: String {
         case .galvanized: return 119.5
         case .amalgam: return 118.0
         case .omega: return 118.5
+        case .peculiar: return 119.0
         default: return 118.6
+        }
+    }
+
+    var horizontalEquippedHexY: CGFloat {
+        switch self {
+        case .galvanized: return 104.5
+        case .omega: return 103.5
+        default: return 107.6
+        }
+    }
+
+    var equippedHexBackerTint: Color {
+        switch self {
+        case .bronze: return Color(hex: "F0C6A8")
+        case .gold: return Color(hex: "FFE29A")
+        case .legendary: return Color(hex: "A6F0F8")
+        case .amalgam: return Color(hex: "BBD8F4")
+        case .peculiar: return Color(hex: "D8E2EC")
+        default: return Color(hex: "DDE8F4")
         }
     }
 
@@ -309,6 +365,61 @@ private enum ModFrameTier: String {
         case .omega: return 0.52
         case .legendary: return 0.40
         default: return 0.48
+        }
+    }
+
+    var verticalTopY: CGFloat {
+        switch self {
+        case .galvanized: return -8.0
+        case .omega: return 2.0
+        case .peculiar: return -64.0
+        default: return 1.0
+        }
+    }
+
+    var verticalBottomTopY: CGFloat {
+        switch self {
+        case .legendary: return 269.0
+        case .galvanized: return 277.0
+        case .amalgam: return 301.0
+        case .omega: return 272.0
+        case .peculiar: return 196.0
+        default: return 278.0
+        }
+    }
+
+    var verticalSideLightX: CGFloat {
+        switch self {
+        case .galvanized: return -8.0
+        case .peculiar: return -21.0
+        default: return 0.0
+        }
+    }
+
+    var verticalSideLightY: CGFloat {
+        switch self {
+        case .galvanized: return 66.0
+        case .amalgam: return 50.0
+        case .omega: return 64.0
+        case .peculiar: return 66.0
+        default: return 68.0
+        }
+    }
+
+    var verticalCapacityTrailingX: CGFloat {
+        switch self {
+        case .galvanized, .amalgam: return 259.0
+        case .omega: return 256.0
+        default: return 249.4
+        }
+    }
+
+    var verticalRankY: CGFloat {
+        switch self {
+        case .galvanized, .peculiar: return 374.0
+        case .amalgam: return 375.0
+        case .omega: return 367.0
+        default: return 379.0
         }
     }
 }
@@ -460,7 +571,10 @@ struct ModArtworkView: View {
     var alignment: Alignment = .center
     var imageYOffset: CGFloat = 0
 
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
     var body: some View {
+        let _ = remoteAssets.revision
         Color.clear
             .overlay(artworkLayer.offset(y: imageYOffset), alignment: alignment)
             .clipped()
@@ -495,20 +609,18 @@ struct ModArtworkView: View {
             let isVeiled = rawName.localizedCaseInsensitiveContains("riven mod")
                 || rawName.contains("裂罅")
             if isVeiled {
-                if let omegaArt = NativeDamageCatalog.shared.localModArt(named: "OmegaMod.webp") {
-                    return (omegaArt, nil)
-                }
                 return (
-                    NativeDamageCatalog.shared.localModIcon(named: "riven.webp"),
-                    URL(string: "https://warframe-damage.com/data/mods/riven.webp")
+                    NativeDamageCatalog.shared.localModArt(named: "OmegaMod.webp")
+                        ?? NativeDamageCatalog.shared.localModIcon(named: "riven.webp"),
+                    RemoteAssetStore.shared.remoteURL(forRelativePath: "mod-art/OmegaMod.webp")
+                        ?? URL(string: "https://warframe-damage.com/data/mods/riven.webp")
                 )
             }
-            if let unveiledArt = NativeDamageCatalog.shared.localModArt(named: "RifleZoomMod.webp") {
-                return (unveiledArt, nil)
-            }
             return (
-                NativeDamageCatalog.shared.localModIcon(named: "riven.webp"),
-                URL(string: "https://warframe-damage.com/data/mod-art/RifleZoomMod.webp")
+                NativeDamageCatalog.shared.localModArt(named: "RifleZoomMod.webp")
+                    ?? NativeDamageCatalog.shared.localModIcon(named: "riven.webp"),
+                RemoteAssetStore.shared.remoteURL(forRelativePath: "mod-art/RifleZoomMod.webp")
+                    ?? URL(string: "https://warframe-damage.com/data/mod-art/RifleZoomMod.webp")
             )
         }
         return NativeDamageCatalog.shared.modIconURLs(forName: rawName)
@@ -559,69 +671,120 @@ struct ModArtworkView: View {
 }
 
 @MainActor
+private struct DEFrameAssetView: View {
+    let fileName: String
+    var contentMode: ContentMode = .fit
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
+    var body: some View {
+        let _ = remoteAssets.revision
+#if canImport(UIKit)
+        if let img = ModAssetImageCache.frameImage(named: fileName) {
+            Image(uiImage: img)
+                .resizable()
+                .aspectRatio(contentMode: contentMode)
+        }
+#endif
+    }
+}
+
+@MainActor
+private struct DETintedFrameAssetView: View {
+    let fileName: String
+    let tint: Color
+    var contentMode: ContentMode = .fit
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
+    var body: some View {
+        let _ = remoteAssets.revision
+#if canImport(UIKit)
+        if let img = ModAssetImageCache.frameImage(named: fileName) {
+            Image(uiImage: img)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: contentMode)
+                .foregroundColor(tint)
+        }
+#endif
+    }
+}
+
+@MainActor
+private struct DECapacityBackerView: View {
+    let fileName: String
+    let height: CGFloat
+    let leftCapWidth: CGFloat
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
+    var body: some View {
+        let _ = remoteAssets.revision
+#if canImport(UIKit)
+        if let parts = ModAssetImageCache.capacityBackerParts(named: fileName) {
+            HStack(spacing: 0) {
+                Image(uiImage: parts.leftCap)
+                    .resizable()
+                    .frame(width: leftCapWidth, height: height)
+                Image(uiImage: parts.flatBody)
+                    .resizable()
+                    .frame(height: height)
+            }
+        } else {
+            DEFrameAssetView(fileName: fileName, contentMode: .fill)
+                .frame(height: height)
+                .clipped()
+        }
+#endif
+    }
+}
+
+@MainActor
+private struct DEPolarityAssetView: View {
+    let polarity: String
+    let tint: Color
+    let size: CGFloat
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
+    var body: some View {
+        let _ = remoteAssets.revision
+#if canImport(UIKit)
+        if let img = ModAssetImageCache.polarityImage(named: polarity) {
+            Image(uiImage: img)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundColor(tint)
+                .frame(width: size, height: size)
+        } else {
+            fallbackPolarityText(polarity, tint: tint, size: size)
+        }
+#else
+        fallbackPolarityText(polarity, tint: tint, size: size)
+#endif
+    }
+}
+
+@MainActor
 @ViewBuilder
 private func deFrameImage(_ fileName: String, contentMode: ContentMode = .fit) -> some View {
-#if canImport(UIKit)
-    if let img = ModAssetImageCache.frameImage(named: fileName) {
-        Image(uiImage: img)
-            .resizable()
-            .aspectRatio(contentMode: contentMode)
-    }
-#endif
+    DEFrameAssetView(fileName: fileName, contentMode: contentMode)
 }
 
 @MainActor
 @ViewBuilder
 private func deTintedFrameImage(_ fileName: String, tint: Color, contentMode: ContentMode = .fit) -> some View {
-#if canImport(UIKit)
-    if let img = ModAssetImageCache.frameImage(named: fileName) {
-        Image(uiImage: img)
-            .renderingMode(.template)
-            .resizable()
-            .aspectRatio(contentMode: contentMode)
-            .foregroundColor(tint)
-    }
-#endif
+    DETintedFrameAssetView(fileName: fileName, tint: tint, contentMode: contentMode)
 }
 
 @MainActor
 @ViewBuilder
 private func deCapacityBackerPlate(_ fileName: String, height: CGFloat, leftCapWidth: CGFloat) -> some View {
-#if canImport(UIKit)
-    if let parts = ModAssetImageCache.capacityBackerParts(named: fileName) {
-        HStack(spacing: 0) {
-            Image(uiImage: parts.leftCap)
-                .resizable()
-                .frame(width: leftCapWidth, height: height)
-            Image(uiImage: parts.flatBody)
-                .resizable()
-                .frame(height: height)
-        }
-    } else {
-        deFrameImage(fileName, contentMode: .fill)
-            .frame(height: height)
-            .clipped()
-    }
-#endif
+    DECapacityBackerView(fileName: fileName, height: height, leftCapWidth: leftCapWidth)
 }
 
 @MainActor
 @ViewBuilder
 private func dePolarityView(_ polarity: String, tint: Color, size: CGFloat) -> some View {
-#if canImport(UIKit)
-    if let img = ModAssetImageCache.polarityImage(named: polarity) {
-        Image(uiImage: img)
-            .renderingMode(.template)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .foregroundColor(tint)
-            .frame(width: size, height: size)
-    } else {
-        fallbackPolarityText(polarity, tint: tint, size: size)
-    }
-#else
-    fallbackPolarityText(polarity, tint: tint, size: size)
-#endif
+    DEPolarityAssetView(polarity: polarity, tint: tint, size: size)
 }
 
 @ViewBuilder
@@ -718,6 +881,31 @@ private struct DETopRightCapacityBacker: View {
     }
 }
 
+@MainActor
+@ViewBuilder
+private func deCapacityPlateView(
+    card: ModCardPresentation,
+    tier: ModFrameTier,
+    drainTint: Color,
+    trailingX: CGFloat,
+    centerY: CGFloat,
+    scale: CGFloat
+) -> some View {
+    if let drain = card.effectiveDrain {
+        DETopRightCapacityBacker(
+            frameImageName: tier.topRightBackerImageName,
+            capacityText: card.isPositiveCapacity ? "+\(drain)" : "\(drain)",
+            polarity: card.metadata?.polarity ?? "",
+            tint: drainTint,
+            scale: scale
+        )
+        .position(
+            x: trailingX - DETopRightCapacityBacker.nativeContainerWidth * 0.5 * scale,
+            y: centerY
+        )
+    }
+}
+
 /// Compact in-game horizontal Mod / Arcane tile for a two-column grid.
 ///
 /// The Mod chrome, glass mask, and glass glow were extracted from a single
@@ -781,6 +969,12 @@ struct HorizontalModCardView: View {
             let rankLineWidth: CGFloat = isOverhang ? w * 0.74 : 243 * scale
 
             ZStack(alignment: .topLeading) {
+                // Equipped gunmetal Mod Dock sits underneath glass & top/bottom chrome
+                // to supply side brackets, 3-sided lower cradle, and bottom pedestal.
+                EquippedModDockView(showSideEars: !isOverhang, scale: scale)
+                    .frame(width: w, height: h)
+                    .allowsHitTesting(false)
+
                 // Artwork, rarity wash, and the *real* glass layers all use
                 // the same full card canvas. The metal chrome goes above it.
                 ZStack {
@@ -846,7 +1040,8 @@ struct HorizontalModCardView: View {
                     // Ordinary tiers clip the capacity plate inside the glass mask so
                     // its right edge stops cleanly under the thin vertical chrome rim.
                     if !isOverhang {
-                        capacityPlateView(
+                        deCapacityPlateView(
+                            card: card,
                             tier: tier,
                             drainTint: drainTint,
                             trailingX: capacityTrailingX - glassOriginX,
@@ -863,6 +1058,33 @@ struct HorizontalModCardView: View {
                     y: glassOriginY + glassHeight * 0.5
                 )
                 .allowsHitTesting(false)
+
+                if tier == .peculiar || tier == .galvanized {
+                    let sideAsset = tier == .peculiar ? "PeculiarSideSmoke.png" : "GalvanizedSideLight.png"
+                    let sideOpacity = tier == .peculiar ? 0.85 : 0.62
+                    deFrameImage(sideAsset, contentMode: .fill)
+                        .frame(width: tier.sideLightNativeWidth * scale, height: 74 * scale)
+                        .clipped()
+                        .opacity(sideOpacity)
+                        .blendMode(.screen)
+                        .position(
+                            x: (tier.horizontalSideLightX + tier.sideLightNativeWidth * 0.5) * scale,
+                            y: 56 * scale
+                        )
+                        .allowsHitTesting(false)
+
+                    deFrameImage(sideAsset, contentMode: .fill)
+                        .frame(width: tier.sideLightNativeWidth * scale, height: 74 * scale)
+                        .clipped()
+                        .scaleEffect(x: -1, y: 1)
+                        .opacity(sideOpacity)
+                        .blendMode(.screen)
+                        .position(
+                            x: w - (tier.horizontalSideLightX + tier.sideLightNativeWidth * 0.5) * scale,
+                            y: 56 * scale
+                        )
+                        .allowsHitTesting(false)
+                }
 
                 // All tiers align their full top & bottom frames onto the same 256 × 131 grid.
                 ZStack(alignment: .top) {
@@ -883,9 +1105,14 @@ struct HorizontalModCardView: View {
                 .frame(width: w, height: h)
                 .allowsHitTesting(false)
 
+                EquippedModCenterBadge(tier: tier, scale: scale)
+                    .frame(width: w, height: h)
+                    .allowsHitTesting(false)
+
                 // Overhang tiers drape the capacity ribbon in front of the right side pillar.
                 if isOverhang {
-                    capacityPlateView(
+                    deCapacityPlateView(
+                        card: card,
                         tier: tier,
                         drainTint: drainTint,
                         trailingX: capacityTrailingX,
@@ -947,29 +1174,6 @@ struct HorizontalModCardView: View {
         .zIndex(tier.hasHorizontalOverhang ? 1 : 0)
     }
 
-    @ViewBuilder
-    private func capacityPlateView(
-        tier: ModFrameTier,
-        drainTint: Color,
-        trailingX: CGFloat,
-        centerY: CGFloat,
-        scale: CGFloat
-    ) -> some View {
-        if let drain = card.effectiveDrain {
-            DETopRightCapacityBacker(
-                frameImageName: tier.topRightBackerImageName,
-                capacityText: card.isPositiveCapacity ? "+\(drain)" : "\(drain)",
-                polarity: card.metadata?.polarity ?? "",
-                tint: drainTint,
-                scale: scale
-            )
-            .position(
-                x: trailingX - DETopRightCapacityBacker.nativeContainerWidth * 0.5 * scale,
-                y: centerY
-            )
-        }
-    }
-
     private var arcaneTile: some View {
         let tier = ModFrameTier(card: card)
         return GeometryReader { geo in
@@ -977,80 +1181,295 @@ struct HorizontalModCardView: View {
             let h = geo.size.height
             let backerSide = min(h * 1.04, w * 0.42)
 
-            ZStack {
-                LinearGradient(
-                    colors: [Color(hex: "16252B"), tier.backdropColor, Color(hex: "071015")],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+            HStack(spacing: 0) {
+                ZStack {
+                    deFrameImage("ArcaneUpgradeBackerMask.png", contentMode: .fit)
+                        .frame(width: backerSide, height: backerSide)
+                        .opacity(0.94)
 
-                LinearGradient(
-                    colors: [tier.accentColor.opacity(0.12), .clear, Color.black.opacity(0.24)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-
-                HStack(spacing: 0) {
-                    ZStack {
-                        deFrameImage("ArcaneUpgradeBackerMask.png", contentMode: .fit)
-                            .frame(width: backerSide, height: backerSide)
-                            .opacity(0.94)
-
-                        ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
-                            .frame(width: backerSide * 1.28, height: backerSide * 0.92)
-                            .shadow(color: Color.black.opacity(0.65), radius: 3, y: 1)
-                    }
-                    .frame(width: w * 0.48, height: h)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(card.displayName)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.85), radius: 1.5, y: 1)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.74)
-
-                        Text("赋能")
-                            .font(.system(size: 9, weight: .medium))
-                            .tracking(1.1)
-                            .foregroundColor(tier.accentColor)
-
-                        if card.effectiveMaxRank > 0 {
-                            deRankBar(
-                                current: card.effectiveRank,
-                                maxRank: card.effectiveMaxRank,
-                                dotSize: 7.5,
-                                spacing: 1.5,
-                                lineWidth: w * 0.34
-                            )
-                        }
-                    }
-                    .frame(width: w * 0.45, alignment: .leading)
-
-                    Spacer(minLength: 0)
+                    ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
+                        .frame(width: backerSide * 1.28, height: backerSide * 0.92)
+                        .shadow(color: Color.black.opacity(0.65), radius: 3, y: 1)
                 }
-                .padding(.horizontal, max(5, w * 0.025))
+                .frame(width: w * 0.48, height: h)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(card.displayName)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.85), radius: 1.5, y: 1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.74)
+
+                    Text("赋能")
+                        .font(.system(size: 9, weight: .medium))
+                        .tracking(1.1)
+                        .foregroundColor(tier.accentColor)
+
+                    if card.effectiveMaxRank > 0 {
+                        deRankBar(
+                            current: card.effectiveRank,
+                            maxRank: card.effectiveMaxRank,
+                            dotSize: 7.5,
+                            spacing: 1.5,
+                            lineWidth: w * 0.34
+                        )
+                    }
+                }
+                .frame(width: w * 0.45, alignment: .leading)
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, max(5, w * 0.025))
             .frame(width: w, height: h)
         }
+    }
+}
+
+/// Transparent empty Arcane slot using the official `NoArcaneIcon.png` silhouette.
+@MainActor
+struct EmptyArcaneSlotView: View {
+    var title: String = "赋能"
+    var subtitle: String = "选择赋能"
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let iconSide = min(h * 0.92, w * 0.40)
+
+            HStack(spacing: 0) {
+                deFrameImage("NoArcaneIcon.png", contentMode: .fit)
+                    .frame(width: iconSide, height: iconSide)
+                    .opacity(0.75)
+                    .frame(width: w * 0.48, height: h)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(WFTheme.textMuted)
+                    Text(subtitle)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(WFTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                .frame(width: w * 0.45, alignment: .leading)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, max(5, w * 0.025))
+            .frame(width: w, height: h)
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(256.0 / 128.0, contentMode: .fit)
+        .contentShape(Rectangle())
+    }
+}
+
+/// Arsenal Mod Dock cradle painted underneath equipped horizontal Mod cards:
+/// top crest lip, side brackets bridging `#4`/`#5`, 3-sided lower cradle, and center pedestal.
+private struct EquippedModDockView: View {
+    let showSideEars: Bool
+    let scale: CGFloat
+
+    private let dockFill = LinearGradient(
+        colors: [Color(hex: "363D47"), Color(hex: "262C34"), Color(hex: "1B2027")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    private let dockBevel = LinearGradient(
+        colors: [Color(hex: "98A4B3").opacity(0.82), Color(hex: "5E6978").opacity(0.75)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if showSideEars {
+                HorizontalTopDockRailShape(scale: scale)
+                    .fill(dockFill)
+                HorizontalTopDockRailShape(scale: scale)
+                    .stroke(dockBevel, lineWidth: max(0.8, 0.9 * scale))
+
+                HorizontalSideDockBracketShape(isRight: false, scale: scale)
+                    .fill(dockFill)
+                HorizontalSideDockBracketShape(isRight: false, scale: scale)
+                    .stroke(dockBevel, lineWidth: max(0.8, 1.0 * scale))
+
+                HorizontalSideDockBracketShape(isRight: true, scale: scale)
+                    .fill(dockFill)
+                HorizontalSideDockBracketShape(isRight: true, scale: scale)
+                    .stroke(dockBevel, lineWidth: max(0.8, 1.0 * scale))
+            }
+
+            HorizontalBottomDockCradleShape(scale: scale)
+                .fill(dockFill)
+            HorizontalBottomDockCradleShape(scale: scale)
+                .stroke(dockBevel, lineWidth: max(0.8, 1.05 * scale))
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct HorizontalTopDockRailShape: Shape {
+    let scale: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: 78 * scale, y: 1 * scale))
+        p.addLine(to: CGPoint(x: 178 * scale, y: 1 * scale))
+        p.addLine(to: CGPoint(x: 174 * scale, y: 6 * scale))
+        p.addLine(to: CGPoint(x: 82 * scale, y: 6 * scale))
+        p.closeSubpath()
+        return p
+    }
+}
+
+private struct HorizontalSideDockBracketShape: Shape {
+    let isRight: Bool
+    let scale: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let pts: [(CGFloat, CGFloat)] = [
+            (4.0, 12.0), (2.2, 16.0), (2.0, 44.0), (4.5, 48.0),
+            (7.5, 58.0), (11.0, 58.0), (11.0, 12.0)
+        ]
+        var p = Path()
+        for (idx, raw) in pts.enumerated() {
+            let x = (isRight ? (256.0 - raw.0) : raw.0) * scale
+            let pt = CGPoint(x: x, y: raw.1 * scale)
+            if idx == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+private struct HorizontalBottomDockCradleShape: Shape {
+    let scale: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let pts: [(CGFloat, CGFloat)] = [
+            (6.0, 102.0), (19.0, 114.0), (30.0, 121.0), (34.0, 130.5),
+            (52.0, 130.5), (58.0, 127.0), (93.0, 127.0), (96.0, 132.2),
+            (160.0, 132.2), (163.0, 127.0), (198.0, 127.0), (204.0, 130.5),
+            (222.0, 130.5), (226.0, 121.0), (237.0, 114.0), (250.0, 102.0),
+            (240.0, 100.0), (16.0, 100.0)
+        ]
+        var p = Path()
+        for (idx, raw) in pts.enumerated() {
+            let pt = CGPoint(x: raw.0 * scale, y: raw.1 * scale)
+            if idx == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Center equipped hexagon badge + backer aura (`SilverSelectedBacker.png`,
+/// `GalvanizedBottomLight.png`, or `OmegaEquippedLight.png`) above the rank bar.
+@MainActor
+private struct EquippedModCenterBadge: View {
+    let tier: ModFrameTier
+    let scale: CGFloat
+
+    var body: some View {
+        let cx = 128.0 * scale
+        let cy = tier.horizontalEquippedHexY * scale
+
+        ZStack {
+            if tier == .galvanized {
+                deFrameImage("GalvanizedBottomLight.png", contentMode: .fit)
+                    .frame(width: 32 * scale, height: 32 * scale)
+                    .opacity(0.75)
+                    .blendMode(.screen)
+                    .position(x: cx, y: cy)
+            } else if tier == .omega {
+                deFrameImage("OmegaEquippedLight.png", contentMode: .fit)
+                    .frame(width: 128 * scale, height: 64 * scale)
+                    .blendMode(.screen)
+                    .position(x: cx, y: 103.0 * scale)
+            } else {
+                deTintedFrameImage("SilverSelectedBacker.png", tint: tier.equippedHexBackerTint, contentMode: .fit)
+                    .frame(width: 36 * scale, height: 36 * scale)
+                    .opacity(0.88)
+                    .blendMode(.screen)
+                    .position(x: cx, y: cy)
+            }
+
+            ZStack {
+                PointedHexagonShape()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "E4ECF5"), Color(hex: "83909F")],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 8.6 * scale, height: 9.4 * scale)
+                    .overlay(
+                        PointedHexagonShape()
+                            .stroke(Color(hex: "14181E"), lineWidth: max(0.7, 0.8 * scale))
+                    )
+
+                PointedHexagonShape()
+                    .fill(Color(hex: "20262F"))
+                    .frame(width: 4.8 * scale, height: 5.3 * scale)
+
+                Circle()
+                    .fill(Color(hex: "B8C5D4").opacity(0.70))
+                    .frame(width: 1.5 * scale, height: 1.5 * scale)
+            }
+            .position(x: cx, y: cy)
+        }
+    }
+}
+
+private struct PointedHexagonShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let cx = rect.midX
+        let cy = rect.midY
+        let rx = rect.width * 0.5
+        let ry = rect.height * 0.5
+        let angles: [Double] = [-90, -30, 30, 90, 150, 210]
+        var p = Path()
+        for (idx, deg) in angles.enumerated() {
+            let rad = deg * .pi / 180.0
+            let pt = CGPoint(x: cx + rx * CGFloat(cos(rad)), y: cy + ry * CGFloat(sin(rad)))
+            if idx == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+@MainActor
+private struct DEGlassMaskView: View {
+    let width: CGFloat
+    let height: CGFloat
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
+
+    var body: some View {
+        let _ = remoteAssets.revision
+#if canImport(UIKit)
+        if let maskImg = ModAssetImageCache.seamlessGlassMaskImage()
+            ?? ModAssetImageCache.frameImage(named: "ModGlassMask.png") {
+            Image(uiImage: maskImg)
+                .resizable()
+                .frame(width: width, height: height)
+        } else {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+        }
+#else
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+#endif
     }
 }
 
 @MainActor
 @ViewBuilder
 private func deGlassMask(width: CGFloat, height: CGFloat) -> some View {
-#if canImport(UIKit)
-    if let maskImg = ModAssetImageCache.seamlessGlassMaskImage()
-        ?? ModAssetImageCache.frameImage(named: "ModGlassMask.png") {
-        Image(uiImage: maskImg)
-            .resizable()
-            .frame(width: width, height: height)
-    } else {
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
-    }
-#else
-    RoundedRectangle(cornerRadius: 4, style: .continuous)
-#endif
+    DEGlassMaskView(width: width, height: height)
 }
 
 @MainActor
@@ -1080,7 +1499,7 @@ struct VerticalModCardModal: View {
                                 .padding(.top, 10)
                         } else {
                             verticalModCard(tier: tier)
-                                .padding(.top, 10)
+                                .padding(.top, 18)
                         }
 
                         if card.effectiveMaxRank > 0 {
@@ -1141,274 +1560,339 @@ struct VerticalModCardModal: View {
     }
 
     private func verticalModCard(tier: ModFrameTier) -> some View {
-        // Portrait frame assets share a native 256 × 512 coordinate system.
-        // Preserve it instead of stretching the 242 × 342 carbon background
-        // into an arbitrary short sheet.
+        // Portrait frame assets share one 256px-wide coordinate grid whose inner
+        // opening spans y = 18...357 (`BackgroundTrimmed` 242 × 342 / 339).
         let cardWidth: CGFloat = 280
         let scale = cardWidth / 256
-        let cardHeight = 512 * scale
+        let cardHeight = 388 * scale
+        let isOverhang = tier.hasHorizontalOverhang
         let bodyWidth = 242 * scale
-        let bodyHeight = 342 * scale
-        let bodyTop = 85 * scale
+        let bodyNativeHeight: CGFloat = tier == .amalgam ? 339 : 342
+        let bodyHeight = bodyNativeHeight * scale
+        let bodyTopNative: CGFloat = tier == .amalgam ? 18 : 16
+        let bodyTop = bodyTopNative * scale
         let sideLightWidth = tier.sideLightNativeWidth * scale
         let drainTint = card.isPositiveCapacity ? Color(hex: "77E494") : tier.textColor
 
-        return ZStack {
+        return ZStack(alignment: .topLeading) {
             Color.clear
                 .frame(width: cardWidth, height: cardHeight)
 
-            // 1. The trimmed body is an exact crop of Background.png at
-            //    native x:7, y:85. It must keep its 242:342 aspect ratio.
-            ZStack(alignment: .top) {
-                tier.backdropColor
-                deFrameImage(tier.backgroundImageName, contentMode: .fill)
-                    .frame(width: bodyWidth, height: bodyHeight)
-                    .clipped()
+            // 1. Inner body window: crisp upper artwork + top-left corner glint,
+            //    layered beneath a compact bottom text slab sized cleanly to the text.
+            ZStack(alignment: .bottom) {
+                ZStack(alignment: .topLeading) {
+                    tier.backdropColor
+                    deFrameImage(tier.backgroundImageName, contentMode: .fill)
+                        .frame(width: bodyWidth, height: bodyHeight)
+                        .clipped()
 
-                ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
-                    .frame(width: bodyWidth, height: 218 * scale)
+                    ModArtworkView(
+                        rawName: card.rawName,
+                        isRiven: card.isRiven,
+                        contentMode: .fill,
+                        alignment: .top
+                    )
+                    .frame(width: bodyWidth, height: 256 * scale)
                     .clipped()
-                    .saturation(card.isRiven ? 0.12 : 0.18)
-                    .overlay(
-                        tier.glassTintColor.opacity(card.isRiven ? 0.14 : 0.20)
-                            .blendMode(.screen)
+                    .saturation(card.isRiven ? 0.85 : 1.0)
+
+                    RadialGradient(
+                        stops: [
+                            .init(color: tier.glassTintColor.opacity(card.isRiven ? 0.25 : 0.18), location: 0.0),
+                            .init(color: .clear, location: 1.0),
+                        ],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 95 * scale
                     )
-                    .mask(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white, location: 0.0),
-                                .init(color: .white, location: 0.52),
-                                .init(color: .clear, location: 1.0),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
+                    .frame(width: bodyWidth, height: 150 * scale)
+                    .blendMode(.screen)
+
+                    deFrameImage(tier.cornerLightsImageName, contentMode: .fit)
+                        .frame(width: 64 * scale, height: 64 * scale)
+                        .offset(x: -2 * scale, y: -2 * scale)
+                        .opacity(0.85)
+                        .blendMode(.screen)
+
+                    deFrameImage(tier.cornerLightsImageName, contentMode: .fit)
+                        .frame(width: 64 * scale, height: 64 * scale)
+                        .scaleEffect(x: -1, y: 1)
+                        .offset(x: bodyWidth - 62 * scale, y: -2 * scale)
+                        .opacity(0.85)
+                        .blendMode(.screen)
+
+                    if !isOverhang {
+                        deCapacityPlateView(
+                            card: card,
+                            tier: tier,
+                            drainTint: drainTint,
+                            trailingX: (tier.verticalCapacityTrailingX - 7.0) * scale,
+                            centerY: (34.0 - bodyTopNative) * scale,
+                            scale: scale
                         )
-                    )
+                    }
+                }
+                .frame(width: bodyWidth, height: bodyHeight)
+
+                // Layered dark carbon text tray sized strictly to Title + Effects + LowerTab.
+                VStack(spacing: 0) {
+                    VStack(spacing: 5 * scale) {
+                        Text(card.displayName)
+                            .font(.system(size: 19.5 * scale, weight: .semibold))
+                            .foregroundColor(tier.textColor)
+                            .shadow(color: Color.black.opacity(0.95), radius: 2.5, y: 1)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12 * scale)
+
+                        if !card.effectLines.isEmpty {
+                            VStack(spacing: 3.5 * scale) {
+                                ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
+                                    Text(line)
+                                        .font(.system(size: 12.2 * scale, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.96))
+                                        .shadow(color: Color.black.opacity(0.85), radius: 1.5, y: 1)
+                                        .multilineTextAlignment(.center)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding(.horizontal, 14 * scale)
+                        }
+                    }
+                    .padding(.top, 14 * scale)
+                    .padding(.bottom, 9 * scale)
+
+                    Spacer().frame(height: 36 * scale)
+                }
+                .frame(width: bodyWidth)
+                .background(
+                    GeometryReader { slabGeo in
+                        ZStack(alignment: .bottom) {
+                            tier.backdropColor
+                            deFrameImage(tier.backgroundImageName, contentMode: .fill)
+                                .frame(width: bodyWidth, height: bodyHeight)
+                        }
+                        .frame(width: bodyWidth, height: slabGeo.size.height, alignment: .bottom)
+                        .clipped()
+                        .mask(
+                            VStack(spacing: 0) {
+                                LinearGradient(
+                                    colors: [.clear, .white],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .frame(height: 3 * scale)
+                                Color.white
+                            }
+                        )
+                        .overlay(alignment: .top) {
+                            Rectangle()
+                                .fill(tier.glassTintColor.opacity(0.24))
+                                .frame(height: 1 * scale)
+                                .offset(y: 2 * scale)
+                        }
+                    }
+                )
             }
             .frame(width: bodyWidth, height: bodyHeight)
+            .clipped()
+            .mask(
+                Group {
+                    if tier == .omega {
+                        VerticalChamferedBodyShape(chamfer: 14 * scale)
+                    } else {
+                        Rectangle()
+                    }
+                }
+            )
             .position(x: cardWidth * 0.5, y: bodyTop + bodyHeight * 0.5)
 
-            // 2. Side lights occupy their native 16 × 256 (32 × 256 for
-            //    Galvanized) slot between the portrait top and bottom chrome.
+            // 2. Side rails connect top and bottom frames down both outer edges.
             deFrameImage(tier.sideLightImageName, contentMode: .fit)
                 .frame(width: sideLightWidth, height: 256 * scale)
-                .position(x: sideLightWidth * 0.5, y: 256 * scale)
+                .position(
+                    x: tier.verticalSideLightX * scale + sideLightWidth * 0.5,
+                    y: (tier.verticalSideLightY + 128) * scale
+                )
                 .allowsHitTesting(false)
 
             deFrameImage(tier.sideLightImageName, contentMode: .fit)
                 .frame(width: sideLightWidth, height: 256 * scale)
                 .scaleEffect(x: -1, y: 1)
-                .position(x: cardWidth - sideLightWidth * 0.5, y: 256 * scale)
+                .position(
+                    x: cardWidth - tier.verticalSideLightX * scale - sideLightWidth * 0.5,
+                    y: (tier.verticalSideLightY + 128) * scale
+                )
+                .allowsHitTesting(false)
+
+            // 3. Bottom & top full chrome frames aligned to the shared inner rails.
+            ZStack(alignment: .top) {
+                Color.clear
+                deFrameImage(tier.bottomFrameImageName, contentMode: .fit)
+                    .frame(width: cardWidth * (tier.frameBottomNativeWidth / 256))
+                    .offset(y: tier.verticalBottomTopY * scale)
+            }
+            .frame(width: cardWidth, height: cardHeight)
             .allowsHitTesting(false)
 
-            // Capacity backing is inside the chrome, so its right edge is
-            // occluded by the full portrait frame just as it is on the
-            // horizontal card.
-            if let drain = card.effectiveDrain {
-                DETopRightCapacityBacker(
-                    frameImageName: tier.topRightBackerImageName,
-                    capacityText: card.isPositiveCapacity ? "+\(drain)" : "\(drain)",
-                    polarity: card.metadata?.polarity ?? "",
-                    tint: drainTint,
-                    scale: scale
-                )
-                .position(
-                    x: cardWidth - (3.25 + DETopRightCapacityBacker.nativeContainerWidth * 0.5) * scale,
-                    y: 29 * scale
-                )
-                .allowsHitTesting(false)
-            }
-
-            deFrameImage(tier.cornerLightsImageName, contentMode: .fit)
-                .frame(width: 64 * scale, height: 64 * scale)
-                .opacity(0.65)
-                .position(x: 32 * scale, y: 32 * scale)
-                .allowsHitTesting(false)
-
-            // 3. Full portrait frames. Special tiers retain their source
-            //    width, so their ornate side wings are never squashed.
             ZStack(alignment: .top) {
                 Color.clear
                 deFrameImage(tier.topFrameImageName, contentMode: .fit)
                     .frame(width: cardWidth * (tier.frameTopNativeWidth / 256))
+                    .offset(y: tier.verticalTopY * scale)
             }
             .frame(width: cardWidth, height: cardHeight)
             .allowsHitTesting(false)
 
-            ZStack(alignment: .bottom) {
-                Color.clear
-                deFrameImage(tier.bottomFrameImageName, contentMode: .fit)
-                    .frame(width: cardWidth * (tier.frameBottomNativeWidth / 256))
+            if tier == .galvanized {
+                deFrameImage("GalvanizedBottomLight.png", contentMode: .fit)
+                    .frame(width: 32 * scale, height: 32 * scale)
+                    .opacity(0.72)
+                    .blendMode(.screen)
+                    .position(x: cardWidth * 0.5, y: tier.verticalRankY * scale)
+                    .allowsHitTesting(false)
+            } else if tier == .omega {
+                deFrameImage("OmegaEquippedLight.png", contentMode: .fit)
+                    .frame(width: 128 * scale, height: 64 * scale)
+                    .blendMode(.screen)
+                    .position(x: cardWidth * 0.5, y: 362 * scale)
+                    .allowsHitTesting(false)
             }
-            .frame(width: cardWidth, height: cardHeight)
-            .allowsHitTesting(false)
+
+            // Overhang tiers drape the capacity ribbon in front of the right wing.
+            if isOverhang {
+                deCapacityPlateView(
+                    card: card,
+                    tier: tier,
+                    drainTint: drainTint,
+                    trailingX: tier.verticalCapacityTrailingX * scale,
+                    centerY: 34.0 * scale,
+                    scale: scale
+                )
+                .allowsHitTesting(false)
+            }
 
             if let modSet = card.metadata?.modSet, !modSet.isEmpty {
                 ZStack(alignment: .top) {
                     Color.clear
                     deFrameImage("\(modSet)Header.png", contentMode: .fit)
                         .frame(width: 128 * scale)
-                        .offset(y: -2 * scale)
+                        .offset(y: -13 * scale)
                 }
                 .frame(width: cardWidth, height: cardHeight)
                 .allowsHitTesting(false)
             }
 
-            // 4. Text stays within the safe body area while the source chrome
-            //    owns the upper/lower visual weight and the rank tray.
-            VStack(spacing: 7) {
-                Spacer().frame(height: 226 * scale)
-
-                Text(card.displayName)
-                    .font(.system(size: 20, weight: .bold))
+            // 4. LowerTab and RankBar sit at fixed frame anchors.
+            ZStack {
+                deFrameImage(tier.lowerTabImageName, contentMode: .fit)
+                    .frame(width: 210 * scale)
+                Text(card.compatLabel)
+                    .font(.system(size: 11 * scale, weight: .semibold))
                     .foregroundColor(tier.textColor)
-                    .shadow(color: Color.black.opacity(0.95), radius: 2.5, y: 1)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 14)
-
-                VStack(spacing: 5) {
-                    ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
-                        Text(line)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.95))
-                            .shadow(color: Color.black.opacity(0.85), radius: 1.5, y: 1)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.horizontal, 16 * scale)
-
-                Spacer(minLength: 8 * scale)
-
-                ZStack {
-                    deFrameImage(tier.lowerTabImageName, contentMode: .fit)
-                        .frame(width: 210 * scale)
-                    Text(card.compatLabel)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(tier.textColor)
-                }
-                .padding(.bottom, 5 * scale)
-
-                if card.effectiveMaxRank > 0 {
-                    deRankBar(
-                        current: card.effectiveRank,
-                        maxRank: card.effectiveMaxRank,
-                        dotSize: card.effectiveMaxRank > 6 ? 10 : 12,
-                        spacing: card.effectiveMaxRank > 6 ? 2.5 : 4,
-                        lineWidth: 206 * scale
-                    )
-                    .padding(.bottom, 30 * scale)
-                } else {
-                    Spacer().frame(height: 32 * scale)
-                }
             }
-            .frame(width: bodyWidth, height: cardHeight)
+            .position(x: cardWidth * 0.5, y: 336 * scale)
+            .allowsHitTesting(false)
+
+            if card.effectiveMaxRank > 0 {
+                deRankBar(
+                    current: card.effectiveRank,
+                    maxRank: card.effectiveMaxRank,
+                    dotSize: (card.effectiveMaxRank > 6 ? 10.5 : 12.0) * scale,
+                    spacing: (card.effectiveMaxRank > 6 ? 1.8 : 3.0) * scale,
+                    lineWidth: 204 * scale
+                )
+                .position(x: cardWidth * 0.5, y: tier.verticalRankY * scale)
+                .allowsHitTesting(false)
+            }
         }
         .frame(width: cardWidth, height: cardHeight)
         .shadow(color: tier.accentColor.opacity(0.25), radius: 18, y: 8)
     }
 
     private func verticalArcaneCard(tier: ModFrameTier) -> some View {
-        let panelWidth: CGFloat = 276
         let backerSide: CGFloat = 212
 
-        return ZStack {
-            LinearGradient(
-                colors: [Color(hex: "0B171C"), tier.backdropColor, Color(hex: "050B0E")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+        return VStack(spacing: 12) {
+            ZStack {
+                deFrameImage("ArcaneUpgradeBackerMask.png", contentMode: .fit)
+                    .frame(width: backerSide, height: backerSide)
+                    .opacity(0.96)
 
-            VStack(spacing: 12) {
-                ZStack {
-                    // This is a source backer, not a generic circular mask:
-                    // it carries the etched stone/metal texture of an Arcane
-                    // upgrade slot.
-                    deFrameImage("ArcaneUpgradeBackerMask.png", contentMode: .fit)
-                        .frame(width: backerSide, height: backerSide)
-                        .opacity(0.96)
-
-                    ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
-                        .frame(width: backerSide * 1.28, height: backerSide * 0.92)
-                        .shadow(color: .black.opacity(0.78), radius: 5, y: 2)
-                }
-                .frame(width: backerSide + 18, height: backerSide)
-                .shadow(color: tier.accentColor.opacity(0.20), radius: 14)
-                .padding(.top, 18)
-
-                Text(card.displayName)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.92), radius: 2.5, y: 1)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 18)
-
-                Text("赋能")
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(1.5)
-                    .foregroundColor(tier.accentColor)
-
-                if card.effectiveMaxRank > 0 {
-                    deRankBar(
-                        current: card.effectiveRank,
-                        maxRank: card.effectiveMaxRank,
-                        dotSize: 12,
-                        spacing: 4,
-                        lineWidth: 160
-                    )
-                    .padding(.top, 1)
-                }
-
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.clear, tier.accentColor.opacity(0.48), .clear],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(height: 1)
-                    .padding(.horizontal, 26)
-                    .padding(.top, 5)
-
-                VStack(spacing: 6) {
-                    ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
-                        Text(line)
-                            .font(.system(size: 13.5, weight: .medium))
-                            .foregroundColor(.white.opacity(0.94))
-                            .shadow(color: .black.opacity(0.72), radius: 1.25, y: 1)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.horizontal, 22)
-                .padding(.top, 2)
-                .padding(.bottom, 22)
+                ModArtworkView(rawName: card.rawName, isRiven: false, contentMode: .fit)
+                    .frame(width: backerSide * 1.28, height: backerSide * 0.92)
+                    .shadow(color: .black.opacity(0.78), radius: 5, y: 2)
             }
-        }
-        .frame(width: panelWidth)
-        .overlay(alignment: .top) {
+            .frame(width: backerSide + 18, height: backerSide)
+            .shadow(color: tier.accentColor.opacity(0.20), radius: 14)
+            .padding(.top, 12)
+
+            Text(card.displayName)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.92), radius: 2.5, y: 1)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 18)
+
+            Text("赋能")
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(1.5)
+                .foregroundColor(tier.accentColor)
+
+            if card.effectiveMaxRank > 0 {
+                deRankBar(
+                    current: card.effectiveRank,
+                    maxRank: card.effectiveMaxRank,
+                    dotSize: 12,
+                    spacing: 4,
+                    lineWidth: 160
+                )
+                .padding(.top, 1)
+            }
+
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [.clear, tier.accentColor.opacity(0.72), .clear],
+                        colors: [.clear, tier.accentColor.opacity(0.48), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
                 .frame(height: 1)
+                .padding(.horizontal, 26)
+                .padding(.top, 4)
+
+            VStack(spacing: 6) {
+                ForEach(Array(card.effectLines.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.system(size: 13.5, weight: .medium))
+                        .foregroundColor(.white.opacity(0.94))
+                        .shadow(color: .black.opacity(0.72), radius: 1.25, y: 1)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 2)
+            .padding(.bottom, 12)
         }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, tier.accentColor.opacity(0.52), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
-        }
-        .shadow(color: tier.accentColor.opacity(0.20), radius: 16, y: 8)
+    }
+}
+
+private struct VerticalChamferedBodyShape: Shape {
+    let chamfer: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + chamfer, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - chamfer, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + chamfer))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + chamfer))
+        path.closeSubpath()
+        return path
     }
 }

@@ -140,8 +140,9 @@ jobs:
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
-          # 原生 Swift 计算器只打包 JSON / 图标数据，不执行网站 JS 内核。
-          python3 scripts/build_native_damage_data.py
+          # 原生 Swift 计算器只打包 JSON / 图标数据，不执行网站 JS 内核；
+          # 视觉门禁带上图片以确保无外网波动时截图稳定，Release 包则留给 App 从服务器下载。
+          python3 scripts/build_native_damage_data.py --include-images
           xcodegen generate
 
       - name: Boot Simulator & Build App
@@ -328,7 +329,7 @@ jobs:
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
-          # 原生 Swift 计算器只打包 JSON / 图标数据，不执行网站 JS 内核。
+          # Release 包只打 JSON (~2 MB)，55 MB 图库改由 App 启动后按需从服务器下载缓存。
           python3 scripts/build_native_damage_data.py
           xcodegen generate
 

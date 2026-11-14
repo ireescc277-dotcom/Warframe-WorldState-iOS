@@ -16,11 +16,12 @@ public struct WeaponEntry: Decodable, Identifiable, Hashable {
 
     public var id: String { n }
 
-    /// 站点把武器图放在自己的 /data/img/ 下，文件名就是 imageName。
-    /// 包里带了一份（assets/weapon-icons），这里作为联网兜底。
+    /// 武器图优先走本地/VPS 缓存服务器（`https://data.ireescc.com/wf-assets/icons/...`），
+    /// 若尚未加载或离线再回源站点 CDN。
     public var iconURL: URL? {
         guard !img.isEmpty else { return nil }
-        return URL(string: "https://warframe-damage.com/data/img/\(img)")
+        return RemoteAssetStore.shared.remoteURL(forRelativePath: "icons/\(img)")
+            ?? URL(string: "https://warframe-damage.com/data/img/\(img)")
     }
 
     public var categoryLabel: String {
@@ -174,19 +175,33 @@ public final class WeaponCatalog: ObservableObject {
         }
     }
 
-    /// 在额外图标表里按英文名 / 中文名 / 去后缀名解析本地图标 URL。
-    public func extraIconURL(forName rawName: String?) -> URL? {
-        guard let rawName else { return nil }
+    /// 返回武器缩略图本地文件 URL（磁盘缓存优先，其次包内），缺失时自动触发服务器下载。
+    public func weaponIconURL(named image: String) -> URL? {
+        guard !image.isEmpty else { return nil }
+        return RemoteAssetStore.shared.resolveOrFetch(relativePath: "icons/\(image)")
+    }
+
+    /// 在额外图标表里按英文名 / 中文名 / 去后缀名解析本地或远端图标。
+    public func extraIconURLs(forName rawName: String?) -> (local: URL?, remote: URL?) {
+        guard let rawName else { return (nil, nil) }
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let dir = WeaponCatalog.extraIconsDir else { return nil }
+        guard !trimmed.isEmpty else { return (nil, nil) }
         if extraIconIndex.isEmpty {
             load()
         }
         let filename = extraIconIndex[trimmed.lowercased()]
             ?? extraIconIndex[Self.normalizeLookupKey(trimmed)]
-        guard let filename, !filename.isEmpty else { return nil }
-        let fileURL = dir.appendingPathComponent(filename)
-        return FileManager.default.fileExists(atPath: fileURL.path) ? fileURL : nil
+        guard let filename, !filename.isEmpty else { return (nil, nil) }
+        let rel = "extra-icons/\(filename)"
+        return (
+            RemoteAssetStore.shared.resolveOrFetch(relativePath: rel),
+            RemoteAssetStore.shared.remoteURL(forRelativePath: rel)
+        )
+    }
+
+    /// 在额外图标表里按英文名 / 中文名 / 去后缀名解析本地图标 URL。
+    public func extraIconURL(forName rawName: String?) -> URL? {
+        extraIconURLs(forName: rawName).local
     }
 
     private static func normalizeLookupKey(_ raw: String) -> String {

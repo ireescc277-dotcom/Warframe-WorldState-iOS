@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         BackgroundRefresh.register()
+        RemoteAssetStore.shared.prefetchCoreChromeIfNeeded()
         return true
     }
 
