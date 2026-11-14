@@ -128,11 +128,11 @@ private enum ModFrameTier: String {
     var bottomFrameImageName: String { "\(rawValue)FrameBottom.png" }
 
     var compactTopFrameImageName: String {
-        hasHorizontalOverhang ? "\(rawValue)FrameTopCompact.png" : "\(rawValue)FrameTopTrimmed.png"
+        hasHorizontalOverhang ? "\(rawValue)FrameTopCompact.png" : "\(rawValue)FrameTop.png"
     }
 
     var compactBottomFrameImageName: String {
-        hasHorizontalOverhang ? "\(rawValue)FrameBottomCompact.png" : "\(rawValue)FrameBottomTrimmed.png"
+        hasHorizontalOverhang ? "\(rawValue)FrameBottomCompact.png" : "\(rawValue)FrameBottom.png"
     }
 
     var backgroundImageName: String {
@@ -249,10 +249,11 @@ struct ModArtworkView: View {
     let rawName: String
     let isRiven: Bool
     var contentMode: ContentMode = .fill
+    var alignment: Alignment = .center
 
     var body: some View {
         Color.clear
-            .overlay(artworkLayer)
+            .overlay(artworkLayer, alignment: alignment)
             .clipped()
     }
 
@@ -441,93 +442,100 @@ struct HorizontalModCardView: View {
         return GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let hInset: CGFloat = tier.hasHorizontalOverhang ? 2 : 1
-            let innerW = max(40, w - hInset * 2)
-            let innerH = max(24, h - 2)
-            let frameW = tier.hasHorizontalOverhang ? w : innerW
+            let isOverhang = tier.hasHorizontalOverhang
+            // Exact DE 256x128 inner glass window coordinates so artwork never bleeds outside the frame corners
+            let glassX: CGFloat = isOverhang ? w * (14.0 / 256.0) : w * (6.0 / 256.0)
+            let glassY: CGFloat = isOverhang ? h * (16.0 / 128.0) : h * (15.0 / 128.0)
+            let glassW: CGFloat = isOverhang ? w * (228.0 / 256.0) : w * (244.0 / 256.0)
+            let glassH: CGFloat = h * (88.0 / 128.0)
             let drainTint = card.isPositiveCapacity ? Color(hex: "77E494") : tier.textColor
 
-            ZStack {
-                // 1. Inner high-res illustration + DE glass tint + glass glow, shaped by ModGlassMask
+            ZStack(alignment: .topLeading) {
+                // 1. Inner high-res illustration + DE glass tint + bottom dark vignette + glass glow, masked cleanly inside the metal rim
                 maskedWithModGlass(
                     ZStack {
                         tier.backdropColor
-                        ModArtworkView(rawName: card.rawName, isRiven: card.isRiven, contentMode: .fill)
-                            .frame(width: innerW, height: innerH)
-                            .clipped()
+                        ModArtworkView(
+                            rawName: card.rawName,
+                            isRiven: card.isRiven,
+                            contentMode: .fill,
+                            alignment: Alignment(horizontal: .center, vertical: VerticalAlignment.top)
+                        )
+                        .frame(width: glassW, height: glassH)
+                        .clipped()
 
-                        // Subtle ambient rarity glass tint ("底色混色")
-                        tier.glassTintColor.opacity(card.isRiven ? 0.14 : 0.24)
+                        // Rarity ambient tint ("封膜混色")
+                        tier.glassTintColor.opacity(card.isRiven ? 0.16 : 0.26)
                             .blendMode(.screen)
 
-                        // Bottom vignette for crisp Chinese title contrast
+                        // Deep bottom vignette for crisp title contrast above the metallic bottom rim
                         LinearGradient(
                             stops: [
-                                .init(color: Color.black.opacity(0.08), location: 0.0),
-                                .init(color: Color.black.opacity(0.36), location: 0.52),
-                                .init(color: Color.black.opacity(0.84), location: 1.0),
+                                .init(color: Color.black.opacity(0.10), location: 0.0),
+                                .init(color: Color.black.opacity(0.45), location: 0.48),
+                                .init(color: Color.black.opacity(0.90), location: 1.0),
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
 
                         // DE glass sheen overlay
-                        deFrameImage("ModGlassGlowTrimmed.png", contentMode: .fill)
-                            .frame(width: innerW, height: innerH)
+                        deFrameImage("ModGlassGlow.png", contentMode: .fill)
+                            .frame(width: glassW, height: glassH)
                             .clipped()
-                            .opacity(0.34)
+                            .opacity(0.26)
                             .blendMode(.plusLighter)
-
-                        // Vertical edge light rails
-                        HStack(spacing: 0) {
-                            deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                                .frame(width: 6, height: innerH)
-                                .clipped()
-                                .opacity(0.75)
-                            Spacer(minLength: 0)
-                            deFrameImage(tier.sideLightImageName, contentMode: .fill)
-                                .frame(width: 6, height: innerH)
-                                .clipped()
-                                .scaleEffect(x: -1, y: 1)
-                                .opacity(0.75)
-                        }
                     }
-                    .frame(width: innerW, height: innerH),
-                    width: innerW,
-                    height: innerH
+                    .frame(width: glassW, height: glassH),
+                    width: glassW,
+                    height: glassH
                 )
+                .offset(x: glassX, y: glassY)
                 .allowsHitTesting(false)
 
-                // 2. Full-width DE metallic Top & Bottom compact frames (aligned independently in ZStack)
-                ZStack(alignment: .top) {
-                    Color.clear
-                    deFrameImage(tier.compactTopFrameImageName, contentMode: .fit)
-                        .frame(width: frameW)
-                }
-                .frame(width: w, height: h)
-                .allowsHitTesting(false)
+                // 2. Authentic DE metallic Bottom & Top frames
+                if isOverhang {
+                    ZStack(alignment: .bottom) {
+                        Color.clear
+                        deFrameImage(tier.compactBottomFrameImageName, contentMode: .fit)
+                            .frame(width: w)
+                            .padding(.bottom, h * (5.0 / 128.0))
+                    }
+                    .frame(width: w, height: h)
+                    .allowsHitTesting(false)
 
-                ZStack(alignment: .bottom) {
-                    Color.clear
+                    ZStack(alignment: .top) {
+                        Color.clear
+                        deFrameImage(tier.compactTopFrameImageName, contentMode: .fit)
+                            .frame(width: w)
+                            .padding(.top, h * (3.0 / 128.0))
+                    }
+                    .frame(width: w, height: h)
+                    .allowsHitTesting(false)
+                } else {
+                    // Untrimmed FrameBottom (256x128) & FrameTop (256x64) lock together seamlessly on the 2:1 canvas
                     deFrameImage(tier.compactBottomFrameImageName, contentMode: .fit)
-                        .frame(width: frameW)
+                        .frame(width: w, height: h, alignment: .bottom)
+                        .allowsHitTesting(false)
+
+                    deFrameImage(tier.compactTopFrameImageName, contentMode: .fit)
+                        .frame(width: w, height: h * 0.5, alignment: .top)
+                        .allowsHitTesting(false)
                 }
-                .frame(width: w, height: h)
-                .allowsHitTesting(false)
 
                 // 3. Optional Set Mod top emblem
                 if let modSet = card.metadata?.modSet, !modSet.isEmpty {
                     ZStack(alignment: .top) {
                         Color.clear
                         deFrameImage("\(modSet)Header.png", contentMode: .fit)
-                            .frame(width: innerW * 0.44)
+                            .frame(width: glassW * 0.44)
                             .offset(y: -1)
                     }
                     .frame(width: w, height: h)
                     .allowsHitTesting(false)
                 }
 
-                // 4. Optional Aura/Stance/Exilus pill + Top-Right DE drain backer with polarity PNG
+                // 4. Optional Aura/Stance/Exilus pill + Top-Right DE drain backer tucked into the top-right corner
                 VStack {
                     HStack(alignment: .top, spacing: 4) {
                         if let slotTag = card.slotTag, !slotTag.isEmpty, slotTag != "赋能" {
@@ -536,8 +544,9 @@ struct HorizontalModCardView: View {
                                 .foregroundColor(tier.textColor)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1.5)
-                                .background(Color.black.opacity(0.72))
+                                .background(Color.black.opacity(0.76))
                                 .clipShape(Capsule())
+                                .fixedSize(horizontal: true, vertical: true)
                         }
                         Spacer(minLength: 2)
                         if let drain = card.effectiveDrain {
@@ -555,25 +564,26 @@ struct HorizontalModCardView: View {
                             .clipped()
                         }
                     }
-                    .padding(.horizontal, hInset + 5)
-                    .padding(.top, 6)
+                    .padding(.horizontal, isOverhang ? w * (14.0 / 256.0) : w * (8.0 / 256.0))
+                    .padding(.top, isOverhang ? h * (16.0 / 128.0) : h * (14.0 / 128.0))
                     Spacer()
                 }
                 .frame(width: w, height: h)
                 .allowsHitTesting(false)
 
-                // 5. Official Chinese title + DE diamond rank bar
+                // 5. Title sits cleanly ABOVE the bottom metallic rim (never overlapping white/gold metal),
+                //    and rank dots sit INSIDE the bottom black rank slot.
                 VStack(spacing: 0) {
-                    Spacer(minLength: 14)
+                    Spacer(minLength: 0)
                     Text(card.displayName)
-                        .font(.system(size: card.isRiven ? 11 : 12.5, weight: .semibold))
+                        .font(.system(size: card.isRiven ? 10.5 : 12, weight: .semibold))
                         .foregroundColor(tier.textColor)
-                        .shadow(color: Color.black.opacity(0.95), radius: 2.5, y: 1)
+                        .shadow(color: Color.black.opacity(0.98), radius: 2.5, y: 1)
                         .lineLimit(card.isRiven ? 2 : 1)
                         .minimumScaleFactor(0.72)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, hInset + 10)
-                        .padding(.bottom, tier == .legendary ? 7 : 5)
+                        .padding(.horizontal, isOverhang ? w * 0.10 : w * 0.07)
+                        .padding(.bottom, isOverhang ? h * (15.0 / 128.0) : h * (16.0 / 128.0))
 
                     if card.effectiveMaxRank > 0 {
                         deRankBar(
@@ -581,11 +591,11 @@ struct HorizontalModCardView: View {
                             maxRank: card.effectiveMaxRank,
                             dotSize: card.effectiveMaxRank > 6 ? 6.5 : 7.5,
                             spacing: card.effectiveMaxRank > 6 ? 1.5 : 2.5,
-                            lineWidth: innerW * 0.82
+                            lineWidth: glassW * 0.80
                         )
-                        .padding(.bottom, 3)
+                        .padding(.bottom, isOverhang ? h * (9.0 / 128.0) : h * (11.0 / 128.0))
                     } else {
-                        Spacer().frame(height: 10)
+                        Spacer().frame(height: h * (18.0 / 128.0))
                     }
                 }
                 .frame(width: w, height: h)
@@ -628,6 +638,8 @@ struct HorizontalModCardView: View {
                             .padding(.vertical, 1.5)
                             .background(tier.accentColor.opacity(0.16))
                             .clipShape(Capsule())
+                            .fixedSize(horizontal: true, vertical: true)
+                            .layoutPriority(1)
 
                         if card.effectiveMaxRank > 0 {
                             deRankBar(
@@ -635,7 +647,7 @@ struct HorizontalModCardView: View {
                                 maxRank: card.effectiveMaxRank,
                                 dotSize: 7.5,
                                 spacing: 1.5,
-                                lineWidth: 50
+                                lineWidth: 46
                             )
                         }
                     }
@@ -666,7 +678,7 @@ struct HorizontalModCardView: View {
 @ViewBuilder
 private func maskedWithModGlass<Content: View>(_ content: Content, width: CGFloat, height: CGFloat) -> some View {
 #if canImport(UIKit)
-    if let maskImg = ModAssetImageCache.frameImage(named: "ModGlassMaskTrimmed.png") {
+    if let maskImg = ModAssetImageCache.frameImage(named: "ModGlassMask.png") {
         content.mask(
             Image(uiImage: maskImg)
                 .resizable()
