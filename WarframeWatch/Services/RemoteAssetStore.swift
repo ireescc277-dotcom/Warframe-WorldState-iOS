@@ -10,7 +10,7 @@ import Foundation
 ///   2. App bundle (`DamageData/...`, present in CI offline simulator builds)
 ///   3. Background HTTPS download from `baseURL` with atomic disk write &
 ///      debounced SwiftUI invalidation via `@Published var revision`.
-public final class RemoteAssetStore: ObservableObject {
+public final class RemoteAssetStore: ObservableObject, @unchecked Sendable {
     public static let shared = RemoteAssetStore()
 
     public struct ManifestEntry: Codable, Hashable {
@@ -319,9 +319,7 @@ public final class RemoteAssetStore: ObservableObject {
             try? FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
             try? data.write(to: localManifest, options: .atomic)
 
-            lock.lock()
-            manifestEntries = manifest.files
-            lock.unlock()
+            setManifestEntries(manifest.files)
 
             await MainActor.run {
                 self.manifestCount = manifest.fileCount
@@ -331,6 +329,42 @@ public final class RemoteAssetStore: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    private func setManifestEntries(_ files: [ManifestEntry]) {
+        lock.lock()
+        manifestEntries = files
+        lock.unlock()
+    }
+
+    private func popNextQueuedItem() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        if !pendingQueue.isEmpty {
+            return pendingQueue.removeFirst()
+        }
+        activeDownloads = max(0, activeDownloads - 1)
+        return nil
+    }
+
+    private func finishInFlight(_ rel: String) {
+        lock.lock()
+        inFlight.remove(rel)
+        lock.unlock()
+    }
+
+    private func markDownloadFailed(_ rel: String) {
+        lock.lock()
+        failedAt[rel] = Date()
+        lock.unlock()
+    }
+
+    private func markDownloadSucceeded(_ rel: String) -> Bool {
+        lock.lock()
+        let isNew = diskPaths.insert(rel).inserted
+        failedAt.removeValue(forKey: rel)
+        lock.unlock()
+        return isNew
     }
 
     private func needsDownload(entry: ManifestEntry) -> Bool {
@@ -398,24 +432,13 @@ public final class RemoteAssetStore: ObservableObject {
         var current: String? = initialItem
         while let rel = current {
             _ = await downloadSingle(rel)
-            lock.lock()
-            if !pendingQueue.isEmpty {
-                current = pendingQueue.removeFirst()
-            } else {
-                activeDownloads = max(0, activeDownloads - 1)
-                current = nil
-            }
-            lock.unlock()
+            current = popNextQueuedItem()
         }
     }
 
     @discardableResult
     private func downloadSingle(_ rel: String) async -> Bool {
-        defer {
-            lock.lock()
-            inFlight.remove(rel)
-            lock.unlock()
-        }
+        defer { finishInFlight(rel) }
 
         guard let url = remoteURL(forRelativePath: rel) else { return false }
         do {
@@ -423,9 +446,7 @@ public final class RemoteAssetStore: ObservableObject {
             guard let http = response as? HTTPURLResponse,
                   http.statusCode == 200,
                   Self.isValidPayload(data, forRelativePath: rel) else {
-                lock.lock()
-                failedAt[rel] = Date()
-                lock.unlock()
+                markDownloadFailed(rel)
                 return false
             }
 
@@ -434,11 +455,7 @@ public final class RemoteAssetStore: ObservableObject {
             try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
             try data.write(to: dst, options: .atomic)
 
-            lock.lock()
-            let isNew = diskPaths.insert(rel).inserted
-            failedAt.removeValue(forKey: rel)
-            lock.unlock()
-
+            let isNew = markDownloadSucceeded(rel)
             let deltaBytes = Int64(data.count)
             DispatchQueue.main.async {
                 if isNew {
@@ -449,9 +466,7 @@ public final class RemoteAssetStore: ObservableObject {
             }
             return true
         } catch {
-            lock.lock()
-            failedAt[rel] = Date()
-            lock.unlock()
+            markDownloadFailed(rel)
             return false
         }
     }

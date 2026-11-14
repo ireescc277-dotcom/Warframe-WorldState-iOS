@@ -116,7 +116,7 @@ private enum ModFrameTier: String {
         }
         let trimmed = card.rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.lowercased().hasPrefix("peculiar")
-            || card.metadata?.frameTier.caseInsensitiveCompare("Peculiar") == .orderedSame
+            || card.metadata?.frameTier?.caseInsensitiveCompare("Peculiar") == .orderedSame
             || card.metadata?.rarity.uppercased() == "PECULIAR" {
             self = .peculiar
             return
