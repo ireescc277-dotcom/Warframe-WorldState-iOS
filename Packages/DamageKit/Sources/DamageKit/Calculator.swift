@@ -1,6 +1,6 @@
 import Foundation
 
-/// 站点离线数据目录（`web/app/site`）的读取器。
+/// 站点离线数据目录（`server/site`）的读取器。
 ///
 /// 只读，不改动仓库里的数据文件。
 public struct DataStore: Sendable {
@@ -10,19 +10,92 @@ public struct DataStore: Sendable {
         self.root = root
     }
 
-    /// 仓库默认布局：`<repo>/web/app/site`。
+    /// 仓库中受版本控制的原始站点资料：`<repo>/server/site`。
+    ///
+    /// 这里不把开发机生成的 `web/app/site` 当作默认值。后者是浏览器离线包，
+    /// 不会进入干净的 CI checkout；所有原生计算和对照都应直接读取同一份
+    /// `server/site` 数据。
     public static func defaultRoot(relativeTo url: URL) -> URL {
+        url.appendingPathComponent("server/site")
+    }
+
+    /// 旧浏览器离线包的兼容位置。仅在调用方明确处于一个仍保留该生成物的
+    /// 开发目录时作为 `discoverRoot` 的回退，绝不优先于 `server/site`。
+    public static func legacyBrowserBundleRoot(relativeTo url: URL) -> URL {
         url.appendingPathComponent("web/app/site")
     }
 
+    /// 从当前目录向上寻找 monorepo 的离线数据根。CLI 用这个方法，避免把
+    /// `Packages/DamageKit` 当成仓库根而静默读到不存在的目录。
+    public static func discoverRoot(startingAt directory: URL) -> URL? {
+        var cursor = directory.standardizedFileURL
+        while true {
+            let candidates = [
+                defaultRoot(relativeTo: cursor),
+                legacyBrowserBundleRoot(relativeTo: cursor),
+            ]
+            if let candidate = candidates.first(where: hasRequiredData(at:)) {
+                return candidate
+            }
+
+            let parent = cursor.deletingLastPathComponent()
+            guard parent.path != cursor.path else { return nil }
+            cursor = parent
+        }
+    }
+
+    public static func hasRequiredData(at root: URL) -> Bool {
+        let fm = FileManager.default
+        let hasWeaponManifest = fm.fileExists(atPath: root.appendingPathComponent("weapons.json").path)
+            || fm.fileExists(atPath: root.appendingPathComponent("weapons-list.json").path)
+        return hasWeaponManifest
+            && fm.fileExists(atPath: root.appendingPathComponent("weapons").path)
+            && fm.fileExists(atPath: root.appendingPathComponent("data/json/enemies-min.json").path)
+    }
+
     public func weapon(named name: String) throws -> Weapon {
-        let fileName = name.replacingOccurrences(of: " ", with: "_") + ".json"
-        let url = root.appendingPathComponent("weapons").appendingPathComponent(fileName)
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        guard let url = weaponURL(named: name) else {
             throw DamageKitError.weaponNotFound(name)
         }
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(Weapon.self, from: data)
+    }
+
+    /// 首先走常见的直接文件名；导出文件也会移除括号、`&` 等字符，所以
+    /// fallback 用同一份名称的字母数字规范化键定位，不能只替换空格。
+    private func weaponURL(named name: String) -> URL? {
+        let directory = root.appendingPathComponent("weapons")
+        let directName = name.replacingOccurrences(of: " ", with: "_") + ".json"
+        let direct = directory.appendingPathComponent(directName)
+        if FileManager.default.fileExists(atPath: direct.path) { return direct }
+
+        // `server/site/weapons.json` is the source site's exact name-to-file
+        // map.  Use it before the broad normalized fallback so punctuation,
+        // parentheses and special weapon names select the same record as the
+        // website itself.
+        let manifest = root.appendingPathComponent("weapons.json")
+        if let data = try? Data(contentsOf: manifest),
+           let entries = try? JSONDecoder().decode([String: String].self, from: data),
+           let filename = entries[name] {
+            let mapped = directory.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: mapped.path) { return mapped }
+        }
+
+        let key = Self.weaponLookupKey(name)
+        guard !key.isEmpty,
+              let files = try? FileManager.default.contentsOfDirectory(
+                  at: directory,
+                  includingPropertiesForKeys: nil,
+                  options: [.skipsHiddenFiles]
+              ) else { return nil }
+        return files
+            .filter { $0.pathExtension.lowercased() == "json" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .first { Self.weaponLookupKey($0.deletingPathExtension().lastPathComponent) == key }
+    }
+
+    private static func weaponLookupKey(_ value: String) -> String {
+        value.lowercased().filter { $0.isLetter || $0.isNumber }
     }
 
     public func enemy(named name: String) throws -> Enemy {
@@ -42,10 +115,20 @@ public struct DataStore: Sendable {
     }
 
     public func weaponNames() throws -> [String] {
-        let url = root.appendingPathComponent("weapons-list.json")
         struct Entry: Decodable { let n: String }
-        let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode([Entry].self, from: data).map(\.n)
+        let generatedIndex = root.appendingPathComponent("weapons-list.json")
+        if FileManager.default.fileExists(atPath: generatedIndex.path) {
+            let data = try Data(contentsOf: generatedIndex)
+            return try JSONDecoder().decode([Entry].self, from: data).map(\.n)
+        }
+
+        // The checked-in website source has a compact dictionary instead of
+        // the generated browser bundle's array.  It is sufficient for the
+        // CLI's name listing and keeps native tooling independent of ignored
+        // build artefacts.
+        let manifest = root.appendingPathComponent("weapons.json")
+        let data = try Data(contentsOf: manifest)
+        return try JSONDecoder().decode([String: String].self, from: data).keys.sorted()
     }
 }
 
@@ -78,19 +161,22 @@ extension RefOrValue: Decodable {
 
 /// 一次请求。用来承接 CLI 的输入文件。
 public struct DamageRequest: Decodable, Sendable {
-    public var weapon: RefOrValue<Weapon>
+    public var weapon: RefOrValue<Weapon>?
+    /// 直接按 DE 背包武器实例导入；与 `weapon` 二选一。
+    public var ownedWeapon: OwnedWeaponReference?
     public var enemy: RefOrValue<Enemy>
     public var level: Int
     public var build: Build
     public var options: Options
 
     private enum CodingKeys: String, CodingKey {
-        case weapon, enemy, level, build, options
+        case weapon, ownedWeapon, enemy, level, build, options
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        weapon = try c.decode(RefOrValue<Weapon>.self, forKey: .weapon)
+        weapon = try c.decodeIfPresent(RefOrValue<Weapon>.self, forKey: .weapon)
+        ownedWeapon = try c.decodeIfPresent(OwnedWeaponReference.self, forKey: .ownedWeapon)
         enemy = try c.decode(RefOrValue<Enemy>.self, forKey: .enemy)
         level = try c.decodeIfPresent(Int.self, forKey: .level) ?? 100
         build = try c.decodeIfPresent(Build.self, forKey: .build) ?? Build()
@@ -99,11 +185,26 @@ public struct DamageRequest: Decodable, Sendable {
 
     public func resolve(using store: DataStore?) throws -> DamageInput {
         let w: Weapon
-        switch weapon {
-        case .value(let v): w = v
-        case .reference(let name):
-            guard let store else { throw DamageKitError.weaponNotFound(name) }
-            w = try store.weapon(named: name)
+        let resolvedBuild: Build
+        if let ownedWeapon {
+            guard weapon == nil else {
+                throw DamageKitError.invalidRequest("weapon 与 ownedWeapon 不能同时提供")
+            }
+            guard let store else { throw DamageKitError.weaponNotFound(ownedWeapon.weaponId) }
+            let owned = try InventoryAdapter(snapshotURL: URL(fileURLWithPath: ownedWeapon.snapshot))
+                .resolve(ownedWeapon, using: store)
+            w = owned.weapon
+            resolvedBuild = owned.build
+        } else if let weapon {
+            switch weapon {
+            case .value(let v): w = v
+            case .reference(let name):
+                guard let store else { throw DamageKitError.weaponNotFound(name) }
+                w = try store.weapon(named: name)
+            }
+            resolvedBuild = build
+        } else {
+            throw DamageKitError.invalidRequest("必须提供 weapon 或 ownedWeapon")
         }
         let e: Enemy
         switch enemy {
@@ -112,7 +213,7 @@ public struct DamageRequest: Decodable, Sendable {
             guard let store else { throw DamageKitError.enemyNotFound(name) }
             e = try store.enemy(named: name)
         }
-        return DamageInput(weapon: w, enemy: e, level: level, build: build, options: options)
+        return DamageInput(weapon: w, enemy: e, level: level, build: resolvedBuild, options: options)
     }
 }
 
@@ -145,7 +246,9 @@ public struct Calculator: Sendable {
                                      faction: profile.faction,
                                      library: modLibrary)
         let resolved = resolver.resolveAll()
-        let groups = Calculator.groups(weapon: input.weapon, count: resolved.count)
+        let groups = Calculator.groups(weapon: input.weapon,
+                                       count: resolved.count,
+                                       selected: input.options.combinedAttackGroups)
 
         var ordered = [(Int, AttackResult)]()
         for group in groups {
@@ -177,14 +280,28 @@ public struct Calculator: Sendable {
                       notes: notes)
     }
 
-    /// `comb` 里成对的段是同一次开火出来的（直击 + 爆炸 / 毒云），
-    /// 它们共享状态池；没进任何 pair 的段单独成组。
-    public static func groups(weapon: Weapon, count: Int) -> [[Int]] {
+    /// 网站把 `comb` 作为可勾选的候选组合，而不是默认行为。只有 `selected`
+    /// 中的、且确实出现在武器候选清单里的组合会共享状态池；其他攻击段各自
+    /// 独立。这避免把“直击 + 爆炸可合并”误当成“直击 + 爆炸总是同时命中”。
+    public static func groups(weapon: Weapon, count: Int, selected: [[Int]]) -> [[Int]] {
         var used = Set<Int>()
         var groups: [[Int]] = []
-        for pair in weapon.comb ?? [] {
-            let members = pair.filter { $0 >= 0 && $0 < count }
-            guard !members.isEmpty else { continue }
+
+        let available = (weapon.comb ?? []).compactMap { raw -> [Int]? in
+            let members = raw.filter { $0 >= 0 && $0 < count }
+            guard members.count == raw.count,
+                  members.count > 1,
+                  Set(members).count == members.count else { return nil }
+            return members
+        }
+
+        for request in selected {
+            let requestSet = Set(request)
+            guard request.count > 1,
+                  requestSet.count == request.count,
+                  let members = available.first(where: {
+                      $0.count == request.count && Set($0) == requestSet
+                  }) else { continue }
             if members.contains(where: { used.contains($0) }) { continue }
             members.forEach { used.insert($0) }
             groups.append(members)

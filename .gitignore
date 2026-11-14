@@ -49,6 +49,9 @@ node_modules/
 web/app/site/
 # iOS 侧是同一份资源的复制，作为 folder reference 打进 App 包
 ios/DamageCalc/
+# 原生 Swift 计算器的数据包。由 build_native_damage_data.py 从 server/site 生成，
+# 只含 JSON 与已缓存的武器图，不含网页或 JavaScript 内核。
+ios/DamageData/
 
 # SwiftPM 在 Windows 上把资源包 Info.plist 生成到包根目录，属构建产物
 Packages/DamageKit/Info.plist

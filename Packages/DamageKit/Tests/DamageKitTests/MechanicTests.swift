@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import DamageKit
 
@@ -31,6 +32,15 @@ final class MechanicTests: XCTestCase {
         XCTAssertEqual(Rules.expectedCritMultiplier(critChance: 2.0, critDamage: 2.0), 3.0, accuracy: 1e-12)
         // 50% 暴率 = 期望 1.5
         XCTAssertEqual(Rules.expectedCritMultiplier(critChance: 0.5, critDamage: 2.0), 1.5, accuracy: 1e-12)
+    }
+
+    func testCriticalHeadshotUsesItsOwnCritFormula() {
+        // 标准头部 3x；30% 暴率、2x 暴伤时：3 × (1 + .3 × (2×2−1)) = 5.7。
+        XCTAssertEqual(Rules.expectedCriticalHeadshotMultiplier(critChance: 0.3,
+                                                                 critDamage: 2,
+                                                                 headshotMultiplier: 3),
+                       5.7, accuracy: 1e-12)
+        XCTAssertEqual(Options().headshotMultiplier, 3, accuracy: 1e-12)
     }
 
     func testCritDamageQuantization() {
@@ -90,12 +100,13 @@ final class MechanicTests: XCTestCase {
     // MARK: 护甲
 
     func testArmorReductionAndClamp() {
-        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 1350), 0.45, accuracy: 1e-12)
+        // 标准 NPC 护甲公式：0.9 × sqrt(armor / 2700)。
+        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 1350), 0.9 * sqrt(0.5), accuracy: 1e-6)
         // 2700 是 90% 硬顶
-        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 5400), 5400.0 / 5700.0, accuracy: 1e-12)
+        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 5400), 5400.0 / 5700.0, accuracy: 1e-6)
     }
 
-    func testSlashBypassesArmor() {
+    func testDirectSlashDoesNotBypassArmor() {
         let slash = Attack(name: "S", speed: 1, critChance: 0, critMultiplier: 1,
                            statusChance: 0, damage: [.slash: 100])
         let impact = Attack(name: "I", speed: 1, critChance: 0, critMultiplier: 1,
@@ -103,8 +114,9 @@ final class MechanicTests: XCTestCase {
         let enemy = Enemy(name: "Armored", faction: "Neutral", baseLevel: 1, health: 1e6, armor: 2700)
         let s = healthDamage(run(Weapon(name: "A", attacks: [slash], magazineSize: 1, reloadTime: 0), enemy, window: 0.5))
         let i = healthDamage(run(Weapon(name: "B", attacks: [impact], magazineSize: 1, reloadTime: 0), enemy, window: 0.5))
-        XCTAssertEqual(s, 100, accuracy: 1e-9)
-        XCTAssertEqual(i, 10, accuracy: 1e-9)
+        // 绕甲的是 Slash proc 产生的 Cinematic DOT，而不是直击 Slash。
+        XCTAssertEqual(s, 10, accuracy: 1e-5)
+        XCTAssertEqual(i, 10, accuracy: 1e-5)
     }
 
     func testArmorStripIncreasesDamage() {
@@ -115,8 +127,8 @@ final class MechanicTests: XCTestCase {
         opts.armorStrip = 0.5
         let stripped = healthDamage(run(Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 0),
                                         enemy, window: 0.5, options: opts))
-        // 1350 护甲 → 45% 减伤 → 55 伤害
-        XCTAssertEqual(stripped, 55, accuracy: 1e-6)
+        // 1350 护甲 → 0.9 × sqrt(0.5) 减伤。
+        XCTAssertEqual(stripped, 100 * (1 - Rules.enemyArmorDR(netArmor: 1350)), accuracy: 1e-6)
     }
 
     // MARK: 等级缩放
@@ -125,12 +137,15 @@ final class MechanicTests: XCTestCase {
         let base = Enemy(name: "Heavy Gunner", faction: "Grineer", baseLevel: 8,
                          health: 300, shield: 0, armor: 500)
         let p = EnemyProfile(enemy: base, level: 100, options: Options())
-        // 健康曲线 f2 = 1 + 10.7332 × 92^0.72
-        let expectedHealth = 300 * (1 + 10.7332 * pow(92.0, 0.72))
+        // Checked-in website branch: f2 = 1 + 24 × 92^0.72 × sqrt(5) / 5,
+        // then retain two decimal places and round the displayed target value.
+        let q = 92.0
+        let multiplier = 1 + 24 * pow(q, 0.72) * sqrt(5) / 5
+        let expectedHealth = ((300 * multiplier * 100).rounded() / 100).rounded()
         XCTAssertEqual(p.health, expectedHealth, accuracy: 1e-6)
         // 护甲被夹到 2700
         XCTAssertEqual(p.armor, 2700, accuracy: 1e-9)
-        XCTAssertEqual(p.armorDR, 0.9, accuracy: 1e-12)
+        XCTAssertEqual(p.armorDR, 0.9, accuracy: 1e-6)
     }
 
     func testSteelPathMultipliesStats() {
@@ -138,8 +153,11 @@ final class MechanicTests: XCTestCase {
         var opts = Options()
         opts.steelPath = true
         let p = EnemyProfile(enemy: base, level: 100, options: opts)
-        // 等级 +100 → q = 192
-        let expected = 300 * (1 + 10.7332 * pow(192.0, 0.72)) * Rules.steelPathStatMultiplier
+        // Website first multiplies the floored base health by 2.5, then uses
+        // the same normal target curve and display rounding.
+        let q = 92.0
+        let multiplier = 1 + 24 * pow(q, 0.72) * sqrt(5) / 5
+        let expected = ((2.5 * 300 * multiplier * 100).rounded() / 100).rounded()
         XCTAssertEqual(p.health, expected, accuracy: 1e-6)
     }
 
@@ -156,7 +174,9 @@ final class MechanicTests: XCTestCase {
     func testCorrosiveArmorCurve() {
         XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 1), 0.74, accuracy: 1e-12)
         XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 10), 0.20, accuracy: 1e-12)
-        XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 99), 0.20, accuracy: 1e-12)
+        XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 13), 0.02, accuracy: 1e-12)
+        XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 14), 0, accuracy: 1e-12)
+        XCTAssertEqual(Rules.corrosiveArmorFactor(stacks: 99), 0, accuracy: 1e-12)
     }
 
     func testViralProcDoublesHealthDamage() {
@@ -183,8 +203,8 @@ final class MechanicTests: XCTestCase {
         XCTAssertEqual(t.attacks[0].layers.first { $0.layer == .shield }?.damage ?? 0, 0, accuracy: 1e-9)
         XCTAssertEqual(healthDamage(t), 100, accuracy: 1e-9)
         XCTAssertEqual(i.attacks[0].layers.first { $0.layer == .shield }?.damage ?? 0, 100, accuracy: 1e-9)
-        // 四层是各自独立结算的（口径第 6 条），护盾在不在都不影响「生命层」那一列
-        XCTAssertEqual(healthDamage(i), 100, accuracy: 1e-9)
+        // 普通伤害先被仍存在的护盾完全吸收，不能再同时伤及生命。
+        XCTAssertEqual(healthDamage(i), 0, accuracy: 1e-9)
     }
 
     func testSlashBleedTicksSixTimes() {
@@ -193,8 +213,8 @@ final class MechanicTests: XCTestCase {
         let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
         let result = run(Weapon(name: "W", attacks: [attack], magazineSize: 100, reloadTime: 0),
                          enemy, window: 7)
-        // 1 发直伤 100 + 6 跳 × 35
-        XCTAssertEqual(healthDamage(result), 100 + 6 * 35, accuracy: 1e-6)
+        // Each independent Slash stack uses the exact `(seed + 1)` accumulator.
+        XCTAssertEqual(healthDamage(result), 100 + 6 * 35.35, accuracy: 1e-4)
     }
 
     func testHeatStripReducesArmorOverTime() {
@@ -253,8 +273,9 @@ final class MechanicTests: XCTestCase {
                              enemy, window: 10)
         XCTAssertEqual(noReload.attacks[0].dps, 100, accuracy: 1e-6)
         XCTAssertLessThan(withReload.attacks[0].dps, noReload.attacks[0].dps)
-        // 一个弹匣 10 发用 0.9s，再加 1s 换弹 → 单循环 1.9s，10s 内 55 发
-        XCTAssertEqual(withReload.attacks[0].shots, 55, accuracy: 1e-9)
+        // 自动空仓换弹先有一个 1/射速的 reload delay：最后一发在 0.9s，
+        // 0.1s 后才开始 1s 换弹。每轮从 t=0 到 t=2，共 10 发；10 秒内 50 发。
+        XCTAssertEqual(withReload.attacks[0].shots, 50, accuracy: 1e-9)
     }
 
     // MARK: 多段共享状态池
@@ -269,7 +290,8 @@ final class MechanicTests: XCTestCase {
         var shared = Weapon(name: "Shared", attacks: [viral, impact],
                             magazineSize: 100, reloadTime: 0)
         shared.comb = [[0, 1]]
-        let withPool = run(shared, enemy, window: 3)
+        let withPool = run(shared, enemy, window: 3,
+                           options: Options(combinedAttackGroups: [[0, 1]]))
         // 不共享
         let alone = Weapon(name: "Alone", attacks: [viral, impact],
                            magazineSize: 100, reloadTime: 0)
@@ -291,7 +313,7 @@ final class MechanicTests: XCTestCase {
     }
 
     func testBaneDoubleDipsOnDots() throws {
-        // 100 基础命中、+30% Bane：Bleed 每跳 = 命中总伤害 × 0.35 × 1.3²
+        // Bane is applied in the seed and again after the exact +1 accumulator.
         let attack = Attack(name: "S", speed: 0.01, critChance: 0, critMultiplier: 1,
                             statusChance: 100, damage: [.slash: 100])
         var weapon = Weapon(name: "W", attacks: [attack], magazineSize: 100, reloadTime: 0)
@@ -299,8 +321,8 @@ final class MechanicTests: XCTestCase {
         let enemy = Enemy(name: "E", faction: "Grineer", baseLevel: 1, health: 1e9, armor: 0)
         let result = run(weapon, enemy, window: 7, build: Build(mods: ["Bane of Grineer"]))
         let direct = 100 * 1.3
-        let perTick = 100 * 1.3 * 1.3 * 0.35
-        XCTAssertEqual(healthDamage(result), direct + 6 * perTick, accuracy: 1e-6)
+        let perTick = (100 * 1.3 + 1) * 1.3 * 0.35
+        XCTAssertEqual(healthDamage(result), direct + 6 * perTick, accuracy: 1e-4)
     }
 
     func testConditionalHeadshotModOnlyAppliesOnHeadshot() throws {
@@ -330,6 +352,141 @@ final class MechanicTests: XCTestCase {
         let result = run(weapon, enemy, window: 1, build: Build(riven: riven))
         // 100 × (1+1.0) × (1+0.5)
         XCTAssertEqual(healthDamage(result), 300, accuracy: 1e-6)
+    }
+
+    func testRivenReloadSpeedChangesReloadCycle() throws {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 2)
+        let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
+        let riven = Riven(reloadSpeed: 1)
+        let result = run(weapon, enemy, window: 3, build: Build(riven: riven))
+        // t=0, 2：100% 装填速度将 2s 换弹缩成 1s，但自动换弹前仍有 1s
+        // reload delay；3 秒窗口的右端不计入。
+        XCTAssertEqual(result.attacks[0].shots, 2, accuracy: 1e-9)
+    }
+
+    func testRivenMagazineSizeChangesReloadCycle() throws {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 2)
+        let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
+
+        let baseline = run(weapon, enemy, window: 5)
+        let enlarged = run(weapon, enemy, window: 5,
+                           build: Build(riven: Riven(magazineSize: 1)))
+
+        // Default magazine 1: t=0 and t=3.  The +100% Riven makes magazine 2,
+        // so t=0, t=1, then reload and t=4 are all inside this window.
+        XCTAssertEqual(baseline.attacks[0].shots, 2, accuracy: 1e-9)
+        XCTAssertEqual(enlarged.attacks[0].shots, 3, accuracy: 1e-9)
+    }
+
+    func testRivenAmmoEfficiencyExtendsAnOrdinaryMagazineBeforeReload() throws {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 2, reloadTime: 1)
+        let enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e9, armor: 0)
+        let options = Options(window: 7)
+
+        let baseline = BuildResolver(weapon: weapon, build: Build(), options: options,
+                                     faction: .neutral).resolve(attack: attack)
+        let efficient = BuildResolver(weapon: weapon,
+                                      build: Build(riven: Riven(ammoEfficiency: 0.5)),
+                                      options: options, faction: .neutral).resolve(attack: attack)
+        let profile = EnemyProfile(enemy: enemy, level: 1, options: options)
+        let baselineSchedule = WeaponSimulator(segments: [baseline], enemy: profile, options: options)
+            .shotSchedule(for: baseline)
+        let efficientSchedule = WeaponSimulator(segments: [efficient], enemy: profile, options: options)
+            .shotSchedule(for: efficient)
+
+        XCTAssertEqual(efficient.ammoEfficiency, 0.5, accuracy: 1e-12)
+        // 2 rounds become 4 effective shots: the reload moves from after
+        // t=1 to after t=3, with the existing reload-delay rule preserved.
+        XCTAssertEqual(baselineSchedule.map(\.time), [0, 1, 3, 4, 6])
+        XCTAssertEqual(efficientSchedule.map(\.time), [0, 1, 2, 3, 5, 6])
+    }
+
+    func testRivenAmmoEfficiencyCapsAtSeventyFivePercent() {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        let weapon = Weapon(name: "W", attacks: [attack], magazineSize: 1, reloadTime: 1)
+        let resolved = BuildResolver(weapon: weapon,
+                                     build: Build(riven: Riven(ammoEfficiency: 1)),
+                                     options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+
+        XCTAssertEqual(resolved.ammoEfficiency, 0.75, accuracy: 1e-12)
+    }
+
+    func testConditionalAmmoEfficiencyAndInfiniteAmmoRemainDistinct() {
+        let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 1])
+        var primary = Weapon(name: "Primary", attacks: [attack], magazineSize: 2, reloadTime: 1)
+        primary.categories = ["primary", "primary-rifle"]
+        let ordinary = BuildResolver(weapon: primary, build: Build(mods: ["Primary Crux"]),
+                                     options: Options(), faction: .neutral).resolve(attack: attack)
+
+        var viper = Weapon(name: "Viper", attacks: [attack], magazineSize: 1, reloadTime: 1)
+        viper.categories = ["secondary"]
+        let infinite = BuildResolver(weapon: viper, build: Build(mods: ["Skull Shots"]),
+                                     options: Options(), faction: .neutral).resolve(attack: attack)
+
+        XCTAssertEqual(ordinary.ammoEfficiency, 0.6, accuracy: 1e-12)
+        XCTAssertFalse(ordinary.hasInfiniteAmmo)
+        XCTAssertEqual(infinite.ammoEfficiency, 0, accuracy: 1e-12)
+        XCTAssertTrue(infinite.hasInfiniteAmmo)
+        let options = Options(window: 3)
+        let profile = EnemyProfile(enemy: Enemy(name: "E", faction: "Neutral", health: 1e9),
+                                   level: 1, options: options)
+        let schedule = WeaponSimulator(segments: [infinite], enemy: profile, options: options)
+            .shotSchedule(for: infinite)
+        XCTAssertEqual(schedule.map(\.time), [0, 1, 2])
+    }
+
+    func testRivenHeavyComboEfficiencyReachesTheHeavySchedule() throws {
+        let attack = Attack(name: "Normal Attack", speed: 1, critChance: 0,
+                            critMultiplier: 1, statusChance: 0, damage: [.slash: 10])
+        var weapon = Weapon(name: "Skana", attacks: [attack], category: "Melee")
+        weapon.categories = ["weapon", "melee", "melee-sword"]
+        weapon.compTags = ["SWORDS_STANCE", "SKANA"]
+        let options = Options(window: 20, heavyAttack: true, heavyAttackStartingCombo: 12)
+        let resolved = try XCTUnwrap(BuildResolver(
+            weapon: weapon,
+            build: Build(riven: Riven(meleeComboEfficiency: 0.5)),
+            options: options,
+            faction: .grineer
+        ).resolveAll().first)
+
+        XCTAssertEqual(resolved.heavyComboEfficiency, 0.5, accuracy: 1e-12)
+        let enemy = Enemy(name: "E", faction: "Grineer", health: 1e12, armor: 0)
+        let schedule = WeaponSimulator(
+            segments: [resolved], enemy: EnemyProfile(enemy: enemy, level: 1, options: options),
+            options: options
+        ).shotSchedule(for: resolved)
+        // One pair of heavy contacts consumes combo at a time. At 50%
+        // efficiency the 12x opening pair becomes a 6x pair, rather than
+        // falling straight to 1x as it would with no efficiency.
+        XCTAssertEqual(Array(schedule.prefix(4).map(\.comboMultiplier)), [12, 12, 6, 6])
+    }
+
+    func testRivenCompletedCorrosiveStaysOneCompletedDamageComponent() {
+        let attack = Attack(name: "Riven Corrosive", speed: 1, critChance: 0, critMultiplier: 1,
+                            statusChance: 0, damage: [.impact: 100])
+        var weapon = Weapon(name: "Rifle", attacks: [attack], magazineSize: 1, reloadTime: 0)
+        weapon.categories = ["primary-rifle"]
+
+        let resolved = BuildResolver(weapon: weapon,
+                                     build: Build(riven: Riven(elements: ["corrosive": 1])),
+                                     options: Options(), faction: .neutral)
+            .resolve(attack: attack)
+
+        XCTAssertEqual(resolved.damage[.impact] ?? 0, 100, accuracy: 1e-9)
+        XCTAssertEqual(resolved.damage[.corrosive] ?? 0, 100, accuracy: 1e-9)
+        // This Riven term is not two primary elements placed in an arbitrary
+        // slot order, so it cannot be turned into another combination.
+        XCTAssertNil(resolved.damage[.electricity])
+        XCTAssertNil(resolved.damage[.toxin])
     }
 
     // MARK: 灵化
@@ -363,7 +520,8 @@ final class MechanicTests: XCTestCase {
     /// 这条用例锁的是「伤害向量不提前求和」——否则免疫只能靠把总和拆回来实现。
     func testImmuneTypeStaysZeroInVector() {
         var enemy = Enemy(name: "E", faction: "Neutral", baseLevel: 1, health: 1e6)
-        enemy.elemRes = ["heat": 0]
+        // `elemRes` 表示减伤比例；1 才是完全免疫。
+        enemy.elemRes = ["heat": 1]
 
         let attack = Attack(name: "H", speed: 1, critChance: 0, critMultiplier: 1,
                             statusChance: 0, damage: [.impact: 50, .heat: 50])

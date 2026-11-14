@@ -1,0 +1,53 @@
+{
+  "weapon": "Laetum",
+  "enemy": "Conculyst",
+  "level": 999,
+  "build": {
+    "mods": [
+      "Galvanized Diffusion",
+      "Frostbite",
+      "Pistol Pestilence",
+      "Lethal Torrent",
+      "Anemic Agility",
+      "Galvanized Shot",
+      "Primed Heated Charge",
+      "Cascadia Flare"
+    ],
+    "slottedMods": [
+      { "slot": 0, "name": "Galvanized Diffusion" },
+      { "slot": 1, "name": "Frostbite" },
+      { "slot": 2, "name": "Pistol Pestilence" },
+      { "slot": 3, "name": "Lethal Torrent" },
+      { "slot": 4, "name": "Anemic Agility" },
+      { "slot": 5, "name": "Galvanized Shot" },
+      { "slot": 6, "name": "Primed Heated Charge" },
+      { "slot": 10, "name": "Cascadia Flare" }
+    ],
+    "rivenSlot": 7,
+    "riven": {
+      "name": "Feva-can",
+      "multishot": 1.3335,
+      "critChance": -1.2809,
+      "reloadSpeed": 0.6155,
+      "elements": {
+        "corrosive": 1.0969
+      }
+    },
+    "incarnonPerks": ["19:1", "20:0", "21:1", "22:0"]
+  },
+  "options": {
+    "window": 20,
+    "steelPath": true,
+    "eximus": false,
+    "headshot": false,
+    "weakPoint": false,
+    "distance": 0,
+    "corrosiveStackCapBonus": 5,
+    "conditionalModStacks": {
+      "Galvanized Diffusion": 4,
+      "Galvanized Shot": 3,
+      "Cascadia Flare": 40,
+      "Lethal Rearmament": 3
+    }
+  }
+}

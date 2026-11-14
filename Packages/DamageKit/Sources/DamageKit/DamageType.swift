@@ -2,7 +2,7 @@ import Foundation
 
 /// 伤害类型。
 ///
-/// 命名对齐 `web/app/site/weapons/*.json` 里 `damage` 字典的键（小写）；
+/// 命名对齐 `server/site/weapons/*.json` 里 `damage` 字典的键（小写）；
 /// 数据里偶尔出现的 `fire` 是 `heat` 的别名，`finisher` 单独保留。
 ///
 /// 元素组合表来源：<https://wiki.warframe.com/w/Damage>

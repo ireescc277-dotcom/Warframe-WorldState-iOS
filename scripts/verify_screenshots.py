@@ -10,6 +10,29 @@ import os
 import math
 from PIL import Image
 
+# These screens are expected to show a populated local weapon catalogue and
+# calculator.  A large block of the app's error-red text therefore means that
+# a resource-loading failure reached the user, even if the process did not
+# crash and the page otherwise has normal brightness/variance.
+CALCULATOR_DATA_SCREENS = {
+    "screen_arsenal.png",
+    "screen_arsenal_melee.png",
+    "screen_arsenal_config.png",
+    "screen_arsenal_companion_config.png",
+    "screen_calc.png",
+    "screen_calc_companion.png",
+    "screen_calc_result.png",
+}
+
+
+def missing_calculator_data_error_pixels(img):
+    """Count the error-red glyph pixels used by the unavailable-data state."""
+    return sum(
+        1
+        for r, g, b in img.getdata()
+        if r >= 210 and g <= 160 and b <= 160 and r - g >= 60 and r - b >= 60
+    )
+
 def verify_screenshot(img_path):
     print("==========================================")
     print(f"=== Verifying Screenshot: {os.path.basename(img_path)} ===")
@@ -89,6 +112,17 @@ def verify_screenshot(img_path):
     if std_dev < 4.0:
         print("[FAIL] Content area has virtually zero variance (solid blank screen or crash)!")
         return False
+
+    # The former gate accepted the fully rendered-but-useless resource error
+    # page.  Only apply this semantic check to arsenal/calculator captures:
+    # red is a valid colour for unrelated alerts elsewhere in the app.
+    if os.path.basename(img_path) in CALCULATOR_DATA_SCREENS:
+        error_pixels = missing_calculator_data_error_pixels(img)
+        max_error_pixels = max(250, int(width * height * 0.0005))
+        print(f"[CHECK] Calculator unavailable-data error-red pixels: {error_pixels} (max {max_error_pixels})")
+        if error_pixels > max_error_pixels:
+            print("[FAIL] Calculator screen shows the unavailable-data error state, not usable weapon/calculation content!")
+            return False
         
     print(f"[PASS] {os.path.basename(img_path)} verified successfully.")
     return True

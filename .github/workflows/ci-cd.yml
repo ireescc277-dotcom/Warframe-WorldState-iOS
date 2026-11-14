@@ -26,6 +26,42 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer || true
           swift --version
 
+      - name: Install website parity runtime
+        working-directory: server
+        run: npm ci
+
+      - name: Verify DamageKit source data and local Mod thumbnails
+        run: |
+          node scripts/verify_mod_data_parity.js
+          python3 scripts/verify_mod_icon_cache.py
+
+      - name: Verify account snapshot Mod-rank reconstruction
+        run: python3 scripts/test_build_app_inventory.py
+
+      - name: Verify documented website quantization branch
+        run: node scripts/verify_website_quantization_probe.js
+
+      - name: Verify quantization counterfactual across weapon classes
+        run: node scripts/verify_website_quantization_counterfactual.js --verify
+
+      - name: Verify documented website bow timeline branch
+        run: node scripts/verify_website_bow_timeline_probe.js
+
+      - name: Decompose Kuva Bramma website discrepancy
+        run: node scripts/probe_bramma_layers.js --verify
+
+      - name: Verify website Heat custom-stat branches
+        run: node scripts/verify_website_heat_custom_probe.js
+
+      - name: Verify website DOT window boundary branch
+        run: node scripts/verify_website_dot_window_probe.js
+
+      - name: Run DamageKit tests
+        run: swift test --package-path Packages/DamageKit
+
+      - name: Compare website target option states
+        run: node scripts/compare_target_states.js
+
       - name: Compile and Run Test Runner
         run: |
           echo "=== Compiling test_runner executable ==="
@@ -35,6 +71,7 @@ jobs:
             WarframeWatch/Models/CommunityModels.swift \
             WarframeWatch/Models/FocusModels.swift \
             WarframeWatch/Models/InventoryModel.swift \
+            WarframeWatch/Views/Arsenal/CompanionWeaponBuffResolver.swift \
             WarframeWatch/Models/MissionModels.swift \
             WarframeWatch/Models/MongoExtendedJSON.swift \
             WarframeWatch/Models/NotificationPlan.swift \
@@ -49,6 +86,21 @@ jobs:
           
           echo "=== Executing test_runner ==="
           ./test_runner
+
+      - name: Verify normal-build status-tail counterfactuals
+        run: node scripts/verify_website_status_tail_cases.js
+
+      - name: Verify normal-build bow-timeline counterfactuals
+        run: node scripts/verify_website_bow_timeline_counterfactual.js --verify
+
+      - name: Verify Nourish post-hit status-order counterfactual
+        run: node scripts/verify_website_status_order_counterfactual.js --verify
+
+      - name: Verify Laetum Gas queue-timing branch
+        run: node scripts/verify_website_laetum_gas_timeline_probe.js
+
+      - name: Run complete website parity suite
+        run: node scripts/compare_damagekit.js --strict --summary
 
   simulator-visual-test:
     name: 2. iOS Simulator Boot & Fullscreen Visual Quality Gate
@@ -78,15 +130,18 @@ jobs:
 
       - name: Generate Xcode Project
         run: |
-          cp WarframeWatch/Resources/InventoryData.sample.json WarframeWatch/Resources/InventoryData.json
+          # 公开样例不含任何账号装备；视觉门禁改用由该样例生成的虚构军械库，
+          # 才能真的走到“配置页 → 计算器”的路径，而不泄露用户账号数据。
+          python3 scripts/make_visual_inventory_fixture.py \
+            --input WarframeWatch/Resources/InventoryData.sample.json \
+            --out WarframeWatch/Resources/InventoryData.json
           # 仲裁排程是公开数据，构建时现抓一份（30 天），抓不到就用空样例，
           # 界面上那张卡会自己隐藏，不影响其他页面。
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
-          # 计算器离线包：web/app/site（站点内核 + 武器数据）并同步到
-          # WarframeWatch/Resources/DamageCalc，作为 folder reference 打进 App
-          python3 scripts/build_web_site.py
+          # 原生 Swift 计算器只打包 JSON / 图标数据，不执行网站 JS 内核。
+          python3 scripts/build_native_damage_data.py
           xcodegen generate
 
       - name: Boot Simulator & Build App
@@ -125,11 +180,16 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchStoryboardName string LaunchScreen" "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP_PATH/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP_PATH/Info.plist"
-          # 计算器页由 App 内 127.0.0.1 的本地服务提供，ATS 默认拦明文 http
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$APP_PATH/Info.plist" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$APP_PATH/Info.plist" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$APP_PATH/Info.plist" 2>/dev/null || true
           plutil -p "$APP_PATH/Info.plist"
+
+      - name: Run iOS calculator source-bound tests
+        run: |
+          xcodebuild test \
+            -project WarframeWatch.xcodeproj \
+            -scheme WarframeWatch \
+            -configuration Debug \
+            -destination "id=$SIM_UDID" \
+            -derivedDataPath build_sim
 
       - name: Install & Launch App on Simulator
         run: |
@@ -173,16 +233,25 @@ jobs:
           capture screen_assets_detail -startTab 2 -assetSet "Hildryn Prime"
           capture screen_arsenal -startTab 3
           capture screen_arsenal_melee -startTab 3 -arsenalCat melee
-          # 从武器列表点进计算器的那一跳：simctl 点不了屏，用启动参数直接做掉。
-          # 内核要加载站点脚本 + 内联数据，比原生页慢，给它单独的长等待。
+          # 军械库的中间配置页：先核对背包武器和当前战甲的 A/B/C，才可进入计算器。
+          capture screen_arsenal_config -startTab 3 -arsenalConfigWeapon Torid
+          # 同伴本体也有独立 A/B/C；这一张验证真实路由不是只编译模型字段。
+          capture screen_arsenal_companion_config -startTab 3 -arsenalConfigEquipment "Carrier Prime（视觉测试）"
+          # simctl 点不了配置页的按钮，计算器结果图由启动参数直接进入。
+          # 等 DamageKit 完成首轮时间线计算后再取图。
           xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
           xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid >/dev/null
-          sleep 22
+          sleep 12
           xcrun simctl io $SIM_UDID screenshot screen_calc.png
-          # 再拍一张滚到底的：确认结果表真的算出来了
+          # 账号绑定的同伴来源：选同伴实例与其 A/B/C 后才会出现实际 Mod；
+          # 该启动参数仅滚到卡片并选择虚构 fixture 的第一个同伴。
+          capture screen_calc_companion -startTab 3 -calcWeapon Torid -calcCompanion
+          # `-calcResult` is a calculator-only CI hook: after the native core
+          # finishes it scrolls to the rendered results card, so this is not a
+          # duplicate capture of the input form.
           xcrun simctl terminate $SIM_UDID com.warframe.watch >/dev/null 2>&1 || true
-          xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid -calcScroll >/dev/null
-          sleep 24
+          xcrun simctl launch $SIM_UDID com.warframe.watch -startTab 3 -calcWeapon Torid -calcResult >/dev/null
+          sleep 12
           xcrun simctl io $SIM_UDID screenshot screen_calc_result.png
           ls -lh screen_calc.png screen_calc_result.png
           capture screen_more -startTab 4
@@ -193,6 +262,7 @@ jobs:
             dashboard_preview.png screen_watch.png screen_watch_targets.png \
             screen_assets.png screen_assets_relics.png screen_assets_aya.png \
             screen_assets_detail.png screen_arsenal.png screen_arsenal_melee.png \
+            screen_arsenal_config.png screen_arsenal_companion_config.png screen_calc.png screen_calc_companion.png screen_calc_result.png \
             screen_more.png
 
       - name: Upload Screenshot Artifact
@@ -209,7 +279,10 @@ jobs:
             screen_assets_detail.png
             screen_arsenal.png
             screen_arsenal_melee.png
+            screen_arsenal_config.png
+            screen_arsenal_companion_config.png
             screen_calc.png
+            screen_calc_companion.png
             screen_calc_result.png
             screen_more.png
           retention-days: 14
@@ -255,9 +328,8 @@ jobs:
           python3 scripts/build_arb_schedule.py --days 30 \
             --out WarframeWatch/Resources/ArbSchedule.json \
             || cp WarframeWatch/Resources/ArbSchedule.sample.json WarframeWatch/Resources/ArbSchedule.json
-          # 计算器离线包：web/app/site（站点内核 + 武器数据）并同步到
-          # WarframeWatch/Resources/DamageCalc，作为 folder reference 打进 App
-          python3 scripts/build_web_site.py
+          # 原生 Swift 计算器只打包 JSON / 图标数据，不执行网站 JS 内核。
+          python3 scripts/build_native_damage_data.py
           xcodegen generate
 
       - name: Build & Archive (Unsigned)
@@ -281,12 +353,10 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :UILaunchStoryboardName string LaunchScreen" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" || \
             /usr/libexec/PlistBuddy -c "Add :UILaunchScreen dict" "$APP/Info.plist"
-          # 计算器页由 App 内 127.0.0.1 的本地服务提供，ATS 默认拦明文 http
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$APP/Info.plist" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" "$APP/Info.plist" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$APP/Info.plist" 2>/dev/null || true
 
-          # 账号快照在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          # 账号版本 manifest 在 VPS 上，链接不写进源码；仓库公开后这里也读不到。
+          # wf_publish.py 保持路径为 inventory.json，但该文件现在只指向经
+          # sha256 校验的不可变 payload，App 不会把时间和别的版本混在一起。
           INVENTORY_URL="${{ secrets.INVENTORY_URL }}"
           if [ -n "$INVENTORY_URL" ]; then
             /usr/libexec/PlistBuddy -c "Add :InventoryURL string $INVENTORY_URL" "$APP/Info.plist"
@@ -317,8 +387,8 @@ jobs:
           test -d "$APP/LaunchScreen.storyboardc" && echo "✅ LaunchScreen.storyboardc present" || exit 1
           test -f "$APP/DefaultSnapshot.json" && echo "✅ DefaultSnapshot.json present" || exit 1
           test -f "$APP/DefaultDict.json" && echo "✅ DefaultDict.json present" || exit 1
-          test -f "$APP/DamageCalc/index.html" && echo "✅ DamageCalc/index.html present" || exit 1
-          test -f "$APP/DamageCalc/site/min.js" && echo "✅ DamageCalc/site/min.js present" || exit 1
+          test -f "$APP/DamageData/weapons-list.json" && echo "✅ DamageData weapons present" || exit 1
+          test -f "$APP/DamageData/data/json/enemies-min.json" && echo "✅ DamageData enemies present" || exit 1
 
       - name: Package Unsigned IPA
         run: |

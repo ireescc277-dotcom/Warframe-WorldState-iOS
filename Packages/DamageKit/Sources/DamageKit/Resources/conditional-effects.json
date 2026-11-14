@@ -1,0 +1,112 @@
+[
+  {
+    "mod" : "Galvanized Diffusion",
+    "maxStacks" : 4,
+    "mode" : "totalRelativeToStaticAction",
+    "keys" : ["multishot"]
+  },
+  {
+    "mod" : "Galvanized Chamber",
+    "maxStacks" : 5,
+    "mode" : "totalRelativeToStaticAction",
+    "keys" : ["multishot"]
+  },
+  {
+    "mod" : "Cascadia Flare",
+    "maxStacks" : 40,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base"]
+  },
+  {
+    "mod" : "Primary Frostbite",
+    "maxStacks" : 40,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["crit_mult", "multishot"]
+  },
+  {
+    "mod" : "Primary Deadhead",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base"],
+    "alwaysActiveKeys" : ["mult_for_head"]
+  },
+  {
+    "mod" : "Secondary Deadhead",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base"],
+    "alwaysActiveKeys" : ["mult_for_head"]
+  },
+  {
+    "mod" : "Lethal Rearmament",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["reloadTime"]
+  },
+  {
+    "mod" : "Primary Merciless",
+    "maxStacks" : 12,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base", "reloadTime", "charge_time"]
+  },
+  {
+    "mod" : "Secondary Merciless",
+    "maxStacks" : 12,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base", "reloadTime", "charge_time"]
+  },
+  {
+    "mod" : "Melee Merciless",
+    "maxStacks" : 12,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["base", "reloadTime", "charge_time"]
+  },
+  {
+    "mod" : "Melee Exposure",
+    "maxStacks" : 4,
+    "mode" : "scaledConditionalValue",
+    "keys" : ["addCorrosive"],
+    "conditionalActionKeys" : ["addCorrosive"],
+    "inputLabel" : "次技能施放"
+  },
+  {
+    "mod" : "Condition Overload",
+    "maxStacks" : 0,
+    "mode" : "scaledConditionalValue",
+    "keys" : [],
+    "perStatusDamage" : {
+      "activation" : "always",
+      "excludedShotTypes" : ["AoE"]
+    }
+  },
+  {
+    "mod" : "Galvanized Aptitude",
+    "maxStacks" : 2,
+    "mode" : "scaledConditionalValue",
+    "keys" : [],
+    "perStatusDamage" : {
+      "activation" : "conditionalStacks",
+      "excludedShotTypes" : ["AoE"]
+    }
+  },
+  {
+    "mod" : "Galvanized Savvy",
+    "maxStacks" : 2,
+    "mode" : "scaledConditionalValue",
+    "keys" : [],
+    "perStatusDamage" : {
+      "activation" : "conditionalStacks",
+      "excludedShotTypes" : ["AoE"]
+    }
+  },
+  {
+    "mod" : "Galvanized Shot",
+    "maxStacks" : 3,
+    "mode" : "scaledConditionalValue",
+    "keys" : [],
+    "perStatusDamage" : {
+      "activation" : "conditionalStacks",
+      "excludedShotTypes" : ["AoE"]
+    }
+  }
+]
