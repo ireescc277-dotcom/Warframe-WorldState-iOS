@@ -45,12 +45,5 @@
     </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoads</key>
-        <true/>
-    </dict>
-    <key>NSLocalNetworkUsageDescription</key>
-    <string>用于连接局域网开发服务器进行本地数据热调试与实时预览。</string>
 </dict>
 </plist>

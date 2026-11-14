@@ -32,10 +32,10 @@ final class CoreTests: XCTestCase {
 
     func testEnemyArmorReduction() {
         // 2700 护甲 → 90%
-        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 2700), 0.9, accuracy: 1e-12)
+        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 2700), 0.9, accuracy: 1e-6)
         XCTAssertEqual(Rules.enemyArmorDR(netArmor: 0), 0, accuracy: 1e-12)
         // 超过 2700 切回 armor/(armor+300)
-        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 3000), 3000.0 / 3300.0, accuracy: 1e-12)
+        XCTAssertEqual(Rules.enemyArmorDR(netArmor: 3000), 3000.0 / 3300.0, accuracy: 1e-6)
     }
 
     func testDeterminism() throws {

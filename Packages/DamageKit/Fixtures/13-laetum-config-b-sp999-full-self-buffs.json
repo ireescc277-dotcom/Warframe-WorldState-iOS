@@ -1,0 +1,55 @@
+{
+  "weapon": "Laetum",
+  "enemy": "Corrupted Heavy Gunner",
+  "level": 999,
+  "build": {
+    "mods": [
+      "Primed Heated Charge",
+      "Galvanized Shot",
+      "Anemic Agility",
+      "Lethal Torrent",
+      "Pistol Pestilence",
+      "Frostbite",
+      "Galvanized Diffusion",
+      "Steady Hands",
+      "Cascadia Flare"
+    ],
+    "slottedMods": [
+      { "slot": 0, "name": "Primed Heated Charge" },
+      { "slot": 1, "name": "Galvanized Shot" },
+      { "slot": 2, "name": "Anemic Agility" },
+      { "slot": 3, "name": "Lethal Torrent" },
+      { "slot": 4, "name": "Pistol Pestilence" },
+      { "slot": 5, "name": "Frostbite" },
+      { "slot": 6, "name": "Galvanized Diffusion" },
+      { "slot": 8, "name": "Steady Hands" },
+      { "slot": 10, "name": "Cascadia Flare" }
+    ],
+    "rivenSlot": 7,
+    "riven": {
+      "name": "Feva-can",
+      "multishot": 1.3335,
+      "critChance": -1.2809,
+      "reloadSpeed": 0.6155,
+      "elements": {
+        "corrosive": 1.0969
+      }
+    },
+    "incarnonPerks": ["19:1", "20:0", "21:1", "22:0"]
+  },
+  "options": {
+    "window": 20,
+    "steelPath": true,
+    "eximus": true,
+    "headshot": false,
+    "weakPoint": false,
+    "distance": 0,
+    "corrosiveStackCapBonus": 5,
+    "conditionalModStacks": {
+      "Galvanized Diffusion": 4,
+      "Galvanized Shot": 3,
+      "Cascadia Flare": 40,
+      "Lethal Rearmament": 0
+    }
+  }
+}

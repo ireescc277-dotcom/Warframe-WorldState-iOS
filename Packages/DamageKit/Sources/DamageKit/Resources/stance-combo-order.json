@@ -1,0 +1,363 @@
+{
+ "Blind Justice": [
+  "Guiding Light",
+  "Zatōs Creed",
+  "Heeding Call",
+  "Destined Path",
+  "Parting Knee"
+ ],
+ "Tranquil Cleave": [
+  "Breathless Lunge",
+  "Windless Cut",
+  "Beyond Reproach",
+  "Hook and Eye",
+  "Setting Sun"
+ ],
+ "Decisive Judgement": [
+  "Swift Retribution",
+  "Windless Cut",
+  "Consent Decree",
+  "Silent Acumen"
+ ],
+ "Defiled Snapdragon": [
+  "Claws of the Drake",
+  "Soul of the Leviathan",
+  "Heart of the Naga",
+  "Fangs of the Lindwurm",
+  "Weightless Steel"
+ ],
+ "Crossing Snakes": [
+  "East to West",
+  "Lacerating Leap",
+  "Northern Coil",
+  "Twin Fang"
+ ],
+ "Swirling Tiger": [
+  "Winding Claws",
+  "Raking Flesh",
+  "Dancing Hunter"
+ ],
+ "Carving Mantis": [
+  "Rapid Incisions",
+  "Ambush Predator",
+  "Dire Courtship",
+  "Biting Mandibles"
+ ],
+ "Cyclone Kraken": [
+  "Gale Triton",
+  "Leviathan Rain",
+  "Lightning Siren",
+  "Thunder Hydra"
+ ],
+ "Sundering Weave": [
+  "Rapid Current",
+  "Cresting Surf",
+  "Flash Flood",
+  "Coming Tide"
+ ],
+ "Vulpine Mask": [
+  "Assailant Guise",
+  "Duel Secrets",
+  "Hidden Flourish",
+  "Deceptive Lunge"
+ ],
+ "Wise Razor": [
+  "Threshing Grain",
+  "Cutting Thrice",
+  "Calling Thunder"
+ ],
+ "Iron Phoenix": [
+  "Wings and Beak",
+  "Double Slash",
+  "Taking Flight"
+ ],
+ "Crimson Dervish": [
+  "Twisting Flurry",
+  "Crimson Orbit",
+  "Coiling Impale"
+ ],
+ "Vengeful Revenant": [
+  "Impending Dread",
+  "Lone Vengeance",
+  "Drowning Despair",
+  "Rising Hate"
+ ],
+ "Swooping Falcon": [
+  "Diving Kestrel",
+  "Swift Pursuit",
+  "Slicing Talon",
+  "Keen Broadwing"
+ ],
+ "Eleventh Storm": [
+  "Striking Thunder",
+  "Devouring Beast",
+  "Bide and Bleed",
+  "Diamond Deus"
+ ],
+ "Final Harbinger": [
+  "Null Warning",
+  "Impending Battery",
+  "Dark Light",
+  "Systemic Shred"
+ ],
+ "Slicing Feathers": [
+  "Scathing Plume",
+  "Razor Fin",
+  "Serrated Crest",
+  "Cutting Fringe"
+ ],
+ "Votive Onslaught": [
+  "Purging Drive",
+  "Clarion Rush",
+  "Rending Lamentation",
+  "Penitent Offering"
+ ],
+ "Homing Fang": [
+  "Cutting Arches",
+  "Life Eater",
+  "Lashing Forward"
+ ],
+ "Pointed Wind": [
+  "Parting Edge",
+  "Viper's Bite"
+ ],
+ "Stinging Thorn": [
+  "Carving Spike",
+  "Piercing Horn",
+  "Lacerating Spine",
+  "Impaling Quill"
+ ],
+ "Seismic Palm": [
+  "Quaking Touch",
+  "Erupting Vulcan",
+  "Sudden Rockfall",
+  "Echoing Hands"
+ ],
+ "Fracturing Wind": [
+  "Rolling Gale",
+  "Gaining Humility",
+  "Trailing Doom",
+  "Rising Wind"
+ ],
+ "Gaia's Tragedy": [
+  "River's Grief",
+  "Ocean's Contempt",
+  "Mountain's Rage",
+  "Forest's Remorse"
+ ],
+ "Grim Fury": [
+  "Fanning Flame",
+  "Bright Blaze",
+  "Burning Desire"
+ ],
+ "Brutal Tide": [
+  "Inferno",
+  "Rushing Fire"
+ ],
+ "Shimmering Blight": [
+  "Slashing Wind",
+  "Howling Gale"
+ ],
+ "Bleeding Willow": [
+  "Lethal Gust",
+  "Drifting Steel"
+ ],
+ "Twirling Spire": [
+  "Cresting Peak",
+  "Spiraling Pinnacle",
+  "Vaulting Apex",
+  "Summit Plunge"
+ ],
+ "Reaping Spiral": [
+  "Eternal Nocturne",
+  "Reclamation",
+  "Abyssal Automaton"
+ ],
+ "Stalking Fan": [
+  "Shadow Wing",
+  "Many Tears",
+  "Dying Light"
+ ],
+ "Clashing Forest": [
+  "Resolute Flurry",
+  "Skyward Limb",
+  "Battering Roots"
+ ],
+ "Flailing Branch": [
+  "Rising Falls",
+  "Battered Thread",
+  "Autumn Leaf"
+ ],
+ "Butcher's Revelry": [
+  "Rictus' Wrath",
+  "Ghoul Rush",
+  "Rip 'N Ride",
+  "Reciprocator"
+ ],
+ "Shattering Storm": [
+  "Falling Rock",
+  "Pounding Smite",
+  "Smashing Fury",
+  "Rising Thunder"
+ ],
+ "Crushing Ruin": [
+  "Raging Whirlwind",
+  "Tidal Force",
+  "Shattered Village",
+  "Winding Temper"
+ ],
+ "Cleaving Whirlwind": [
+  "Crowd Fall",
+  "Broken Bull",
+  "Sundered Tusk",
+  "Drifting Stampede"
+ ],
+ "Rending Crane": [
+  "Skull Splitter",
+  "Lashing Tempest",
+  "Rampaging Boar"
+ ],
+ "Tempo Royale": [
+  "August Mesto",
+  "Majestic Abandon",
+  "Resplendent Calma",
+  "Bold Reprise"
+ ],
+ "Galeforce Dawn": [
+  "Stormreaper",
+  "Bleak Winnowing",
+  "Thundering Peaks"
+ ],
+ "Astral Twilight": [
+  "Morning Sun",
+  "Midnight Cloud",
+  "Falling Star",
+  "Rising Moon"
+ ],
+ "Gleaming Talon": [
+  "Mercury Vortex",
+  "Ruin",
+  "Silver Reach"
+ ],
+ "Bullet Dance": [
+  "Automatic Rhumba",
+  "Magnum Mambo",
+  "Lead Tango",
+  "Samba Slash"
+ ],
+ "High Noon": [
+  "Final Showdown",
+  "Vagabond Blitz",
+  "Desperado Zeal",
+  "Tomahawk Double-Tap"
+ ],
+ "Atlantis Vulcan": [
+  "Molten Whirlpool",
+  "Searing Undertow",
+  "Blazing Vortex",
+  "Infernal Maelstrom"
+ ],
+ "Gemini Cross": [
+  "Vagrant Blight",
+  "Cold Vendetta",
+  "Baleful Sin",
+  "Blind Tormentor",
+  "Ascendant Bane"
+ ],
+ "Sovereign Outcast": [
+  "Rogue Edict",
+  "Vagrant Behest",
+  "Villain Rule",
+  "Scout Command",
+  "Ascendant Bane"
+ ],
+ "Burning Wasp": [
+  "Sparking Torture",
+  "Buzzing Sting",
+  "Guided Claw"
+ ],
+ "Coiling Viper": [
+  "Whistling Wind",
+  "Tumbling King"
+ ],
+ "Malicious Raptor": [
+  "Jagged Gash",
+  "Wicked Slash",
+  "Lethal Clash",
+  "Venging Thrash"
+ ],
+ "Four Riders": [
+  "Aggravated Swarm",
+  "Hungering Encroachment",
+  "Raging Conflict",
+  "Eternal Fall"
+ ],
+ "Vermillion Storm": [
+  "Flurry Rose",
+  "Crimson Hurricane",
+  "Cardinal Breeze",
+  "Ruby Wind"
+ ],
+ "Ravenous Wraith": [
+  "Cleaving Claws",
+  "Soul Thresher",
+  "Void Torrent"
+ ],
+ "Gnashing Payara": [
+  "Pincer Strike",
+  "Cheetah's Guile",
+  "Flash Flurry"
+ ],
+ "Spinning Needle": [
+  "True Kiss",
+  "Accursed Whispers",
+  "Fey Intervention",
+  "Fey Intervention (Block)"
+ ],
+ "Sinking Talon": [
+  "Lashing Panther",
+  "Rising Lion",
+  "Fey Intervention",
+  "Fey Intervention (Block)"
+ ],
+ "Exalted Blade": [
+  "Cutting Poise",
+  "Lancing Justice",
+  "Virtuous Slash",
+  "Equal Laceration"
+ ],
+ "Hysteria": [
+  "Fervor",
+  "Rage",
+  "Madness",
+  "Delirium"
+ ],
+ "Serene Storm": [
+  "Trespass Denied",
+  "Father's Lesson",
+  "Final Sunrise",
+  "Patience Shattered"
+ ],
+ "Primal Fury": [
+  "Falling Oak Buster",
+  "Spinning Crash Technique",
+  "Cyclone Lightning Strike",
+  "Rolling Boulder Rush"
+ ],
+ "Mountain's Edge": [
+  "Rise and Fall",
+  "Loyal Blades",
+  "Steel Eclipse"
+ ],
+ "Harrowing Spire": [
+  "Rennen",
+  "Piercing Advance",
+  "Relentless Onset"
+ ],
+ "Blade Storm": [
+  "Default"
+ ],
+ "Razorwing": [
+  "Default"
+ ]
+}

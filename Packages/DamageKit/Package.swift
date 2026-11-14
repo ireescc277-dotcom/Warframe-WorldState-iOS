@@ -14,7 +14,12 @@ let package = Package(
     targets: [
         .target(
             name: "DamageKit",
-            resources: [.copy("Resources/mods.json")]
+            resources: [
+                .copy("Resources/mods.json"),
+                .copy("Resources/conditional-effects.json"),
+                .copy("Resources/stance-combo-order.json"),
+                .copy("Resources/default-melee-stances.json")
+            ]
         ),
         .executableTarget(
             name: "damagekit-cli",

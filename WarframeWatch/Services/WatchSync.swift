@@ -17,7 +17,7 @@ public final class WatchSync {
 
     private init() {}
 
-    /// .../wf/<token>/inventory.json -> .../wf/<token>/watch
+    /// .../wf/<token>/inventory.json (版本 manifest) -> .../wf/<token>/watch
     /// 和背包同一个目录、同一个 token，不额外发明一套鉴权。
     private static var endpoint: URL? {
         guard let base = InventoryStore.remote else { return nil }

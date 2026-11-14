@@ -44,7 +44,7 @@ WorkingDirectory={remote}
 Environment=PYTHONUNBUFFERED=1
 Environment=WF_DB={remote}/wf_history.db
 Environment=WF_DICT={remote}/node_meta.json
-ExecStart=/usr/bin/python3 {remote}/wf_record.py --interval 120
+{worldstate_env}ExecStart=/usr/bin/python3 {remote}/wf_record.py --interval 120
 Restart=always
 RestartSec=15
 Nice=10
@@ -117,10 +117,17 @@ def main():
             print(out)
             return 0
 
+        token = os.environ.get("WF_PUBLISH_TOKEN", "").strip()
+        worldstate_env = (
+            "Environment=WF_WORLDSTATE_OUT=/var/www/wf/%s/worldstate.json\n" % token
+            if token
+            else ""
+        )
+
         sftp = client.open_sftp()
         try:
             with sftp.file("/tmp/wf-recorder.service", "w") as fh:
-                fh.write(UNIT.format(remote=REMOTE_DIR))
+                fh.write(UNIT.format(remote=REMOTE_DIR, worldstate_env=worldstate_env))
             sftp.chmod("/tmp/wf-recorder.service", 0o644)
         finally:
             sftp.close()

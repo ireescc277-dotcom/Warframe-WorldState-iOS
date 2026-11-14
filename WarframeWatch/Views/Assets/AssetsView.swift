@@ -88,7 +88,9 @@ public struct AssetsView: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WFTheme.textPrimary)
                 HStack(spacing: 5) {
-                    Text("背包 \(AssetFormat.stamp(data.profile.sync)) · 价格 \(AssetFormat.stamp(data.marketAt))")
+                    Text("背包源 \(AssetFormat.stamp(data.profile.sync)) · "
+                         + "已发布 \(AssetFormat.stamp(feed.manifest?.publishedAt)) · "
+                         + "价格 \(AssetFormat.stamp(data.marketAt))")
                     if feed.fetching {
                         ProgressView()
                             .controlSize(.mini)
@@ -121,23 +123,44 @@ public struct AssetsView: View {
 
     private func summary(_ data: InventoryData) -> some View {
         let t = data.totals
+        let allPlat = t.allPlat ?? t.loosePlat
+        let allDucats = t.allDucats ?? t.looseDucats
         return VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 0) {
-                bigNumber("\(AssetFormat.plat(t.loosePlat))", unit: "p", label: "散件可变现")
+                bigNumber("\(AssetFormat.plat(allPlat))", unit: "p", label: "全部 Prime 散件市价")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber(AssetFormat.grouped(t.looseDucats), unit: "", label: "可换 Ducats")
+                bigNumber(AssetFormat.grouped(allDucats), unit: "", label: "散件可换 Ducats")
                 Rectangle().fill(WFUI.hairline).frame(width: 0.5, height: 44)
-                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "已制成")
+                bigNumber("\(t.setsOwned)", unit: "/\(t.setsAll)", label: "收录套装已有")
             }
             .padding(.vertical, 16)
+
+            VStack(alignment: .leading, spacing: 4) {
+                if let total = t.primePartUnits, let priced = t.pricedPrimePartUnits {
+                    Text("市价按每件 Prime 散件的在线报价相加：已报价 \(priced) / \(total) 件")
+                } else {
+                    Text("市价按每件 Prime 散件的在线报价相加")
+                }
+                if allPlat != t.loosePlat {
+                    Text("保留每套未制作物品各一件后：\(AssetFormat.plat(t.loosePlat)) p（仅作余件出售参考）")
+                }
+                if allDucats != t.looseDucats {
+                    Text("保留每套未制作物品各一件后：\(AssetFormat.grouped(t.looseDucats)) Ducats")
+                }
+            }
+            .font(.wfLabel)
+            .foregroundColor(WFTheme.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 11)
 
             WFHairline()
 
             HStack(spacing: 0) {
-                miniStat("可制造", t.setsReady)
-                miniStat("缺 ≤2 件", t.setsClose)
-                miniStat("遗物", t.relicKinds, suffix: " 代号")
-                miniStat("Mod", t.mods, suffix: " 张")
+                miniStat("可制造", t.setsReady, suffix: " 套")
+                miniStat("缺 ≤2 件", t.setsClose, suffix: " 套")
+                miniStat("遗物 (共 \(t.relicUnits) 颗)", t.relicKinds, suffix: " 种")
+                miniStat("Mod 堆叠", t.mods, suffix: " 组")
             }
             .padding(.vertical, 11)
         }

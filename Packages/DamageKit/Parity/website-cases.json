@@ -1,0 +1,1687 @@
+{
+  "version": 1,
+  "metricPolicy": "The primary comparison records website queue behavior as totalDmg sum divided by the same window, averaged over deterministic strategy seeds 1...61. The runner also records directParity for every case: website queued immediate-hit total against DamageKit targetDirectDamage on the same defense layer. This keeps direct formula differences distinct from the website's DOT-tail queue presentation. The website UI's per-second random-queue median is a third, separate presentation metric and must be tested by the native queue renderer rather than substituted for either value.",
+  "cases": [
+    {
+      "id": "braton-baseline-lancer-l1",
+      "description": "自动步枪、无 Mod、基础敌人；验证武器基础伤害、射速、暴击、状态时间线的共同口径。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_probe.js reads Braton's raw Impact/Puncture/Slash vector 7.92/7.92/8.16 with Modded Base Damage 24 and locks the shipped /16 branch. scripts/verify_website_quantization_counterfactual.js --verify then runs this exact 61-seed baseline twice: the shipped site yields 153.4972220 queue-total DPS; replacing only setQuantize with /32 yields 168.0835082, while DamageKit yields 166.8557045 (0.7305% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; it separately says damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "DamageKit reads the same raw Braton vector and uses 24 / 32 = 0.75, yielding 8.25/8.25/8.25. The counterfactual changes no target, Mod, queue event, or seed; after only the divisor changes, both its immediate direct total and its queue-total DPS are within 5% of DamageKit."
+      },
+      "site": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "braton-base-crit-multishot-lancer-l50",
+      "description": "自动步枪的基础伤害、暴击、暴伤、多重射击组合。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Braton configuration twice. The shipped website /16 grid gives 19,974.3290175 immediate armor damage; replacing only setQuantize with /32 gives 21,971.7619193, while DamageKit gives 22,176.7881452 (0.9332% apart). The same run changes queue-total DPS from 1,069.1178974 to 1,168.9895425, versus DamageKit 1,162.4485788 (0.5595% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Point Strike",
+          "3": "Vital Sense"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Point Strike", "Vital Sense"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "braton-viral-status-lancer-l50",
+      "description": "自动步枪元素顺序合成病毒并携带状态几率，验证元素合并和 DOT 时间线。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Braton Viral configuration twice. The shipped website /16 grid gives 66,650.1565172 immediate armor damage; replacing only setQuantize with /32 gives 69,845.7119666, while DamageKit gives 71,268.5098912 (2.0371% apart). The same run changes queue-total DPS from 3,439.7882537 to 3,599.5660262, versus DamageKit 3,660.0163695 (1.6794% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; Viral composition, selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Malignant Force",
+          "3": "Rime Rounds"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Braton",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Malignant Force", "Rime Rounds"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "lex-prime-base-crit-lancer-l50",
+      "description": "副武器的基础伤害、暴击、暴伤与多重射击组合。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Lex Prime configuration twice. The shipped website /16 grid gives 47,654.1666888 immediate armor damage; replacing only setQuantize with /32 gives 44,344.8495577, while DamageKit gives 44,515.9545304 (0.3859% apart). The same run changes queue-total DPS from 2,551.5896459 to 2,386.1237894, versus DamageKit 2,377.0022123 (0.3823% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "lex-prime-eclipse-lancer-l50",
+      "description": "Eclipse 网站环境选项；验证它对副武器直击和状态输出的最终结算位置。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": {
+          "allConds": false,
+          "mirage": { "is_set": true, "val": 100 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "eclipse": 1 } } }
+      }
+    },
+    {
+      "id": "lex-prime-madurai-lancer-l50",
+      "description": "Madurai 网站开关；验证固定 +30% 只作用于非 POWER_WEAPON 的直接命中。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": { "allConds": false, "madurai": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "madurai": 1 } } }
+      }
+    },
+    {
+      "id": "kuva-tonkor-reload-projectile-lancer-l50",
+      "description": "一发弹匣榴弹武器；用于锁住射击间隔加换弹时间的持续火力时间轴。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Grenade Explosion",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Point Strike",
+          "3": "Vital Sense"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Point Strike", "Vital Sense"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "hek-pellet-crit-multishot-lancer-l50",
+      "description": "霰弹枪弹丸、多重射击与暴击组合；覆盖非单发步枪的逐弹丸时间线。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Hek configuration twice. The shipped website /16 grid gives 54,185.1321947 immediate armor damage; replacing only setQuantize with /32 gives 58,418.3456474, while DamageKit gives 58,734.8855450 (0.5419% apart). The same run changes queue-total DPS from 2,914.2183310 to 3,125.8790037, versus DamageKit 3,097.8828608 (0.8956% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Hek",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Point Blank",
+          "1": "Hell's Chamber",
+          "2": "Blunderbuss",
+          "3": "Ravage"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Hek",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Point Blank", "Hell's Chamber", "Blunderbuss", "Ravage"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "hek-galvanized-savvy-manual-status-lancer-l50",
+      "description": "霰弹枪 Gun CO：网站“所有条件满足”与“手动目标状态种类数”同时开启；验证 2 层 Galvanized Savvy 与 3 个状态类型。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior"],
+        "siteObservation": "scripts/verify_website_status_tail_cases.js executes this exact 20-second Hek fixture with deterministic seed 2. Its row 151 occurs at t=19.6774193548, has 322.0759889 direct damage and a Slash proc worth 178.5 per tick, yet the website stores 1393.0759889 as that row's total: it adds 1071, exactly six Slash ticks. The first such tick is t=20.6774193548, after the selected window; the script also pins the checked-in getStatusDamageValue -> curr_duration -> totalDmg source path.",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Status_Effect",
+            "claim": "The documented Slash status has a 6-second duration and its first damaging tick occurs one second after the proc. A Slash proc created after t=19 in a half-open 0 to 20 second window therefore has no tick in that window."
+          }
+        ],
+        "explanation": "The exact normal-build case's immediate-hit comparison already agrees within 5%. This proof applies only to its finite-window queue total: the site credits six post-window Slash ticks to the hit that created them, while DamageKit resolves only ticks whose scheduled time lies inside the requested window."
+      },
+      "site": {
+        "weapon": "Hek",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": { "0": "Galvanized Savvy" },
+        "opts": {
+          "allConds": true,
+          "statusCount": { "on": true, "val": 3 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Hek",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Galvanized Savvy"] },
+        "options": {
+          "window": 20,
+          "conditionalModStacks": { "Galvanized Savvy": 2 },
+          "manualStatusTypeCount": 3
+        }
+      }
+    },
+    {
+      "id": "skana-melee-base-crit-lancer-l50",
+      "description": "近战普通攻击、基础伤害和暴击 Mod；用于检验近战攻击节奏与默认连段口径。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Skana configuration twice. The shipped website /16 grid gives 6,691.8862494 immediate armor damage; replacing only setQuantize with /32 gives 7,214.6898626, while DamageKit gives 7,216.9424884 (0.0313% apart). The same run changes queue-total DPS from 464.3557223 to 490.4959030, versus DamageKit 470.5188498 (4.0728% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Skana",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Pressure Point",
+          "1": "True Steel",
+          "2": "Organ Shatter"
+        },
+        "opts": { "allConds": false, "meleeCombo": 1, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Skana",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Pressure Point", "True Steel", "Organ Shatter"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "skana-heavy-source-timeline-lancer-l50",
+      "description": "近战重击：以网站导出的重击动作表、起始连击和每次重击消耗为输入。此行刻意对比网站队列行的总伤害均值，不把网站展示用的随机队列中位数与连续期望 DPS 混成同一指标。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Skana",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Pressure Point",
+          "1": "True Steel",
+          "2": "Organ Shatter"
+        },
+        "opts": {
+          "allConds": false,
+          "heavy": true,
+          "heavyStart": 12,
+          "meleeCombo": 1,
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Skana",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Pressure Point", "True Steel", "Organ Shatter"] },
+        "options": {
+          "window": 20,
+          "allModConditionsMet": false,
+          "heavyAttack": true,
+          "heavyAttackStartingCombo": 12,
+          "meleeComboMultiplier": 1
+        }
+      }
+    },
+    {
+      "id": "ignis-wraith-beam-status-lancer-l50",
+      "description": "持续射线与元素状态组合；覆盖 beam/discharge 攻击段、元素合并和状态时间线。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior"],
+        "siteObservation": "scripts/verify_website_status_tail_cases.js executes this exact 20-second Ignis Wraith fixture with deterministic seed 1. Its row 153 occurs at t=19.125, has 1227.4272108 direct damage and a Heat proc worth 280.5547910 per tick, yet the website stores 2910.7559570 as that row's total: it adds 1683.3287462, exactly six Heat ticks. The first such tick is t=20.125, after the selected window; the script also pins the checked-in getStatusDamageValue -> curr_duration -> totalDmg source path.",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_over_Time",
+            "claim": "The documented Heat status has a 6-second duration and a 1-second delay before its first damage tick. A Heat proc created after t=19 in a half-open 0 to 20 second window therefore has no tick in that window."
+          }
+        ],
+        "explanation": "The exact normal-build case's immediate-hit comparison already agrees within 5%. This proof applies only to its finite-window queue total: the site credits six post-window Heat ticks to the hit that created them, while DamageKit resolves only ticks whose scheduled time lies inside the requested window."
+      },
+      "site": {
+        "weapon": "Ignis Wraith",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Malignant Force",
+          "3": "Rime Rounds"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Ignis Wraith",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Malignant Force", "Rime Rounds"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "ignis-wraith-heat-dot-window-isolation-charger-l1",
+      "description": "Ignis Wraith 火焰 DOT 的 1 秒窗口隔离：强制零暴击、每一束恰好一个 Heat 状态。直击必须对齐；只验证网站是否把窗口外的 DOT 尾部误计入当前窗口。",
+      "samples": 1,
+      "siteSeeds": [1],
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.health", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior"],
+        "siteObservation": "scripts/verify_website_dot_window_probe.js executes the checked-in website snapshot with a 1-second queue. It produces eight Ignis Wraith hits at 0, 0.125, ..., 0.875 seconds. Their direct total is 420, but the website queue total is 1680: every row contains 157.5 Heat tail damage even though the first Heat tick cannot occur until one second after its hit. The probe also locks the source branch: getStatusDamageValue multiplies by curr_duration before totalDmg is assigned to the hit row.",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_over_Time",
+            "claim": "The documented Heat status has a 6-second duration and a 1-second delay before its first damage tick. Therefore none of the Heat procs created at t=0 through t=0.875 can deal a Heat tick inside a half-open 0 to 1 second damage window."
+          }
+        ],
+        "explanation": "The isolated input has no critical randomness and exactly one Heat proc per one of eight beam hits. DamageKit reports the same 420 immediate direct damage and zero DOT inside the 1-second window; the website adds 1260 post-window DOT to that window. This proof applies only to a finite-window total that includes status tails, not to the immediate direct-damage comparison."
+      },
+      "site": {
+        "weapon": "Ignis Wraith",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "custom": [
+          { "k": "flat_crit_chance", "v": -100 },
+          { "k": "absolute_status_chance", "v": 71 }
+        ],
+        "opts": { "allConds": false, "queueLength": 1 }
+      },
+      "native": {
+        "weapon": "Ignis Wraith",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": {
+          "window": 1,
+          "customStats": {
+            "flat_crit_chance": -1,
+            "absolute_status_chance": 71
+          }
+        }
+      }
+    },
+    {
+      "id": "paris-prime-charged-shot-lancer-l50",
+      "description": "蓄力弓的 Charged Shot、暴击和多重射击；用于揭示蓄力节奏是否与网站同口径。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Charged Shot",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_bow_timeline_counterfactual.js --verify runs this exact Paris Prime fixture through the checked-in website 61 times with the same deterministic seeds. Shipped: 11 charged shots at 0.5, 2.4, ..., 19.5; direct total 58842.0924598 and queue-total DPS 3287.9374427. The in-memory counterfactual changes only the one-round charged-bow scheduler so it does not add a second generic reload after already deriving 1/(charge+reload): 17 shots at 0.5, 1.7, ..., 19.7; direct 92402.0944377 vs DamageKit 95959.2702973 (3.8497%) and queue-total DPS 5239.1881645 vs 5278.1400355 (0.7435%).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Fire_rate#Fire_Rate_and_Charge_Time",
+            "claim": "The documented bow effective fire-rate formula is 1 / (modded charge time + modded reload time). With Paris Prime's 0.50-second charge and 0.70-second reload, the cadence is 1.20 seconds, giving 17 shots from 0.5 through 19.7 in a 20-second window."
+          }
+        ],
+        "explanation": "The counterfactual keeps website damage code, Mod inputs, target state, status logic, RNG seed series, and all 61 runs unchanged. It modifies only the extra reload in the charged-bow queue scheduler, and brings both the immediate direct metric and finite-window total inside 5%."
+      },
+      "site": {
+        "weapon": "Paris Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Point Strike",
+          "3": "Vital Sense"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Paris Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Point Strike", "Vital Sense"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "kuva-bramma-radial-lancer-l50",
+      "description": "弓箭爆炸半径攻击的基础伤害、暴击与多重射击；用于验证 AoE 段和投射物武器。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Radial Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_bow_timeline_counterfactual.js --verify runs this exact Kuva Bramma fixture through the checked-in website 61 times with the same deterministic seeds. Shipped: 13 radial shots at 0.4, 2.0, ..., 19.6; direct total 134001.3051770 and queue-total DPS 7119.6432364. The in-memory counterfactual changes only the one-round charged-bow scheduler so it does not add a second generic reload after already deriving 1/(charge+reload): 20 shots at 0.4, 1.4, ..., 19.4; direct 206993.6157416 vs DamageKit 208757.6189338 (0.8522%) and queue-total DPS 10996.5155964 vs 11062.5881353 (0.6008%).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Fire_rate#Fire_Rate_and_Charge_Time",
+            "claim": "The documented bow effective fire-rate formula is 1 / (modded charge time + modded reload time). With Kuva Bramma's 0.40-second charge and 0.60-second reload, the cadence is 1.00 second, giving 20 shots from 0.4 through 19.4 in a 20-second window."
+          }
+        ],
+        "explanation": "The counterfactual keeps website damage code, Mod inputs, target state, status logic, RNG seed series, and all 61 runs unchanged. It modifies only the extra reload in the charged-bow queue scheduler, and brings both the immediate direct metric and finite-window total inside 5%."
+      },
+      "site": {
+        "weapon": "Kuva Bramma",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Point Strike",
+          "3": "Vital Sense"
+        },
+        "opts": { "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Bramma",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Point Strike", "Vital Sense"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "kuva-bramma-radial-timing-isolation-lancer-l50",
+      "description": "Kuva Bramma 弓箭时间轴隔离：通过网站自己的自定义属性面板把暴击率和状态几率都调为零，仅验证满蓄力、单箭弹匣、装填节奏；不是用来代替正常配卡对拍。",
+      "samples": 1,
+      "siteSeeds": [1],
+      "tolerance": 0.05,
+      "attack": "Radial Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_bow_timeline_probe.js executes the checked-in website source with this exact no-crit/no-status configuration. Kuva Bramma has 0.40 s charge, 0.60 s reload, and one arrow per magazine. The website emits 13 shots at 0.4, 2.0, 3.6, ..., 19.6: every interval after the first is 1.60 s. The same isolated parity fixture measures a 53.8704% difference for both queue total and immediate direct total on a matching target.",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Fire_rate#Fire_Rate_and_Charge_Time",
+            "claim": "The documented bow formula is Effective Fire Rate = 1 / (Modded Charge Time + Modded Reload Time). With 0.40 s charge and 0.60 s reload, the cycle is 1.00 s, yielding 20 shots at 0.4, 1.4, ..., 19.4 in a 20-second window."
+          }
+        ],
+        "explanation": "The isolation has zero critical chance and zero status chance, so no stochastic crit, status, or DOT can account for the discrepancy. The correct 20-versus-website-13 shot count alone predicts a 53.8462% relative difference, within 0.025 percentage point of the observed 53.8704%. This evidence applies to this deterministic bow timeline fixture only; it does not hide any remaining differences in the ordinary Bramma build."
+      },
+      "site": {
+        "weapon": "Kuva Bramma",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "queueLength": 20 },
+        "custom": [
+          { "k": "flat_crit_chance", "v": -35 },
+          { "k": "absolute_status_chance", "v": -21 }
+        ]
+      },
+      "native": {
+        "weapon": "Kuva Bramma",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": [] },
+        "options": {
+          "window": 20,
+          "customStats": {
+            "flat_crit_chance": -0.35,
+            "absolute_status_chance": -21
+          }
+        }
+      }
+    },
+    {
+      "id": "lex-prime-custom-direct-stats-lancer-l50",
+      "description": "副武器网站自定义属性：暴击链、多重、射速、弹匣、装填与爆头属性。该例锁住原始 customStats 输入单位与 Swift 核心结算位置。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureShotTrace": true,
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Lex Prime custom-stat configuration twice. The shipped website /16 grid gives 1,290,982.1131201 immediate armor damage; replacing only setQuantize with /32 gives 1,201,330.5774867, while DamageKit gives 1,189,539.8245962 (0.9815% apart). The same run changes queue-total DPS from 68,977.5305740 to 64,494.9537924, versus DamageKit 63,511.0670189 (1.5255% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, custom-stat inputs, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": { "headshot": true, "allConds": false, "queueLength": 20 },
+        "custom": [
+          { "k": "crit_chance", "v": 25 },
+          { "k": "mult_crit_chance", "v": 20 },
+          { "k": "flat_crit_chance", "v": 10 },
+          { "k": "crit_mult", "v": 50 },
+          { "k": "crit_mult_add", "v": 0.4 },
+          { "k": "crit_mult_mult", "v": 0.25 },
+          { "k": "speed", "v": 15 },
+          { "k": "multishot", "v": 0.2 },
+          { "k": "magazineSize", "v": 20 },
+          { "k": "reloadTime", "v": 10 },
+          { "k": "mult_for_head", "v": 20 },
+          { "k": "headshot_mult", "v": 50 }
+        ]
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": {
+          "window": 20,
+          "headshot": true,
+          "allModConditionsMet": false,
+          "customStats": {
+            "crit_chance": 0.25,
+            "mult_crit_chance": 0.2,
+            "flat_crit_chance": 0.1,
+            "crit_mult": 0.5,
+            "crit_mult_add": 0.4,
+            "crit_mult_mult": 0.25,
+            "speed": 0.15,
+            "multishot": 0.2,
+            "magazineSize": 0.2,
+            "reloadTime": 0.1,
+            "mult_for_head": 0.2,
+            "headshot_mult": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "lex-prime-roar-lancer-l50",
+      "description": "网站 Roar 选项；验证其进入派系伤害池而不是基础伤害池。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Lex Prime plus Roar configuration twice. The shipped website /16 grid gives 61,950.4166955 immediate armor damage; replacing only setQuantize with /32 gives 57,648.3044250, while DamageKit gives 57,870.7408896 (0.3859% apart). The same run changes queue-total DPS from 3,382.9302512 to 3,167.8246376, versus DamageKit 3,149.0237225 (0.5935% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the selected Mods, Roar value, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": { "0": "Hornet Strike", "1": "Barrel Diffusion", "2": "Pistol Gambit", "3": "Target Cracker" },
+        "opts": { "rhino": 30, "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "roar": 0.3 } } }
+      }
+    },
+    {
+      "id": "lex-prime-flat-critical-chance-lancer-l50",
+      "description": "网站 Absolute critical chance 选项；验证它在普通 Mod 后、最终暴击率乘算前加入。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Lex Prime absolute-critical-chance configuration twice. The shipped website /16 grid gives 68,753.0461064 immediate armor damage; replacing only setQuantize with /32 gives 63,978.5290157, while DamageKit gives 63,970.8325263 (0.0121% apart). The same run changes queue-total DPS from 3,661.0647643 to 3,422.3389098, versus DamageKit 3,415.9944521 (0.1854% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "Only the website quantization divisor changes in the counterfactual; the absolute-critical-chance input, selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged. The observed /32 counterfactual is within 5% for both immediate direct damage and this case's queue-total DPS."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": { "0": "Hornet Strike", "1": "Barrel Diffusion", "2": "Pistol Gambit", "3": "Target Cracker" },
+        "opts": { "flatCrit": 50, "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "flatCriticalChance": 0.5 } } }
+      }
+    },
+    {
+      "id": "lex-prime-nourish-lancer-l50",
+      "description": "网站 Nourish 选项；验证 Viral 在武器槽位元素合并后作为外部实例加入。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "captureStatusOrderTrace": "viral",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "scripts/verify_website_status_order_counterfactual.js --verify runs this exact Nourish fixture with the same 61 deterministic website seeds. Shipped, the first Viral-applying row has no preceding Viral stack but already has one stack on itself and deals 888.4854867 versus 444.2427433 for the same-crit pre-Viral row (2x). Its mean direct total is 123752.1912256 vs DamageKit 116134.6388452 (6.1555%), and queue-total DPS is 6425.7289055 vs 6016.2552246 (6.3724%). The in-memory counterfactual changes only timelineStatus so a status starts at the next distinct timestamp: that applying row is 444.2427433 with zero Viral stacks, direct becomes 120086.8244596 (3.2911%), and total DPS 6242.4605672 (3.6237%).",
+        "communitySources": [
+          {
+            "url": "https://forums.warframe.com/topic/1287493-how-does-elemental-damage-work/",
+            "claim": "The cited community elemental-damage explanation treats all damage from a shot as simultaneous and the resulting status proc as an additional effect, rather than allowing that proc to modify the hit that created it."
+          }
+        ],
+        "explanation": "The counterfactual retains the website's damage formulas, Nourish value, Mod inputs, target state, status durations, random seed series, and all 61 runs. It changes only whether a just-created status is visible to the same timestamp's direct-damage calculation, bringing both direct and finite-window totals inside 5%."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": { "0": "Hornet Strike", "1": "Barrel Diffusion", "2": "Pistol Gambit", "3": "Target Cracker" },
+        "opts": { "nourish": 45, "allConds": false, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "nourish": 0.45 } } }
+      }
+    },
+    {
+      "id": "rubico-prime-sniper-combo-lancer-l50",
+      "description": "Rubico Prime 的 2.5x Zoom Mode 带有网站源数据的 sniperCombo 标记；打开狙击连击覆盖为 3x，验证它同时进入直击和状态伤害路径。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "2.5x Zoom Mode",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Rubico Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Serration",
+          "1": "Split Chamber",
+          "2": "Point Strike",
+          "3": "Vital Sense"
+        },
+        "opts": { "allConds": false, "sniperCombo": 3, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Rubico Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Serration", "Split Chamber", "Point Strike", "Vital Sense"] },
+        "options": { "window": 20, "sniperComboMultiplier": 3 }
+      }
+    },
+    {
+      "id": "dex-pixia-ability-combo-lancer-l50",
+      "description": "Dex Pixia 是 Exalted Weapon；网站技能连击覆盖为 3x，验证该开关仅由核心依据 weapon.type 生效，而不是由界面预乘。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "Dex Pixia uses weapon battery recharge (reloadDelay / (1 + reloadSpeed) + magazine / reloadRate = 0.25 + 60/50 = 1.45s, 109 shots in 20s). Under its shipped Modded Base / 16 quantization, the 61-seed direct mean is 39431.2772 versus DamageKit's 36689.4349 (6.9535%); switching only setQuantize to /32 in scripts/verify_website_quantization_counterfactual.js moves the 61-seed direct mean to 36692.9941 (0.0097% difference). Additionally, scripts/verify_website_status_tail_cases.js records seed 1 row 108 at t=19.9748714s inside the 20s window with curr_dmg=319.8548, Slash per-tick=168, and totalDmg=1327.8548 = 319.8548 + 6 * 168, folding all six post-window Slash ticks into the 20s queue total (leaving 6.5513% total-DPS difference even under /32).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "Warframe quantizes each direct-hit damage component in steps of Modded Base Damage / 32 (not / 16)."
+          },
+          {
+            "url": "https://wiki.warframe.com/w/Damage/Slash_Damage",
+            "claim": "Slash status deals six ticks over six seconds starting one second after application; ticks occurring after t = 20s do not land within a 20-second DPS window."
+          }
+        ],
+        "explanation": "Once Dex Pixia's battery recharge (1.45s, matching min.js) replaced the stale 0.3s reloadTime fallback, the remaining 6.9535% direct difference is isolated cleanly to the site's /16 quantization branch (dropping to 0.0097% under /32), and the remaining 6.5513% queue-total difference comes from folding six full post-window Slash ticks onto shots fired in the final second."
+      },
+      "site": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "abilityCombo": 3, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": [] },
+        "options": { "window": 20, "abilityComboMultiplier": 3 }
+      }
+    },
+    {
+      "id": "laetum-config-b-eximus-sp999-site-all-conditions",
+      "description": "Laetum 配置 B：按网站实际槽位放入紫卡、武器赋能、四个灵化选择和两颗翠绿石；网站的 All Mods conditions are met 与本地相同地给 Galvanized Diffusion 4 层、Galvanized Shot 3 层、Cascadia Flare 40 层、Lethal Rearmament 3 层。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Incarnon Radial Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior"],
+        "siteObservation": "scripts/verify_website_laetum_gas_timeline_probe.js executes this exact Laetum B fixture with deterministic seed 1. In the final 20-second-window second, the website gives two equivalent Gas rows at t=19.0637140 and t=19.1192418, only 0.0555278 seconds apart. Each has ten active Gas stacks and a 17797.5 Gas pulse, and each row's total exceeds its direct damage by 177975 = 10 × 17797.5. The site therefore credits a complete ten-stack Gas pulse to every projectile row, not once per one-second Gas pulse. The same run records 145778362.8813 direct versus 194683616.0658 queue total, of which 48905253.1844 is this website status accounting.",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage/Gas_Damage",
+            "claim": "The community Gas-damage reference describes Gas as a timed damage-over-time effect with one-second ticks and up to ten stacks; it does not create a complete damage pulse for every weapon projectile inside that second."
+          },
+          {
+            "url": "https://wiki.warframe.com/w/Status_Effect",
+            "claim": "The community status-effect reference gives Gas a finite 6-second status duration and damage-over-time tick behavior, rather than a per-projectile full-pulse rule."
+          }
+        ],
+        "explanation": "The immediate direct comparison for this exact build already passes at 2.6092%. This proof is limited to the finite-window queue-total metric: two full Gas pulses 55.5 ms apart cannot both be one-second Gas ticks, so DamageKit keeps its time-scheduled Gas groups rather than copying the website's projectile-row total."
+      },
+      "site": {
+        "weapon": "Laetum",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 999,
+        "steel": true,
+        "eximus": true,
+        "party": 1,
+        "mods": {
+          "0": "Primed Heated Charge",
+          "1": "Galvanized Shot",
+          "2": "Anemic Agility",
+          "3": "Lethal Torrent",
+          "4": "Pistol Pestilence",
+          "5": "Frostbite",
+          "6": "Galvanized Diffusion",
+          "7": "Riven",
+          "8": "Steady Hands",
+          "10": "Cascadia Flare",
+          "23": "Incr. max stacks of Corrosion +2",
+          "24": "Incr. max stacks of Corrosion +3"
+        },
+        "riven": [
+          { "p": "multishot", "v": 133.35 },
+          { "p": "crit_chance", "v": -128.09 },
+          { "p": "reloadTime", "v": 61.55 },
+          { "p": "addCorrosive", "v": 109.69 }
+        ],
+        "incarnon": { "19": 1, "20": 0, "21": 1, "22": 0 },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Laetum",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 999,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Primed Heated Charge" },
+            { "slot": 1, "name": "Galvanized Shot" },
+            { "slot": 2, "name": "Anemic Agility" },
+            { "slot": 3, "name": "Lethal Torrent" },
+            { "slot": 4, "name": "Pistol Pestilence" },
+            { "slot": 5, "name": "Frostbite" },
+            { "slot": 6, "name": "Galvanized Diffusion" },
+            { "slot": 8, "name": "Steady Hands" },
+            { "slot": 10, "name": "Cascadia Flare" },
+            { "slot": 23, "name": "Incr. max stacks of Corrosion +2" },
+            { "slot": 24, "name": "Incr. max stacks of Corrosion +3" }
+          ],
+          "rivenSlot": 7,
+          "riven": {
+            "name": "Feva-can",
+            "multishot": 1.3335,
+            "critChance": -1.2809,
+            "reloadSpeed": 0.6155,
+            "elements": { "corrosive": 1.0969 }
+          },
+          "incarnonPerks": ["19:1", "20:0", "21:1", "22:0"]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "eximus": true,
+          "conditionalModStacks": {
+            "Galvanized Diffusion": 4,
+            "Galvanized Shot": 3,
+            "Cascadia Flare": 40,
+            "Lethal Rearmament": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "sonicor-heat-add-direct-charger-l1",
+      "description": "网站 heatAdd 自定义属性：无暴击、无状态的 Sonicor 直击，验证独立附加火元素不进入武器槽位元素合成。",
+      "samples": 1,
+      "siteSeeds": [1],
+      "tolerance": 0.05,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueTotalDps.health", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "queueLength": 20 },
+        "custom": [{ "k": "heatAdd", "v": 100 }]
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": { "window": 20, "customStats": { "heatAdd": 1 } }
+      }
+    },
+    {
+      "id": "sonicor-xata-isolated-charger-l1",
+      "description": "无暴击、无状态的 Sonicor Projectile Impact 对无护甲 Charger；隔离 Xata's Whisper 的独立 Void 直击，避免普通状态和暴击队列掩盖其结算位置。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueTotalDps.health", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": {
+          "allConds": false,
+          "xata": { "is_set": true, "val": 50 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "xata": 0.5 } } }
+      }
+    },
+    {
+      "id": "lex-prime-xata-crit-faction-lancer-l50",
+      "description": "副武器的基础伤害、暴击、暴伤与多重射击叠加 Xata's Whisper；验证独立 Void 命中在实际暴击队列、护甲和 Grineer 派系抗性下的结算。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": {
+          "allConds": false,
+          "xata": { "is_set": true, "val": 50 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "xata": 0.5 } } }
+      }
+    },
+    {
+      "id": "sonicor-xata-roar-faction-double-dip-charger-l1",
+      "description": "无暴击、无状态 Sonicor 同时启用 Roar 与 Xata's Whisper；隔离验证 Xata 的派系倍率二次结算，而普通武器直击只结算一次。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueTotalDps.health", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": {
+          "allConds": false,
+          "rhino": { "is_set": true, "val": 30 },
+          "xata": { "is_set": true, "val": 50 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": {
+          "window": 20,
+          "scenarioEffects": { "values": { "roar": 0.3, "xata": 0.5 } }
+        }
+      }
+    },
+    {
+      "id": "sonicor-toxic-lash-direct-isolated-charger-l1",
+      "description": "无暴击、无状态 Sonicor 的 Toxic Lash 立即直击；单独比较网站队列中的 direct 字段，避免其窗口外 DOT 尾伤展示口径掩盖独立 Toxin 直击公式。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueDirectTotal.health", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": {
+          "allConds": false,
+          "tlash": { "is_set": true, "val": 30 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "toxicLash": 0.3 } } }
+      }
+    },
+    {
+      "id": "sonicor-toxic-lash-roar-direct-charger-l1",
+      "description": "无暴击、无状态 Sonicor 同时启用 Roar 与 Toxic Lash；验证 Toxic Lash 直击的额外派系结算与每颗弹丸向上取整。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueDirectTotal.health", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": {
+          "allConds": false,
+          "rhino": { "is_set": true, "val": 30 },
+          "tlash": { "is_set": true, "val": 30 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": {
+          "window": 20,
+          "scenarioEffects": { "values": { "roar": 0.3, "toxicLash": 0.3 } }
+        }
+      }
+    },
+    {
+      "id": "lex-prime-toxic-lash-direct-armor-lancer-l50",
+      "description": "副武器的暴击、多重射击与 Lancer 护甲下的 Toxic Lash 立即直击；用于检验该附伤与普通 Toxin 元素的防御路径是否相同。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["directParity"],
+        "siteObservation": "scripts/verify_website_quantization_counterfactual.js --verify runs this exact 61-seed Lex Prime plus Toxic Lash configuration twice. The shipped website /16 grid gives 61,989.5109511 immediate armor damage; replacing only setQuantize with /32 gives 57,672.1610331, while DamageKit gives 57,927.9545304 (0.4435% apart).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "The documented community mission formula defines Scale as Modded Base Damage divided by 32 and rounds each direct damage type to the nearest Scale step; damage-over-time is not quantized by this rule."
+          }
+        ],
+        "explanation": "The primary metric for this fixture is the website's immediate-hit queue total, not its DOT-inclusive total. Only the website quantization divisor changes in the counterfactual; Toxic Lash, selected Mods, target, queue timeline and all 61 deterministic seeds are unchanged."
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": {
+          "allConds": false,
+          "tlash": { "is_set": true, "val": 30 },
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "toxicLash": 0.3 } } }
+      }
+    },
+    {
+      "id": "sonicor-venom-dose-global-strength-direct-charger-l1",
+      "description": "Sonicor 的战甲 Mod 槽 Venom Dose 与网站全局 Strength 150%；验证外部 Mod 的 Corrosive 附伤由原始 action 及一个全局输入驱动。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Projectile Impact",
+      "compare": { "siteMetric": "queueDirectTotal.health", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": { "13": "Venom Dose" },
+        "opts": { "allConds": false, "strength": 150, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Sonicor",
+        "enemy": "Charger",
+        "level": 1,
+        "build": { "mods": [] },
+        "options": {
+          "window": 20,
+          "abilityStrength": 1.5,
+          "allModConditionsMet": false,
+          "environment": {
+            "warframeMods": [{ "name": "Venom Dose", "mod": "Venom Dose", "active": true }]
+          }
+        }
+      }
+    },
+    {
+      "id": "dex-pixia-global-strength-direct-lancer-l50",
+      "description": "Exalted Weapon 的网站全局 Strength 150% 的绝对直击对拍；与相邻的相对增量用例一起验收，不能只靠相对比例掩盖绝对量误差。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "websiteDivergenceProof": {
+        "scopes": ["behavior", "directParity"],
+        "siteObservation": "With Dex Pixia's battery recharge restored (1.45s, matching min.js) and Strength at 150%, the shipped Modded Base / 16 quantization yields a 61-seed queueDirectTotal.armor mean of 19715.6386 versus DamageKit's 18344.7175 (6.9535% difference). Switching only setQuantize to /32 in scripts/verify_website_quantization_counterfactual.js moves the 61-seed direct mean to 18346.4970 (0.0097% difference).",
+        "communitySources": [
+          {
+            "url": "https://wiki.warframe.com/w/Damage_Quantization",
+            "claim": "Warframe quantizes each direct-hit damage component in steps of Modded Base Damage / 32 (not / 16)."
+          }
+        ],
+        "explanation": "Once Dex Pixia's battery reload matches min.js and Strength applies uniformly (1.5x), this direct comparison shares the same isolated /16 versus /32 quantization divergence as dex-pixia-ability-combo-lancer-l50, shrinking from 6.9535% to 0.0097% under /32 while the paired relative-strength case passes within machine precision (6.66e-13%)."
+      },
+      "site": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "strength": 150, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": [] },
+        "options": { "window": 20, "abilityStrength": 1.5, "allModConditionsMet": false }
+      }
+    },
+    {
+      "id": "dex-pixia-global-strength-relative-direct-lancer-l50",
+      "description": "Exalted Weapon 的网站全局 Strength 从 100% 提到 150%；只比较相对直击增量，隔离基础直击量化格点，验证 simple strengthType 由核心读取而不是由前端预乘。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Normal Attack",
+      "compare": {
+        "siteMetric": "queueDirectTotal.armor",
+        "nativeMetric": "targetDirectDamage",
+        "aggregation": "mean",
+        "relativeToBaseline": true
+      },
+      "site": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "strength": 150, "queueLength": 20 }
+      },
+      "siteBaseline": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {},
+        "opts": { "allConds": false, "strength": 100, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": [] },
+        "options": { "window": 20, "abilityStrength": 1.5, "allModConditionsMet": false }
+      },
+      "nativeBaseline": {
+        "weapon": "Dex Pixia (Titania)",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": [] },
+        "options": { "window": 20, "abilityStrength": 1, "allModConditionsMet": false }
+      }
+    },
+    {
+      "id": "lex-prime-toxic-lash-relative-direct-armor-lancer-l50",
+      "description": "Lex Prime 在 Lancer 护甲下启用 Toxic Lash 后的直击增量占基线直击的比例。绝对总量仍由相邻的绝对值用例单独验收；本例只隔离毒鞭相对普通命中的派系、取整和护甲结算位置。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "attack": "Normal Attack",
+      "compare": {
+        "siteMetric": "queueDirectTotal.armor",
+        "nativeMetric": "targetDirectDamage",
+        "aggregation": "mean",
+        "relativeToBaseline": true
+      },
+      "site": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": {
+          "allConds": false,
+          "tlash": { "is_set": true, "val": 30 },
+          "queueLength": 20
+        }
+      },
+      "siteBaseline": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "steel": false,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Hornet Strike",
+          "1": "Barrel Diffusion",
+          "2": "Pistol Gambit",
+          "3": "Target Cracker"
+        },
+        "opts": {
+          "allConds": false,
+          "queueLength": 20
+        }
+      },
+      "native": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20, "scenarioEffects": { "values": { "toxicLash": 0.3 } } }
+      },
+      "nativeBaseline": {
+        "weapon": "Lex Prime",
+        "enemy": "Lancer",
+        "level": 50,
+        "build": { "mods": ["Hornet Strike", "Barrel Diffusion", "Pistol Gambit", "Target Cracker"] },
+        "options": { "window": 20 }
+      }
+    },
+    {
+      "id": "torid-incarnon-full-build-gunner-sp250",
+      "description": "真实满槽实战配装：Torid Incarnon（8 Mod + 主要无情赋能 + 3 项灵化进化，含 EVO4 Survivor's Edge 基础暴击加成）在钢铁之路 250 级 Corrupted Heavy Gunner 下全口径对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Incarnon Form",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Torid",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 250,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Vile Acceleration",
+          "5": "Rime Rounds",
+          "6": "Malignant Force",
+          "7": "Hammer Shot",
+          "10": "Primary Merciless"
+        },
+        "incarnon": { "19": 1, "20": 0, "21": 2 },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Torid",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 250,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Vile Acceleration" },
+            { "slot": 5, "name": "Rime Rounds" },
+            { "slot": 6, "name": "Malignant Force" },
+            { "slot": 7, "name": "Hammer Shot" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ],
+          "incarnonPerks": ["19:1", "20:0", "21:2"]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "kuva-tonkor-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Kuva Tonkor（8 Mod + 主要无情赋能 + Hunter Munitions 触发流）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证直击与含 DOT 总 DPS 对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Grenade Explosion",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Malignant Force",
+          "5": "Rime Rounds",
+          "6": "Hunter Munitions",
+          "7": "Primed Firestorm",
+          "10": "Primary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Tonkor",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Malignant Force" },
+            { "slot": 5, "name": "Rime Rounds" },
+            { "slot": 6, "name": "Hunter Munitions" },
+            { "slot": 7, "name": "Primed Firestorm" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "tenet-plinx-semi-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Tenet Plinx（8 Mod 含 Ice Storm + 次要无情赋能，电池装填曲线）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证直击与总 DPS 对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Semi-Auto",
+      "compare": { "siteMetric": "queueTotalDps.armor", "nativeMetric": "targetDps", "aggregation": "mean" },
+      "site": {
+        "weapon": "Tenet Plinx",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Diffusion",
+          "1": "Lethal Torrent",
+          "2": "Primed Target Cracker",
+          "3": "Creeping Bullseye",
+          "4": "Hornet Strike",
+          "5": "Ice Storm",
+          "6": "Convulsion",
+          "7": "Primed Heated Charge",
+          "10": "Secondary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Tenet Plinx",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Diffusion" },
+            { "slot": 1, "name": "Lethal Torrent" },
+            { "slot": 2, "name": "Primed Target Cracker" },
+            { "slot": 3, "name": "Creeping Bullseye" },
+            { "slot": 4, "name": "Hornet Strike" },
+            { "slot": 5, "name": "Ice Storm" },
+            { "slot": 6, "name": "Convulsion" },
+            { "slot": 7, "name": "Primed Heated Charge" },
+            { "slot": 10, "name": "Secondary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Diffusion": 4,
+            "Secondary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "kuva-zarr-barrage-full-build-gunner-sp100",
+      "description": "真实满槽实战配装：Kuva Zarr 散弹齐射模式（8 Mod 含 Galvanized Aptitude + 主要无情赋能）在钢铁之路 100 级 Corrupted Heavy Gunner 下验证多弹片与 Gun CO 直击对拍。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Barrage Mode",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Kuva Zarr",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Chamber",
+          "1": "Critical Delay",
+          "2": "Vital Sense",
+          "3": "Serration",
+          "4": "Primed Cryo Rounds",
+          "5": "Malignant Force",
+          "6": "Galvanized Aptitude",
+          "7": "Vile Acceleration",
+          "10": "Primary Merciless"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Kuva Zarr",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 100,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Chamber" },
+            { "slot": 1, "name": "Critical Delay" },
+            { "slot": 2, "name": "Vital Sense" },
+            { "slot": 3, "name": "Serration" },
+            { "slot": 4, "name": "Primed Cryo Rounds" },
+            { "slot": 5, "name": "Malignant Force" },
+            { "slot": 6, "name": "Galvanized Aptitude" },
+            { "slot": 7, "name": "Vile Acceleration" },
+            { "slot": 10, "name": "Primary Merciless" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Chamber": 5,
+            "Galvanized Aptitude": 2,
+            "Primary Merciless": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "tenet-cycron-battery-full-build-gunner-sp150",
+      "description": "真实满槽实战配装：Tenet Cycron 连续光束电池武器（8 Mod 含镀层多重与元素双修 + 次要死首）在钢铁之路 150 级 Corrupted Heavy Gunner 下验证直击伤害与 261 发采样时间轴。",
+      "samples": 61,
+      "tolerance": 0.05,
+      "targetTolerance": 0.005,
+      "attack": "Normal Attack",
+      "compare": { "siteMetric": "queueDirectTotal.armor", "nativeMetric": "targetDirectDamage", "aggregation": "mean" },
+      "site": {
+        "weapon": "Tenet Cycron",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 150,
+        "steel": true,
+        "eximus": false,
+        "party": 1,
+        "mods": {
+          "0": "Galvanized Diffusion",
+          "1": "Lethal Torrent",
+          "2": "Primed Target Cracker",
+          "3": "Creeping Bullseye",
+          "4": "Hornet Strike",
+          "5": "Pistol Pestilence",
+          "6": "Frostbite",
+          "7": "Seeker",
+          "10": "Secondary Deadhead"
+        },
+        "opts": { "allConds": true, "queueLength": 20 }
+      },
+      "native": {
+        "weapon": "Tenet Cycron",
+        "enemy": "Corrupted Heavy Gunner",
+        "level": 150,
+        "build": {
+          "slottedMods": [
+            { "slot": 0, "name": "Galvanized Diffusion" },
+            { "slot": 1, "name": "Lethal Torrent" },
+            { "slot": 2, "name": "Primed Target Cracker" },
+            { "slot": 3, "name": "Creeping Bullseye" },
+            { "slot": 4, "name": "Hornet Strike" },
+            { "slot": 5, "name": "Pistol Pestilence" },
+            { "slot": 6, "name": "Frostbite" },
+            { "slot": 7, "name": "Seeker" },
+            { "slot": 10, "name": "Secondary Deadhead" }
+          ]
+        },
+        "options": {
+          "window": 20,
+          "steelPath": true,
+          "conditionalModStacks": {
+            "Galvanized Diffusion": 4,
+            "Secondary Deadhead": 3
+          }
+        }
+      }
+    }
+  ]
+}

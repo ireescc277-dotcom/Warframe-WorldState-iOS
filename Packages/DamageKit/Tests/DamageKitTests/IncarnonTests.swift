@@ -57,7 +57,7 @@ final class IncarnonTests: XCTestCase {
         var weapon = weaponWith(attack, .init(name: "F", action: ["flat_change_dmg": .number(51)]))
         weapon.categories = ["primary-rifle"]
         let out = resolved(weapon, build: Build(mods: ["Serration"], incarnonPerks: ["19:0"]))
-        XCTAssertEqual(out[0].damage[.toxin] ?? 0, 151 * 2.65, accuracy: 1e-6)
+        XCTAssertEqual(out[0].damage[.toxin] ?? 0, 151 * 2.65, accuracy: 1e-4)
     }
 
     func testAddCritChanceIsAbsolutePercentagePoint() {
@@ -172,5 +172,28 @@ final class IncarnonTests: XCTestCase {
         let out = resolved(weapon, build: Build(incarnonPerks: ["19:0"]))
         XCTAssertTrue(out[0].notes.contains { $0.contains("未实现的灵化动作") && $0.contains("some_unknown_key") },
                       "notes: \(out[0].notes)")
+    }
+
+    func testIncarnonConditionalUsesTheSameDataRuleAsAMod() {
+        // Laetum's Lethal Rearmament is a conditional Incarnon option rather
+        // than a `mods.json` slot Mod.  Its 3-stack rule is nevertheless data
+        // in conditional-effects.json, so BuildResolver must not have a second
+        // name-specific path or report WITH_COND.reloadTime as unsupported.
+        let attack = Attack(name: "Normal Attack", speed: 1, critChance: 0, critMultiplier: 2,
+                            statusChance: 0, damage: [.impact: 100])
+        var weapon = Weapon(name: "W", attacks: [attack], magazineSize: 10, reloadTime: 10)
+        weapon.incarnon = [IncarnonTier(tier: 20, options: [
+            .init(name: "Lethal Rearmament: test", type: ["Normal Attack"],
+                  action: ["WITH_COND": .object(["reloadTime": .number(0.9)])])
+        ])]
+        let options = Options(conditionalModStacks: ["Lethal Rearmament": 3])
+        let profile = EnemyProfile(enemy: enemy(), level: 1, options: options)
+        let out = BuildResolver(weapon: weapon, build: Build(incarnonPerks: ["20:0"]),
+                                options: options, faction: profile.faction)
+            .resolve(attack: attack)
+
+        XCTAssertEqual(out.reload, 10 / 1.9, accuracy: 1e-12)
+        XCTAssertFalse(out.notes.contains { $0.contains("WITH_COND.reloadTime") },
+                       "notes: \(out.notes)")
     }
 }

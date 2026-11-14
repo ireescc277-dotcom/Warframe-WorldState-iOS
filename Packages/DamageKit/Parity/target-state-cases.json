@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "description": "Only target initialization is under test here. These rows deliberately do not treat a weapon-DPS result as evidence for the party-size option: they compare the website's actual health/armor/shield/overguard target state with the Swift core on the same enemy, level, Steel Path, Eximus, and party inputs.",
+  "cases": [
+    {
+      "id": "demolisher-anti-moa-party-1-l50",
+      "enemy": "Demolisher Anti MOA",
+      "level": 50,
+      "steel": false,
+      "eximus": false,
+      "party": 1,
+      "tolerance": 0.005
+    },
+    {
+      "id": "demolisher-anti-moa-party-2-l50",
+      "enemy": "Demolisher Anti MOA",
+      "level": 50,
+      "steel": false,
+      "eximus": false,
+      "party": 2,
+      "tolerance": 0.005
+    },
+    {
+      "id": "demolisher-anti-moa-party-3-l50",
+      "enemy": "Demolisher Anti MOA",
+      "level": 50,
+      "steel": false,
+      "eximus": false,
+      "party": 3,
+      "tolerance": 0.005
+    },
+    {
+      "id": "demolisher-anti-moa-party-4-l50",
+      "enemy": "Demolisher Anti MOA",
+      "level": 50,
+      "steel": false,
+      "eximus": false,
+      "party": 4,
+      "tolerance": 0.005
+    },
+    {
+      "id": "lancer-ignores-party-4-l50",
+      "enemy": "Lancer",
+      "level": 50,
+      "steel": false,
+      "eximus": false,
+      "party": 4,
+      "tolerance": 0.005
+    },
+    {
+      "id": "corrupted-heavy-gunner-eximus-l30",
+      "enemy": "Corrupted Heavy Gunner",
+      "level": 30,
+      "steel": false,
+      "eximus": true,
+      "party": 1,
+      "tolerance": 0.005
+    },
+    {
+      "id": "corrupted-heavy-gunner-eximus-l50",
+      "enemy": "Corrupted Heavy Gunner",
+      "level": 50,
+      "steel": false,
+      "eximus": true,
+      "party": 1,
+      "tolerance": 0.005
+    },
+    {
+      "id": "corrupted-heavy-gunner-eximus-l100",
+      "enemy": "Corrupted Heavy Gunner",
+      "level": 100,
+      "steel": false,
+      "eximus": true,
+      "party": 1,
+      "tolerance": 0.005
+    },
+    {
+      "id": "corrupted-heavy-gunner-eximus-l120",
+      "enemy": "Corrupted Heavy Gunner",
+      "level": 120,
+      "steel": false,
+      "eximus": true,
+      "party": 1,
+      "tolerance": 0.005
+    },
+    {
+      "id": "corrupted-heavy-gunner-eximus-sp999",
+      "enemy": "Corrupted Heavy Gunner",
+      "level": 999,
+      "steel": true,
+      "eximus": true,
+      "party": 1,
+      "tolerance": 0.005
+    }
+  ]
+}

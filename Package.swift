@@ -15,11 +15,15 @@ let package = Package(
             targets: ["WarframeWatch"]
         ),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(path: "Packages/DamageKit")
+    ],
     targets: [
         .target(
             name: "WarframeWatch",
-            dependencies: [],
+            dependencies: [
+                .product(name: "DamageKit", package: "DamageKit")
+            ],
             path: "WarframeWatch",
             resources: [
                 .process("Resources")

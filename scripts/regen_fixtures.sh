@@ -12,6 +12,6 @@ PKG="$ROOT/Packages/DamageKit"
 for input in "$PKG"/Fixtures/*.json; do
   name="$(basename "$input" .json)"
   bash "$ROOT/scripts/swiftw.sh" run --package-path "$PKG" damagekit-cli \
-    "$input" --data-root "$ROOT/web/app/site" > "$PKG/Fixtures/expected/$name.json"
+    "$input" --data-root "$ROOT/server/site" > "$PKG/Fixtures/expected/$name.json"
   echo "wrote $name.json"
 done

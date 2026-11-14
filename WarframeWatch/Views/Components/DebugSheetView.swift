@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct DebugSheetView: View {
     @EnvironmentObject private var vm: WorldStateViewModel
+    @ObservedObject private var remoteAssets = RemoteAssetStore.shared
     @Environment(\.dismiss) private var dismiss
     
     @State private var inputUrl: String = ""
@@ -18,6 +19,9 @@ public struct DebugSheetView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         // Diagnostic Banner
                         diagnosticCard
+                        
+                        // Remote Asset Cache
+                        assetCacheCard
                         
                         // Active Source & Configuration
                         dataSourceConfigCard
@@ -116,6 +120,74 @@ public struct DebugSheetView: View {
         .cornerRadius(6)
     }
     
+    // MARK: - Asset Cache
+    private var assetCacheCard: some View {
+        let mb = Double(remoteAssets.cachedBytes) / 1_048_576.0
+        let totalText = remoteAssets.manifestCount > 0 ? " / \(remoteAssets.manifestCount)" : ""
+        return WFCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .foregroundColor(WFTheme.cyan)
+                    Text("离线图库与服务器缓存")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(WFTheme.cyan)
+                    Spacer()
+                    Text("\(remoteAssets.cachedCount)\(totalText) · \(String(format: "%.1f MB", mb))")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(WFTheme.textSecondary)
+                }
+
+                Text(remoteAssets.baseURL.absoluteString)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(WFTheme.textMuted)
+                    .lineLimit(1)
+
+                if remoteAssets.isDownloadingPack {
+                    ProgressView(value: remoteAssets.packProgress)
+                        .tint(WFTheme.cyan)
+                    Text(String(format: "正在后台下载离线资源 %.0f%%", remoteAssets.packProgress * 100))
+                        .font(.system(size: 11))
+                        .foregroundColor(WFTheme.textSecondary)
+                }
+
+                if let err = remoteAssets.lastErrorMessage {
+                    Text(err)
+                        .font(.system(size: 11))
+                        .foregroundColor(WFTheme.red)
+                }
+
+                HStack(spacing: 10) {
+                    Button {
+                        Task { await remoteAssets.downloadAllAssets() }
+                    } label: {
+                        Text(remoteAssets.isDownloadingPack ? "下载中..." : "下载全部离线资源")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Color.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(remoteAssets.isDownloadingPack ? WFTheme.panelElevated : WFTheme.cyan)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .disabled(remoteAssets.isDownloadingPack)
+
+                    Button {
+                        remoteAssets.clearCache()
+                    } label: {
+                        Text("清理缓存")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(WFTheme.textPrimary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(WFTheme.panelElevated)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .disabled(remoteAssets.isDownloadingPack)
+                }
+            }
+        }
+    }
+
     // MARK: - Data Source Config
     private var dataSourceConfigCard: some View {
         WFCard {
